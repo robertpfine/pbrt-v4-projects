@@ -1,0 +1,19 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "PBRT: Render Current Project",
+            "type": "shell",
+            "command": "python3 /home/rpf4/my-pbrt-projects/02_FOG_SCENES/scripts/python/02_fog_spheres.py && ~/pbrt-v4/build/pbrt --gpu /home/rpf4/my-pbrt-projects/02_FOG_SCENES/scenes/sandbox_render.pbrt",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

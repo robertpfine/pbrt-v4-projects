@@ -1,0 +1,64 @@
+{
+  "project": {
+    "name": "05_RGB_GRID",
+    "output_dir": "generated",
+    "render_prefix": "05_RGB_GRID"
+  },
+
+  "film": {
+    "filename": "rgbgrid_test.png",
+    "xresolution": 800,
+    "yresolution": 800
+  },
+
+  "camera": {
+    "eye": [0, 0, -5],
+    "target": [0, 0, 0],
+    "up": [0, 1, 0],
+    "fov": 50
+  },
+
+  "integrator": {
+    "type": "volpath",
+    "maxdepth": 10
+  },
+
+  "sampler": {
+    "type": "halton",
+    "pixelsamples": 64
+  },
+
+  "volume_grid": {
+    "resolution": [64, 64, 64],
+    "world_min": -1.5,
+    "world_max": 1.5,
+    "sigma_a": [0.002, 0.002, 0.002],
+    "g": 0.0
+  },
+
+  "volumes": [
+    {
+      "name": "rgb_vol_01",
+      "file": "rgbgrid_medium_01.pbrt",
+      "axis": "X",
+      "translate": [0, -1.2, 1.5],
+      "radius": 0.6,
+      "zones": [
+        { "position": 0.3, "wavelength": 650, "width": 0.25, "sigma_s_peak": 50.0 },
+        { "position": 0.7, "wavelength": 450, "width": 0.25, "sigma_s_peak": 100.0 }
+      ]
+    }
+  ],
+
+  "lights": {
+    "point": {
+      "from": [0, 3, -3],
+      "temperature": 3200,
+      "scale": 20.0
+    },
+    "infinite": {
+      "temperature": 4500,
+      "scale": 0.2
+    }
+  }
+}

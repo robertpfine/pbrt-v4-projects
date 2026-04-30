@@ -1,0 +1,101 @@
+############################################################
+# Film and Camera
+############################################################
+Film "rgb"
+    "integer xresolution" [2000]
+    "integer yresolution" [2000]
+    "string filename" ["04_RGB_MIXING.png"]
+
+Sampler "halton"
+    "integer pixelsamples" [64]
+
+Integrator "volpath"
+
+LookAt 0 0 -15  0 0 0  0 1 0
+Camera "perspective"
+    "float fov" [45]
+
+############################################################
+# World Definition
+############################################################
+WorldBegin
+
+    MakeNamedMedium "fog"
+        "string type" [ "homogeneous" ]
+        "rgb sigma_a" [ .005 .005 .005 ]
+        "rgb sigma_s" [ .3 .3 .3 ]
+        "float g" [ 0.8 ]
+
+    MediumInterface "fog" ""
+
+    ############################################################
+    # ROW 1 - primaries, aimed downward
+    # Each light uses its own pre-colored image for hue.
+    ############################################################
+
+    # Red
+    AttributeBegin
+        LookAt  -3 5 0    -3 0 0    0 0 1
+        LightSource "projection"
+            "string filename" ["pointillist_grid_red.png"]
+            "float scale" [800]
+            "float fov" [60]
+    AttributeEnd
+
+    # Green
+    AttributeBegin
+        LookAt   0 5 0     0 0 0    0 0 1
+        LightSource "projection"
+            "string filename" ["pointillist_grid_green.png"]
+            "float scale" [800]
+            "float fov" [60]
+    AttributeEnd
+
+    # Blue
+    AttributeBegin
+        LookAt   3 5 0     3 0 0    0 0 1
+        LightSource "projection"
+            "string filename" ["pointillist_grid_blue.png"]
+            "float scale" [800]
+            "float fov" [60]
+    AttributeEnd
+
+    ############################################################
+    # ROW 2 - mixes, aimed upward
+    ############################################################
+
+    # Magenta
+    AttributeBegin
+        LookAt  -3 -5 0   -3 0 0    0 0 1
+        LightSource "projection"
+            "string filename" ["pointillist_grid_magenta.png"]
+            "float scale" [400]
+            "float fov" [60]
+    AttributeEnd
+
+    # Yellow
+    AttributeBegin
+        LookAt   0 -5 0    0 0 0    0 0 1
+        LightSource "projection"
+            "string filename" ["pointillist_grid_yellow.png"]
+            "float scale" [400]
+            "float fov" [60]
+    AttributeEnd
+
+    # Cyan
+    AttributeBegin
+        LookAt   3 -5 0    3 0 0    0 0 1
+        LightSource "projection"
+            "string filename" ["pointillist_grid_cyan.png"]
+            "float scale" [400]
+            "float fov" [60]
+    AttributeEnd
+
+    ############################################################
+    # Geometry
+    ############################################################
+    AttributeBegin
+        Material "diffuse"
+            "rgb reflectance" [ 0.9 0.9 0.9 ]
+        Shape "sphere" "float radius" [5]
+    AttributeEnd

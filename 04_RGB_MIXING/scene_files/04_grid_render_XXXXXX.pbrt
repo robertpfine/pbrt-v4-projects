@@ -1,0 +1,30 @@
+############################################################
+# PROJECT: 04_RGB_MIXING
+# FILE: 04_grid_render.pbrt
+# VERSION: pbrt-v4 (NANOVDB GRID TEST)
+############################################################
+
+Integrator "volpath" "integer maxdepth" [25]
+Sampler "halton" "integer pixelsamples" [64]
+Film "rgb" "integer xresolution" [1000] "integer yresolution" [1000]
+    "string filename" ["grid_test.exr"]
+
+LookAt 0 0 -4  0 0 0  0 1 0
+Camera "perspective" "float fov" [65]
+
+WorldBegin
+    # --- INCLUDE THE NANOVDB GRID ---
+    Include "noise_grid_nvdb_XXXXXX.pbrt"
+
+    # --- DEFINE THE CONTAINER ---
+    AttributeBegin
+        MediumInterface "perlin_grid_medium" ""
+        Material "interface"
+        Shape "sphere" "float radius" 1.5
+    AttributeEnd
+
+    # --- LIGHTING ---
+    #LightSource "infinite" "rgb L" [ 0.0 0.0 0.005 ]
+    LightSource "point" "rgb I" [ 100 0 0 ] "point3 from" [ -2 0 0 ]
+    LightSource "point" "rgb I" [ 0 100 0 ] "point3 from" [ 0 2 0 ]
+    LightSource "point" "rgb I" [ 0 0 100 ] "point3 from" [ 2 0 0 ]

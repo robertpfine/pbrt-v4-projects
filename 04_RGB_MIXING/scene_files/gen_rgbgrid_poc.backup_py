@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""
+gen_rgbgrid_poc.py
+
+Generates a pbrt-v4 scene file using an inline rgbgrid medium.
+The volume is divided into three zones along the X axis:
+  - Left third:   red scattering
+  - Middle third: green scattering
+  - Right third:  blue scattering
+
+Where zones meet, additive mixing produces yellow, cyan, and magenta.
+Color comes from the medium itself, not the lights.
+
+Usage:
+  python3 gen_rgbgrid_poc.py --out rgbgrid_poc.pbrt
+"""
+
+import argparse
+import textwrap
+
+
+def build_rgbgrid(nx, ny, nz, sigma_s_peak, blend_width):
+    """
+    Build sigma_s and sigma_a flat arrays for a three-zone RGB volume.
+    Zones blend smoothly at boundaries using a linear falloff.
+    Returns (sigma_s_flat, sigma_a_flat).
+    """
+    sigma_s = []
+    sigma_a = []
+
+    for k in range(nz):
+        for j in range(ny):
+            for i in range(nx):
+                # Normalised X position [0, 1]
+                t = (i + 0.5) / nx
+
+                # Zone boundaries
+                left_centre  = 1.0 / 6.0   # centre of left zone
+                mid_centre   = 3.0 / 6.0   # centre of middle zone
+                right_centre = 5.0 / 6.0   # centre of right zone
+
+                # Smooth blend weights
+                def weight(pos, centre, width):
+                    d = abs(pos - centre)
+                    return max(0.0, 1.0 - d / width)
+
+                w_r = weight(t, left_centre,  blend_width)
+                w_g = weight(t, mid_centre,   blend_width)
+                w_b = weight(t, right_centre, blend_width)
+
+                sigma_s += [
+                    w_r * sigma_s_peak,   # R
+                    w_g * sigma_s_peak,   # G
+                    w_b * sigma_s_peak    # B
+                ]
+                sigma_a += [0.02, 0.02, 0.02]
+
+    return sigma_s, sigma_a
+
+
+def fmt(values, per_line=9):
+    """Format flat float list as indented pbrt array rows."""
+    lines = []
+    for i in range(0, len(values), per_line):
+        chunk = values[i:i + per_line]
+        lines.append("        " + " ".join(f"{v:.4f}" for v in chunk))
+    return "\n".join(lines)
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--nx", type=int, default=16,
+                   help="Grid X resolution (default: 16)")
+    p.add_argument("--ny", type=int, default=16,
+                   help="Grid Y resolution (default: 16)")
+    p.add_argument("--nz", type=int, default=16,
+                   help="Grid Z resolution (default: 16)")
+    p.add_argument("--sigma_s", type=float, default=3.0,
+                   help="Peak scattering coefficient (default: 3.0)")
+    p.add_argument("--blend", type=float, default=0.2,
+                   help="Zone blend width 0-1 (default: 0.2)")
+    p.add_argument("--light_intensity", type=float, default=5.0,
+                   help="White light intensity (default: 5.0)")
+    p.add_argument("--spp", type=int, default=128,
+                   help="Samples per pixel (default: 128)")
+    p.add_argument("--out", default="rgbgrid_poc.pbrt",
+                   help="Output .pbrt file (default: rgbgrid_poc.pbrt)")
+    args = p.parse_args()
+
+    nx, ny, nz = args.nx, args.ny, args.nz
+    print(f"Building {nx}x{ny}x{nz} rgbgrid...")
+
+    sigma_s, sigma_a = build_rgbgrid(nx, ny, nz, args.sigma_s, args.blend)
+
+    medium_block = textwrap.dedent(f"""\
+        MakeNamedMedium "rgb_vol"
+            "string type"   [ "rgbgrid" ]
+            "integer nx"    [ {nx} ]
+            "integer ny"    [ {ny} ]
+            "integer nz"    [ {nz} ]
+            "point3 p0"     [ -1.5 -1.5 -1.5 ]
+            "point3 p1"     [  1.5  1.5  1.5 ]
+            "float g"       [ 0.0 ]
+            "rgb sigma_a"   [
+        {fmt(sigma_a)}
+            ]
+            "rgb sigma_s"   [
+        {fmt(sigma_s)}
+            ]
+        """)
+
+    scene = textwrap.dedent(f"""\
+        ############################################################
+        # PROJECT: 04_RGB_MIXING
+        # FILE: rgbgrid_poc_XXXXXX.pbrt
+        # VERSION: pbrt-v4 rgbgrid proof of concept
+        ############################################################
+
+        Integrator "volpath" "integer maxdepth" [25]
+        Sampler "halton" "integer pixelsamples" [{args.spp}]
+        Film "rgb"
+            "integer xresolution" [1000]
+            "integer yresolution" [1000]
+            "string filename"     ["rgbgrid_poc.exr"]
+
+        LookAt 0 0 -5  0 0 0  0 1 0
+        Camera "perspective" "float fov" [50]
+
+        WorldBegin
+
+            {medium_block}
+
+            # --- CONTAINER ---
+            AttributeBegin
+                MediumInterface "rgb_vol" ""
+                Material "interface"
+                Shape "sphere" "float radius" 1.5
+            AttributeEnd
+
+            # --- SINGLE WHITE LIGHT (color comes from medium, not lights) ---
+            LightSource "point"
+                "rgb I" [ {args.light_intensity} {args.light_intensity} {args.light_intensity} ]
+                "point3 from" [ 0 3 -3 ]
+
+            # --- SOFT FILL ---
+            LightSource "infinite" "rgb L" [ 0.02 0.02 0.02 ]
+
+        """)
+
+    with open(args.out, "w") as f:
+        f.write(scene)
+
+    print(f"Written: {args.out}")
+
+
+if __name__ == "__main__":
+    main()

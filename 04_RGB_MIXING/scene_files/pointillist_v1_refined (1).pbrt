@@ -1,0 +1,83 @@
+############################################################
+# PROJECT: RGB POINTILLISM
+# FILE: pointillist_v1_refined.pbrt
+# VERSION: pbrt-v4
+# CONCEPT: "The Moment Just Before Mixing"
+#
+# Three colored point lights illuminate a homogeneous scattering
+# volume from outside. Red and blue oppose each other left/right,
+# creating a dark vertical band between them where the colors
+# have not yet merged. Green comes from behind, present but not
+# dominant, preserving the opposition.
+#
+# Grain is intentional — kept by low pixelsamples at high resolution.
+# The noise IS the pointillism.
+#
+# PRIMARY TUNING KNOBS (marked <-- TUNE):
+#   sigma_s     : scatter radius — lower = tighter color zones, deeper dark band
+#   I values    : per-light intensity and color balance
+#   pixelsamples: keep low (32-64) to preserve grain at scale
+#   maxdepth    : keep high (32+) for accurate volumetric scattering
+############################################################
+
+Integrator "volpath"
+    "integer maxdepth" [32]
+
+Sampler "halton"
+    "integer pixelsamples" [64]              # <-- TUNE: keep low to preserve grain
+
+Film "rgb"
+    "integer xresolution" [10000]
+    "integer yresolution" [10000]
+    "string filename" ["pointillist_v1_refined.png"]
+
+LookAt  0 0 35   0 0 0   0 1 0
+Camera "perspective"
+    "float fov" [35]                         # <-- TUNE: narrow fov fills frame with sphere
+
+WorldBegin
+
+    ############################################################
+    # Homogeneous scattering medium
+    # sigma_s controls how far light scatters from each source.
+    # Lower values = tighter color zones = deeper dark band.
+    # sigma_a = 0 : no absorption, pure scattering
+    ############################################################
+    MakeNamedMedium "vol"
+        "string type"   [ "homogeneous" ]
+        "rgb sigma_s"   [ 0.6 0.6 0.6 ]     # <-- TUNE: try 0.3-1.5
+        "rgb sigma_a"   [ 0.0 0.0 0.0 ]
+
+    ############################################################
+    # Enclosing sphere — medium boundary, invisible to rays
+    ############################################################
+    AttributeBegin
+        MediumInterface "vol" ""
+        Material "interface"
+        Shape "sphere" "float radius" [10]
+    AttributeEnd
+
+    ############################################################
+    # RED — left (original position)
+    ############################################################
+    LightSource "point"
+        "rgb I"       [ 10000 0 0 ]          # <-- TUNE: red intensity
+        "point3 from" [ -20 0 0 ]
+
+    ############################################################
+    # GREEN — top (original position)
+    ############################################################
+    LightSource "point"
+        "rgb I"       [ 0 10000 0 ]          # <-- TUNE: green intensity
+        "point3 from" [ 0 20 0 ]
+
+    ############################################################
+    # BLUE — right (original position)
+    ############################################################
+    LightSource "point"
+        "rgb I"       [ 0 0 10000 ]          # <-- TUNE: blue intensity
+        "point3 from" [ 20 0 0 ]
+
+############################################################
+# end of scene
+############################################################

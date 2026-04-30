@@ -1,0 +1,80 @@
+## ============================================================
+# PBRT-v4: Street Lamp Composition
+# Baseline: sigma_s 0.01, g 0.8
+# ============================================================
+
+# 1. GLOBAL MEDIUM SETUP
+# Defined at the top so the interface and camera are correctly submerged.
+MakeNamedMedium "fog" 
+    "string type" ["homogeneous"]
+    "rgb sigma_a" [0.001 0.001 0.02]
+    "rgb sigma_s" [0.01 0.01 0.03]
+    "float g" [0.4]
+
+# Toggles the camera to be "Born" inside the fog
+MediumInterface "" "fog"
+
+# 2. RENDERER & CAMERA SETUP
+LookAt 0 2 -15   0 2 0   0 1 0
+Camera "perspective" "float fov" [50]
+
+Film "rgb"
+    "integer xresolution" [1800]
+    "integer yresolution" [1600]
+
+#PixelFilter "gaussian" "float xradius" [2] "float yradius" [2]
+
+Sampler "halton" 
+    "integer pixelsamples" [512]
+
+Integrator "volpath" 
+    "integer maxdepth" [128]
+
+WorldBegin
+
+# ---------------------------------------------------------
+# GROUND PLANE
+# ---------------------------------------------------------
+AttributeBegin
+    Material "diffuse" "rgb reflectance" [0.02 0.02 0.05]
+    Shape "trianglemesh"
+        "integer indices" [0 1 2 0 2 3]
+        "point3 P" [-50 0 -50  50 0 -50  50 0 50  -50 0 50]
+AttributeEnd
+
+# ---------------------------------------------------------
+# STREET LAMP COLUMN
+# ---------------------------------------------------------
+AttributeBegin
+    Material "diffuse" "rgb reflectance" [0.02 0.02 0.02]
+    Translate 0 0 0
+    Rotate -90 1 0 0    # Cylinder alignment for v4
+    Shape "cylinder" "float radius" [0.1] "float zmin" [0] "float zmax" [4]
+AttributeEnd
+
+
+# ---------------------------------------------------------
+# LAMP HOOD (Directs light downward)
+# ---------------------------------------------------------
+#AttributeBegin
+#    Material "diffuse" "rgb reflectance" [0.01 0.01 0.01]
+#    Translate 0 4.3 0
+#    Rotate -90 1 0 0
+#    Shape "disk" "float radius" [0.5] "float height" [0]
+#AttributeEnd
+
+
+
+# ---------------------------------------------------------
+# THE LAMP BULB
+# ---------------------------------------------------------
+AttributeBegin
+    Translate 0 4.2 0
+    # Balanced intensity to interact with the baseline fog
+    #AreaLightSource "diffuse" "rgb L" [20 18 12] 
+    AreaLightSource "diffuse" "rgb L" [120 180 200] 
+    Material "diffuse" "rgb reflectance" [0 0 0] 
+    Shape "sphere" "float radius" [0.250]
+AttributeEnd
+
+# Scene ends naturally here in v4. No WorldEnd allowed.

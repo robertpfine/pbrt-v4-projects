@@ -1,0 +1,446 @@
+# ============================================================
+# Auto-generated PBRT-v3 scene
+# Generated on: 12/04/2025 18:59:27
+# Pair ID: additive_emissives_20251204_1859
+# Render output: G:/My Drive/wipImages/PBRT/renders_and_scenes/additive_emissives_20251204_1859_render.png
+# ============================================================
+
+LookAt 0 2 -12   0 1 0   0 1 0
+Camera "perspective" "float fov" [45]
+
+Film "image"
+    "string filename" "G:/My Drive/wipImages/PBRT/renders_and_scenes/additive_emissives_20251204_1859_render.png"
+    "integer xresolution" [800]
+    "integer yresolution" [600]
+
+Sampler "halton" "integer pixelsamples" [256]
+Integrator "volpath" "integer maxdepth" [64]
+
+MakeNamedMedium "fog"
+    "string type" "homogeneous"
+    "rgb sigma_a" [0.0 0.0 0.0]
+    "rgb sigma_s" [0.12 0.12 0.12]
+    "float g" [0.0]
+
+MediumInterface "" "fog"
+
+WorldBegin
+
+MediumInterface "fog" "fog"
+
+# Sphere 1 (blue)
+AttributeBegin
+    Translate -3.21 2.45 1.87
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 2 (red)
+AttributeBegin
+    Translate 1.54 0.32 -2.91
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 3 (green)
+AttributeBegin
+    Translate 4.12 3.88 0.45
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 4 (red)
+AttributeBegin
+    Translate -0.87 1.23 4.56
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 5 (blue)
+AttributeBegin
+    Translate 2.33 4.67 -1.22
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 6 (green)
+AttributeBegin
+    Translate -4.55 0.89 -3.78
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 7 (red)
+AttributeBegin
+    Translate 0.12 2.91 2.34
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 8 (blue)
+AttributeBegin
+    Translate -2.78 4.12 -0.56
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 9 (green)
+AttributeBegin
+    Translate 3.45 1.56 3.21
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 10 (red)
+AttributeBegin
+    Translate -1.23 3.34 -4.67
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 11 (blue)
+AttributeBegin
+    Translate 4.89 0.45 1.11
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 12 (green)
+AttributeBegin
+    Translate -3.67 2.78 -2.34
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 13 (red)
+AttributeBegin
+    Translate 1.98 4.23 4.89
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 14 (blue)
+AttributeBegin
+    Translate -0.34 0.67 -0.89
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 15 (green)
+AttributeBegin
+    Translate 2.67 3.01 0.23
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 16 (red)
+AttributeBegin
+    Translate -4.12 1.89 2.67
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 17 (blue)
+AttributeBegin
+    Translate 0.78 4.56 -3.45
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 18 (green)
+AttributeBegin
+    Translate -2.01 0.12 4.01
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 19 (red)
+AttributeBegin
+    Translate 3.89 2.34 -1.78
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 20 (blue)
+AttributeBegin
+    Translate -1.56 3.67 1.45
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 21 (green)
+AttributeBegin
+    Translate 4.45 0.78 -4.23
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 22 (red)
+AttributeBegin
+    Translate -3.34 4.45 3.56
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 23 (blue)
+AttributeBegin
+    Translate 0.45 1.01 0.67
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 24 (green)
+AttributeBegin
+    Translate -4.78 2.56 -1.01
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 25 (red)
+AttributeBegin
+    Translate 2.12 3.89 2.89
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 26 (blue)
+AttributeBegin
+    Translate -0.67 0.34 -2.12
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 27 (green)
+AttributeBegin
+    Translate 3.01 4.78 4.34
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 28 (red)
+AttributeBegin
+    Translate -2.45 1.45 -3.01
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 29 (blue)
+AttributeBegin
+    Translate 4.67 3.12 1.78
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 30 (green)
+AttributeBegin
+    Translate -1.89 4.01 -0.34
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 31 (red)
+AttributeBegin
+    Translate 0.23 0.56 3.67
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 32 (blue)
+AttributeBegin
+    Translate -3.89 2.23 -4.45
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 33 (green)
+AttributeBegin
+    Translate 1.67 3.45 0.01
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 34 (red)
+AttributeBegin
+    Translate -0.01 4.89 2.12
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 35 (blue)
+AttributeBegin
+    Translate 2.89 0.23 -1.56
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 36 (green)
+AttributeBegin
+    Translate -4.34 1.67 4.78
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 37 (red)
+AttributeBegin
+    Translate 3.56 2.89 -3.89
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 38 (blue)
+AttributeBegin
+    Translate -1.12 3.78 1.23
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 39 (green)
+AttributeBegin
+    Translate 4.01 4.34 3.34
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 40 (red)
+AttributeBegin
+    Translate -2.67 0.01 -2.67
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 41 (blue)
+AttributeBegin
+    Translate 0.89 1.78 4.45
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 42 (green)
+AttributeBegin
+    Translate -3.45 4.67 -0.78
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 43 (red)
+AttributeBegin
+    Translate 1.34 2.12 0.89
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 44 (blue)
+AttributeBegin
+    Translate -4.01 3.34 2.45
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 45 (green)
+AttributeBegin
+    Translate 2.45 0.89 -4.01
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 46 (red)
+AttributeBegin
+    Translate -0.56 1.34 1.56
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 47 (blue)
+AttributeBegin
+    Translate 3.78 4.01 -2.45
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 48 (green)
+AttributeBegin
+    Translate -2.23 2.67 4.12
+    AreaLightSource "diffuse" "rgb L" [0 15 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 49 (red)
+AttributeBegin
+    Translate 4.34 3.56 -0.12
+    AreaLightSource "diffuse" "rgb L" [15 0 0]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Sphere 50 (blue)
+AttributeBegin
+    Translate -1.78 0.45 -1.34
+    AreaLightSource "diffuse" "rgb L" [0 0 15]
+    Material "matte" "rgb Kd" [0.1 0.1 0.1]
+    Shape "sphere" "float radius" [0.3]
+AttributeEnd
+
+# Fog boundary
+AttributeBegin
+    MediumInterface "fog" ""
+    Material "none"
+    Shape "sphere" "float radius" [25]
+AttributeEnd
+
+# Ground
+AttributeBegin
+    Material "matte" "rgb Kd" [0.2 0.2 0.2]
+    Shape "trianglemesh"
+        "integer indices" [0 1 2  0 2 3]
+        "point P" [-20 0 -20   20 0 -20   20 0 20   -20 0 20]
+AttributeEnd
+
+WorldEnd

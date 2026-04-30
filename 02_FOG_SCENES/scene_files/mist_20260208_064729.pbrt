@@ -1,0 +1,29 @@
+# --- THE INTEGRATOR CHANGE ---
+Integrator "volpath"
+
+Sampler "halton" "integer pixelsamples" [64]
+Film "rgb" "string filename" ["/home/rpf4/my-pbrt-projects/02_FOG_SCENES/renders/experiment.png"]
+     "integer xresolution" [800] "integer yresolution" [450]
+
+LookAt 0 4 12  0 1 0  0 1 0
+Camera "perspective" "float fov" [45]
+
+WorldBegin
+    # High-intensity Light (Creates the phasing)
+    AttributeBegin
+        LightSource "point" "point3 from" [10 10 10] "rgb I" [15000 15000 15000]
+    AttributeEnd
+
+    # Your Proven Geometry
+    AttributeBegin
+        Material "dielectric" "float eta" [1.5]
+        Translate 0 1 0
+        Shape "sphere" "float radius" [1]
+    AttributeEnd
+
+    AttributeBegin
+        Material "diffuse" "rgb reflectance" [0.4 0.5 0.4]
+        Shape "trianglemesh" 
+            "integer indices" [0 1 2 0 2 3] 
+            "point3 P" [-10 0 -10  10 0 -10  10 0 10  -10 0 10]
+    AttributeEnd

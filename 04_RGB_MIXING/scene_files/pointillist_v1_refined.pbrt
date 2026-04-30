@@ -1,0 +1,38 @@
+############################################################
+# PROJECT: RGB POINTILLISM
+# FILE: rgb_pointillist_grid.pbrt
+# VERSION: pbrt-v4 (VISIBILITY TEST)
+############################################################
+
+# --- PHASE 1: SYSTEM OPTIONS ---
+Integrator "volpath" "integer maxdepth" [25]
+Sampler "halton" "integer pixelsamples" [2]
+Film "rgb" "integer xresolution" [10000] "integer yresolution" [10000]
+
+LookAt  0 0 -25   0 0 0   0 1 0
+Camera "perspective" "float fov" [50]
+
+# --- PHASE 2: THE WORLD ---
+WorldBegin
+
+    # Thinner medium for testing
+    MakeNamedMedium "procedural_volume" 
+        "string type" "homogeneous"
+        "rgb sigma_s" [ 1 1 1 ] 
+        "rgb sigma_a" [ 0 0 0 ]
+
+    MediumInterface "procedural_volume" ""
+    
+    # Pull the camera back further
+    #Translate 0 0 25
+
+    # Larger container
+    AttributeBegin
+        Material "interface"
+        Shape "sphere" "float radius" 10
+    AttributeEnd
+
+    # Massive lights placed outside the sphere (Radius 10, Lights at 20)
+    LightSource "point" "rgb I" [ 10000 0 0 ] "point3 from" [ -20 0 0 ]
+    LightSource "point" "rgb I" [ 0 10000 0 ] "point3 from" [ 0 20 0 ]
+    LightSource "point" "rgb I" [ 0 0 10000 ] "point3 from" [ 20 0 0 ]

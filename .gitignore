@@ -1,0 +1,29 @@
+# Ignore renders and archives
+generated/
+archive/
+Archive/
+
+# Images
+*.png
+*.exr
+
+*.bin
+*.nvdb
+04_RGB_MIXING/scene_files/pointillist_v2_instances.pbrt
+04_RGB_MIXING/scene_files/rgbgrid_medium_YYYYYY.pbrt
+
+# Renders and logs
+generated/
+archive/
+*.png
+*.exr
+render_log.txt
+
+# Python cache
+__pycache__/
+*.pyc
+
+
+# Blender temp
+*.blend1
+*.blend2
