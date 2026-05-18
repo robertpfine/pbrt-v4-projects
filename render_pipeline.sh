@@ -77,10 +77,23 @@ fi
 sed "s/^# FILE:.*/# FILE: ${SCENE_NAME}/" "${FINAL_BASE}.pbrt" > "${FINAL_BASE}.tmp" && mv "${FINAL_BASE}.tmp" "${FINAL_BASE}.pbrt"
 sed "s/^# PROJECT:.*/# PROJECT: ${PROJECT_TITLE}/" "${FINAL_BASE}.pbrt" > "${FINAL_BASE}.tmp" && mv "${FINAL_BASE}.tmp" "${FINAL_BASE}.pbrt"
 
-# Sync full bundle to Cloud
+# Sync ONLY the 4 newly created files for this specific run to Cloud
 echo "Syncing 4-file archive bundle to Google Drive..."
-rclone copy "$ARCHIVE_DIR" "$REMOTE_PATH"
+rclone copy "$ARCHIVE_DIR" "$REMOTE_PATH" \
+    --include "${PROJECT_TITLE}_${TS}.png" \
+    --include "${PROJECT_TITLE}_${TS}.pbrt" \
+    --include "${PROJECT_TITLE}_${TS}_config.json" \
+    --include "${PROJECT_TITLE}_${TS}_build_scene.py" \
+    --drive-chunk-size=64M \
+    --low-level-retries=5
 
-echo "------------------------------------------------"
-echo "Success: Render Pipeline Complete."
-echo "------------------------------------------------"
+if [ $? -eq 0 ]; then
+    echo "------------------------------------------------"
+    echo "Success: Render Pipeline Complete."
+    echo "------------------------------------------------"
+else
+    echo "------------------------------------------------"
+    echo "WARNING: Render succeeded locally, but Google Drive API rate limit hit."
+    echo "         Files are preserved safely in your local Archive folder."
+    echo "------------------------------------------------"
+fi

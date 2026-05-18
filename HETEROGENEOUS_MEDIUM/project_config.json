@@ -1,0 +1,31 @@
+{
+  "project": {
+    "title": "HETEROGENEOUS_MEDIUM",
+    "remote_archive_path": "gdrive:wipImages/pbrt-v4"
+  },
+  "runtime": {
+    "pbrt_binary": "/home/rpf4/pbrt-v4/build/pbrt",
+    "use_gpu": true,
+    "show_stats": true
+  },
+  "scene": {
+    "master_file": "scene_files/heterogeneous_scene.pbrt",
+    "generated_medium": "scene_files/heterogeneous_grid_medium.pbrt",
+    "associated_mediums": [],
+    "grid": {
+      "nx": 128,
+      "ny": 128,
+      "nz": 128,
+      "axis": "X",
+      "sigma_a": 2.4,
+      "world_min": -1.5,
+      "world_max": 1.5
+    },
+    "zones": [
+      { "position": 0.2, "wavelength": 650, "width": 0.20, "strength": 12.0 },
+      { "position": 0.4, "wavelength": 580, "width": 0.20, "strength": 12.0 },
+      { "position": 0.6, "wavelength": 510, "width": 0.20, "strength": 12.5 },
+      { "position": 0.8, "wavelength": 450, "width": 0.20, "strength": 12.0 }
+    ]
+  }
+}
