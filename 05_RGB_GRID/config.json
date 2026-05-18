@@ -1,14 +1,14 @@
 {
   "project": {
-    "name": "05_RGB_GRID",
+    "name": "04_RGB_MIXING",
     "output_dir": "generated",
-    "render_prefix": "05_RGB_GRID"
+    "render_prefix": "04_RGB_MIXING"
   },
 
   "film": {
-    "filename": "rgbgrid_test.png",
-    "xresolution": 1000,
-    "yresolution": 1000
+    "filename": "rgbMixing_test.png",
+    "xresolution": 2400,
+    "yresolution": 3000
   },
 
   "camera": {
@@ -20,7 +20,7 @@
 
   "integrator": {
     "type": "volpath",
-    "maxdepth": 20
+    "maxdepth": 25
   },
 
   "sampler": {
@@ -104,7 +104,7 @@
   ],
 
   "bowl": {
-    "enabled": true,
+    "enabled": false,
     "file": "models/bowl.ply",
     "translate": [0, -1.45, 1.25],
     "rotate": [90, 0, 0],
