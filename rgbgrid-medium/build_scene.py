@@ -379,6 +379,11 @@ def write_geometry(lines, geometry):
         lines.append(f'# {obj.get("label", "geometry")}')
         lines.append("AttributeBegin")
 
+        # --- Medium binding (after transforms, before shape) ---
+        if "medium" in obj:
+            lines.append(f'    MediumInterface "{obj["medium"]}" ""')
+        
+        
         # --- Material ---
         mat = obj["material"]
         if mat["type"] == "diffuse":
@@ -398,9 +403,7 @@ def write_geometry(lines, geometry):
             a = rot["axis"]
             lines.append(f'    Rotate {rot["angle"]}  {a[0]} {a[1]} {a[2]}')
 
-        # --- Medium binding (after transforms, before shape) ---
-        if "medium" in obj:
-            lines.append(f'    MediumInterface "{obj["medium"]}" ""')
+        
 
         # --- Shape ---
         shp = obj["shape"]
@@ -447,10 +450,10 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_integrator(lines, scene["integrator"])
     lines.append("")
     write_film(lines, scene["film"], scene["output_filename"])
-    write_medium_include(lines, medium_rel_path)
 
     # --- World section ---
     lines += ["WorldBegin", ""]
+    write_medium_include(lines, medium_rel_path)
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
 
