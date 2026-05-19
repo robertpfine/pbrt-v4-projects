@@ -12,7 +12,7 @@
 
   "pipeline": {
     "build_scene": { "enabled": true },
-    "rclone_sync": { "enabled": false }
+    "rclone_sync": { "enabled": true }
   },
 
   "scene": {
