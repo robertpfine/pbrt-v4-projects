@@ -1,0 +1,117 @@
+{
+  "project": {
+    "name": "rgbgrid-medium",
+    "remote_archive_path": "gdrive:wipImages/pbrt-v4"
+  },
+
+  "runtime": {
+    "pbrt_binary": "/home/rpf4/pbrt-v4/build/pbrt",
+    "use_gpu": true,
+    "show_stats": true
+  },
+
+  "pipeline": {
+    "build_scene": { "enabled": true },
+    "rclone_sync": { "enabled": false }
+  },
+
+  "scene": {
+    "master_file":      "scene_files/scene.pbrt",
+    "generated_medium": "scene_files/volumes/rgbgrid.pbrt",
+    "output_filename":  "rgbgrid_poc.png",
+
+    "camera": {
+      "enabled": true,
+      "look_at": {
+        "eye":  [0, 0, -5],
+        "look": [0, -0.25, 0],
+        "up":   [0, 1, 0]
+      },
+      "fov": 45
+    },
+
+    "sampler": {
+      "enabled": true,
+      "type": "halton",
+      "pixel_samples": 128
+    },
+
+    "integrator": {
+      "enabled": true,
+      "type": "volpath",
+      "max_depth": 20
+    },
+
+    "film": {
+      "enabled": true,
+      "x_resolution": 500,
+      "y_resolution": 500
+    },
+
+    "lights": [
+      {
+        "enabled": true,
+        "type": "infinite",
+        "color_mode": "blackbody",
+        "temperature": 4500,
+        "scale": 0.18
+      },
+      {
+        "enabled": true,
+        "type": "point",
+        "position": [0, 3, -3],
+        "color_mode": "blackbody",
+        "temperature": 3200,
+        "scale": 35.0
+      }
+    ],
+
+    "geometry": [
+      {
+        "enabled": false,
+        "label": "ground_plane",
+        "material": { "type": "diffuse", "reflectance": [0.35, 0.32, 0.28] },
+        "transform": { "translate": [0, -1.55, 0] },
+        "shape": {
+          "type": "bilinearmesh",
+          "indices": [0, 1, 2, 3],
+          "points": [-5.0, 0, -5.0,  5.0, 0, -5.0,  5.0, 0, 5.0,  -5.0, 0, 5.0]
+        }
+      },
+      {
+        "enabled": true,
+        "label": "volume_sphere",
+        "material": { "type": "interface" },
+        "medium": "rgb_vol",
+        "transform": {
+          "translate": [0, 0, 0],
+          "rotate": [
+            { "angle": 150, "axis": [0, 1, 0] },
+            { "angle": 20,  "axis": [1, 0, 0] }
+          ]
+        },
+        "shape": {
+          "type": "sphere",
+          "radius": 1.5
+        }
+      }
+    ],
+
+    "grid": {
+      "nx": 128,
+      "ny": 128,
+      "nz": 128,
+      "axis": "X",
+      "sigma_a": 2.4,
+      "world_min": -2.0,
+      "world_max": 2.0
+    },
+
+    "zones": [
+      { "enabled": true, "position": 0.2, "wavelength": 650, "width": 0.20, "strength": 12.0 },
+      { "enabled": true, "position": 0.4, "wavelength": 580, "width": 0.20, "strength": 12.0 },
+      { "enabled": true, "position": 0.6, "wavelength": 510, "width": 0.20, "strength": 12.5 },
+      { "enabled": true, "position": 0.8, "wavelength": 450, "width": 0.20, "strength": 12.0 }
+    ]
+  }
+}

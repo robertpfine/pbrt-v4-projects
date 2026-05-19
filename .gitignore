@@ -1,29 +1,31 @@
-# Ignore renders and archives
-generated/
-archive/
+# ---------------------------------------------------------------
+# pbrt-v4 Projects — .gitignore
+# ---------------------------------------------------------------
+
+# --- Rendered outputs and archives ---
 Archive/
+**/*.png
+**/*.exr
 
-# Images
-*.png
-*.exr
+# --- Generated scene files (produced by build_scene.py at runtime) ---
+**/scene_files/scene.pbrt
+**/scene_files/volumes/
+**/scene_files/meshes/*.ply
 
-*.bin
-*.nvdb
-04_RGB_MIXING/scene_files/pointillist_v2_instances.pbrt
-04_RGB_MIXING/scene_files/rgbgrid_medium_YYYYYY.pbrt
-
-# Renders and logs
-generated/
-archive/
-*.png
-*.exr
-render_log.txt
-
-# Python cache
+# --- Python ---
 __pycache__/
+**/__pycache__/
 *.pyc
+*.pyo
 
+# --- Editor ---
+.vscode/settings.json
+*.swp
+*.swo
 
-# Blender temp
-*.blend1
-*.blend2
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+render_log.txt
