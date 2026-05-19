@@ -1,7 +1,0 @@
-MakeNamedMedium "fog_medium" "string type" "homogeneous"
-    "rgb sigma_s" [ 0.1 0.1 0.1 ]
-    "float g" [ 0.9 ]
-AttributeBegin
-    MediumInterface "fog_medium" ""
-    Shape "sphere" "float radius" [ 15.0 ]
-AttributeEnd
