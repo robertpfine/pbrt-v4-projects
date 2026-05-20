@@ -160,6 +160,31 @@ def compute_rgbgrid(grid_cfg, zones):
 # SECTION 4 — WRITE MEDIUM FILE (scene_files/volumes/rgbgrid.pbrt)
 # ==============================================================
 
+def write_fog_medium(cfg, lines):
+    """
+    Write a homogeneous fog medium named "fog" into the world section.
+    This creates the exterior atmospheric medium that makes god rays visible.
+    Config reads: scene.fog (enabled, sigma_a, sigma_s, g)
+
+    pbrt note: MakeNamedMedium for homogeneous media can appear inside
+    the world section, unlike rgbgrid which uses Include.
+    """
+    fog = cfg["scene"].get("fog")
+    if not fog or not fog.get("enabled", True):
+        return
+
+    lines += [
+        'MakeNamedMedium "fog"',
+        '    "string type"  [ "homogeneous" ]',
+        f'    "rgb sigma_a" [ {fog["sigma_a"]} {fog["sigma_a"]} {fog["sigma_a"]} ]',
+        f'    "rgb sigma_s" [ {fog["sigma_s"]} {fog["sigma_s"]} {fog["sigma_s"]} ]',
+        f'    "float g"     [ {fog["g"]} ]',
+        '',
+        'MediumInterface "fog" ""',
+        '',
+    ]
+
+
 def write_medium(cfg, project_root):
     """
     Generate scene_files/volumes/rgbgrid.pbrt.
@@ -353,6 +378,21 @@ def write_lights(lines, lights):
                 f'  "float scale" [ {scale} ]'
             )
 
+    
+        elif ltype == "spot":
+            p = light["position"]
+            l = light["look_at"]
+            lines.append(
+                f'LightSource "spot"'
+                f'  "point3 from" [ {p[0]} {p[1]} {p[2]} ]'
+                f'  "point3 to"   [ {l[0]} {l[1]} {l[2]} ]'
+                f'  "float coneangle"      [ {light["cone_angle"]} ]'
+                f'  "float conedeltaangle" [ {light["cone_delta_angle"]} ]'
+                f'  "{mode} I" [ {temp} ]'
+                f'  "float scale" [ {scale} ]'
+            )
+    
+    
     lines.append("")
 
 
@@ -456,6 +496,7 @@ def write_scene(cfg, project_root, medium_rel_path):
 
     # --- World section ---
     lines += ["WorldBegin", ""]
+    write_fog_medium(cfg, lines)
     write_medium_include(lines, medium_rel_path)
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))

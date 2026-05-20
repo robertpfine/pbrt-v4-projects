@@ -50,20 +50,32 @@
 
     "lights": [
       {
-        "enabled": true,
+        "enabled": false,
         "type": "infinite",
         "color_mode": "blackbody",
         "temperature": 4500,
         "scale": 0.18
       },
       {
-        "enabled": true,
+        "enabled": false,
         "type": "point",
         "position": [0, 3, -3],
         "color_mode": "blackbody",
         "temperature": 1850,
         "scale": 35.0
-      }
+      },
+
+      {
+        "enabled": true,
+        "type": "spot",
+        "position": [0, 8, 0],
+        "look_at": [0, 0, 0],
+        "cone_angle": 20,
+        "cone_delta_angle": 5,
+        "color_mode": "blackbody",
+        "temperature": 5500,
+        "scale": 500.0
+}
     ],
 
     "geometry": [
@@ -110,6 +122,21 @@
       "world_max": 2.0
     },
 
+    "fog": {
+      "enabled": false,
+      "sigma_a": 0.02,
+      "sigma_s": 0.15,
+      "g": 0.0
+    },
+
+
+    "fog": {
+      "enabled": true,
+      "sigma_a": 1.02,
+      "sigma_s": 1.15,
+      "g": 0.0
+    },
+    
     "zones": [
       { "enabled": true, "position": 0.2, "wavelength": 650, "width": 0.050, "strength": 12.0 },
       { "enabled": true, "position": 0.4, "wavelength": 580, "width": 0.050, "strength": 12.0 },
