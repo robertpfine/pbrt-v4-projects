@@ -180,7 +180,7 @@ def write_fog_medium(cfg, lines):
         f'    "rgb sigma_s" [ {fog["sigma_s"]} {fog["sigma_s"]} {fog["sigma_s"]} ]',
         f'    "float g"     [ {fog["g"]} ]',
         '',
-        'MediumInterface "fog" ""',
+        'MediumInterface "" "fog"',
         '',
     ]
 
@@ -420,7 +420,11 @@ def write_geometry(lines, geometry):
         lines.append("AttributeBegin")
 
         # --- Medium binding (after transforms, before shape) ---
-        if "medium" in obj:
+        if "medium_interior" in obj or "medium_exterior" in obj:
+            interior = obj.get("medium_interior", "")
+            exterior = obj.get("medium_exterior", "")
+            lines.append(f'    MediumInterface "{interior}" "{exterior}"')
+        elif "medium" in obj:
             lines.append(f'    MediumInterface "{obj["medium"]}" ""')
         
         
@@ -488,15 +492,17 @@ def write_scene(cfg, project_root, medium_rel_path):
 
     # --- Pre-world section ---
     write_header(lines, proj)
+    write_fog_medium(cfg, lines)
     write_camera(lines, scene["camera"])
     write_sampler(lines, scene["sampler"])
     write_integrator(lines, scene["integrator"])
     lines.append("")
     write_film(lines, scene["film"], scene["output_filename"])
+    
 
     # --- World section ---
     lines += ["WorldBegin", ""]
-    write_fog_medium(cfg, lines)
+    
     write_medium_include(lines, medium_rel_path)
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
