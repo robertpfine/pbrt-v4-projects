@@ -68,16 +68,19 @@
 
     "geometry": [
       {
-        "enabled": false,
+        "enabled": true,
         "label": "ground_plane",
         "material": { "type": "diffuse", "reflectance": [0.35, 0.32, 0.28] },
-        "transform": { "translate": [0, -1.55, 0] },
+        "transform": {
+        "translate": [0, -1.55, 0],
+        "rotate": [{ "angle": 90, "axis": [1, 0, 0] }]
+        },
         "shape": {
-          "type": "bilinearmesh",
-          "indices": [0, 1, 2, 3],
-          "points": [-5.0, 0, -5.0,  5.0, 0, -5.0,  5.0, 0, 5.0,  -5.0, 0, 5.0]
+        "type": "disk",
+        "radius": 5.0
         }
       },
+      
       {
         "enabled": true,
         "label": "volume_sphere",

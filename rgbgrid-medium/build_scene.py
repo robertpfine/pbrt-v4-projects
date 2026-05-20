@@ -302,9 +302,9 @@ def write_medium_include(lines, medium_rel_path):
     """
     Write the Include directive for the generated rgbgrid medium file.
 
-    IMPORTANT: This Include must appear BEFORE WorldBegin.
-    pbrt requires MakeNamedMedium declarations in the pre-world
-    (options) section. Placing them after WorldBegin is a parse error.
+    IMPORTANT: This Include must appear AFTER WorldBegin.
+    Despite containing a MakeNamedMedium declaration, pbrt-v4
+    correctly handles medium Includes inside the world section.
 
     Input: medium_rel_path — path relative to the project root,
                              as returned by write_medium().
@@ -409,6 +409,9 @@ def write_geometry(lines, geometry):
         shp = obj["shape"]
         if shp["type"] == "sphere":
             lines.append(f'    Shape "sphere"  "float radius" [ {shp["radius"]} ]')
+
+        elif shp["type"] == "disk":
+            lines.append(f'    Shape "disk"  "float radius" [ {shp["radius"]} ]')   
 
         elif shp["type"] == "bilinearmesh":
             idx = " ".join(str(x) for x in shp["indices"])
