@@ -23,8 +23,8 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [3, 1, -10],
-        "look": [0, -0.25, 0],
+        "eye":  [0, 0, 6],
+        "look": [0, 0, 0],
         "up":   [0, 1, 0]
       },
       "fov": 45
@@ -44,8 +44,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 5000,
-      "y_resolution": 5000
+      "x_resolution": 1500,
+      "y_resolution": 1000
     },
 
     "lights": [
@@ -64,7 +64,6 @@
         "temperature": 1850,
         "scale": 35.0
       },
-
       {
         "enabled": true,
         "type": "spot",
@@ -75,7 +74,7 @@
         "color_mode": "blackbody",
         "temperature": 5500,
         "scale": 500.0
-}
+      }
     ],
 
     "geometry": [
@@ -84,17 +83,17 @@
         "label": "ground_plane",
         "material": { "type": "diffuse", "reflectance": [0.35, 0.32, 0.28] },
         "transform": {
-        "translate": [0, -1.55, 0],
-        "rotate": [{ "angle": 90, "axis": [1, 0, 0] }]
+          "translate": [0, -1.0, 0],
+          "rotate": [{ "angle": 90, "axis": [1, 0, 0] }]
         },
         "shape": {
-        "type": "disk",
-        "radius": 5.0
+          "type": "disk",
+          "radius": 10.0
         }
       },
 
       {
-        "enabled": true,
+        "enabled": false,
         "label": "volume_sphere",
         "material": { "type": "interface" },
         "medium": "rgb_vol",
@@ -102,10 +101,26 @@
           "translate": [0, 0, 0],
           "rotate": [
             { "angle": 150, "axis": [0, 1, 0] },
-            { "angle": 20,  "axis": [1, 0, 0] }]},
+            { "angle": 20,  "axis": [1, 0, 0] }
+          ]
+        },
         "shape": {
           "type": "sphere",
           "radius": 1.5
+        }
+      },
+
+      {
+        "enabled": true,
+        "label": "volume_box",
+        "material": { "type": "interface" },
+        "medium": "rgb_vol",
+        "transform": { "translate": [0, 0, 0], "rotate": [] },
+        "shape": {
+          "type": "box",
+          "x_min": -4.35, "x_max": 4.35,
+          "y_min": -1.0,  "y_max": 4.0,
+          "z_min": -9.0,  "z_max": -1.0
         }
       },
 
@@ -117,32 +132,21 @@
         "medium_exterior": "",
         "transform": { "translate": [0, 0, 0] },
         "shape": {
-            "type": "sphere",
-            "radius": 20.0
+          "type": "sphere",
+          "radius": 20.0
         }
       }
     ],
 
     "grid": {
       "nx": 256,
-      "ny": 256,
-      "nz": 256,
+      "ny": 64,
+      "nz": 128,
       "axis": "X",
       "sigma_a": 0.4,
-      "world_min": -2.0,
-      "world_max": 2.0
+      "world_min": [-4.35, -1.0, -9.0],
+      "world_max": [ 4.35,  4.0, -1.0]
     },
-
-    
-
-
-    "fog": {
-      "enabled": false,
-      "sigma_a": 0.0,
-      "sigma_s": 0.04,
-      "g": 0.0
-    },
-
 
     "fog": {
       "enabled": true,
@@ -150,7 +154,7 @@
       "sigma_s": 0.04,
       "g": 0.0
     },
-    
+
     "zones": [
       { "enabled": true, "position": 0.2, "wavelength": 650, "width": 0.050, "strength": 12.0 },
       { "enabled": true, "position": 0.4, "wavelength": 580, "width": 0.050, "strength": 12.0 },

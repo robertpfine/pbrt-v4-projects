@@ -221,8 +221,8 @@ def write_medium(cfg, project_root):
         f'    "integer ny"    [ {g_cfg["ny"]} ]\n'
         f'    "integer nz"    [ {g_cfg["nz"]} ]\n'
         # p0/p1 define the world-space bounding box of the volume
-        f'    "point3 p0"     [ {g_cfg["world_min"]} {g_cfg["world_min"]} {g_cfg["world_min"]} ]\n'
-        f'    "point3 p1"     [ {g_cfg["world_max"]} {g_cfg["world_max"]} {g_cfg["world_max"]} ]\n'
+        f'    "point3 p0"     [ {g_cfg["world_min"][0]} {g_cfg["world_min"][1]} {g_cfg["world_min"][2]} ]\n'
+        f'    "point3 p1"     [ {g_cfg["world_max"][0]} {g_cfg["world_max"][1]} {g_cfg["world_max"][2]} ]\n'
         # g is the Henyey-Greenstein anisotropy parameter: 0.0 = isotropic
         f'    "float g"       [ 0.0 ]\n'
         f'    "rgb sigma_a"   [\n'
@@ -465,6 +465,38 @@ def write_geometry(lines, geometry):
                 f'        "integer indices" [ {idx} ]',
                 f'        "point3 P"        [ {pts} ]',
             ]
+
+        elif shp["type"] == "box":
+            x0, x1 = shp["x_min"], shp["x_max"]
+            y0, y1 = shp["y_min"], shp["y_max"]
+            z0, z1 = shp["z_min"], shp["z_max"]
+
+            # 8 corners of the box
+            # 0: x0 y0 z0,  1: x1 y0 z0,  2: x1 y1 z0,  3: x0 y1 z0
+            # 4: x0 y0 z1,  5: x1 y0 z1,  6: x1 y1 z1,  7: x0 y1 z1
+            pts_list = [
+                x0, y0, z0,  x1, y0, z0,  x1, y1, z0,  x0, y1, z0,
+                x0, y0, z1,  x1, y0, z1,  x1, y1, z1,  x0, y1, z1
+            ]
+            pts = "  ".join(str(v) for v in pts_list)
+
+            # 6 faces, each as 2 triangles (12 triangles total)
+            # Winding order: normals point inward (into the medium)
+            idx = (
+                "0 2 1  0 3 2 "   # front face
+                "5 7 4  5 6 7 "   # back face
+                "4 3 0  4 7 3 "   # left face
+                "1 6 5  1 2 6 "   # right face
+                "4 1 5  4 0 1 "   # bottom face
+                "3 6 2  3 7 6"    # top face
+            )
+
+            lines += [
+                '    Shape "trianglemesh"',
+                f'        "integer indices" [ {idx} ]',
+                f'        "point3 P"        [ {pts} ]',
+            ]
+
 
         lines.append("AttributeEnd")
         lines.append("")
