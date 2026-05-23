@@ -23,17 +23,17 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 0, 6],
-        "look": [0, 0, 0],
+        "eye":  [0, 0, 10.0],
+        "look": [0, 3.0, 0],
         "up":   [0, 1, 0]
       },
-      "fov": 45
+      "fov": 70
     },
 
     "sampler": {
       "enabled": true,
       "type": "halton",
-      "pixel_samples": 256
+      "pixel_samples": 128
     },
 
     "integrator": {
@@ -44,8 +44,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 1500,
-      "y_resolution": 1000
+      "x_resolution": 500,
+      "y_resolution": 333
     },
 
     "lights": [
@@ -65,7 +65,7 @@
         "scale": 35.0
       },
       {
-        "enabled": true,
+        "enabled": false,
         "type": "spot",
         "position": [0, 8, 0],
         "look_at": [0, 0, 0],
@@ -74,8 +74,17 @@
         "color_mode": "blackbody",
         "temperature": 5500,
         "scale": 500.0
-      }
-    ],
+      },
+      {
+        "enabled": true,
+        "type": "distant",
+        "from": [0, 2.0, 10],
+        "to": [0, 0, 0],
+        "color_mode": "blackbody",
+        "temperature": 5500,
+        "scale": 4.0
+    }
+  ],
 
     "geometry": [
       {
@@ -88,7 +97,7 @@
         },
         "shape": {
           "type": "disk",
-          "radius": 10.0
+          "radius": 20.0
         }
       },
 
@@ -118,8 +127,8 @@
         "transform": { "translate": [0, 0, 0], "rotate": [] },
         "shape": {
           "type": "box",
-          "x_min": -4.35, "x_max": 4.35,
-          "y_min": -1.0,  "y_max": 4.0,
+          "x_min": -18.0, "x_max": 18.0,
+          "y_min": -2.0,   "y_max": 16.0,
           "z_min": -9.0,  "z_max": -1.0
         }
       },
@@ -142,24 +151,30 @@
       "nx": 256,
       "ny": 64,
       "nz": 128,
-      "axis": "X",
+      "axis": "Y",
       "sigma_a": 0.4,
-      "world_min": [-4.35, -1.0, -9.0],
-      "world_max": [ 4.35,  4.0, -1.0]
+      "world_min": [-18.0, -2.0, -9.0],
+      "world_max": [ 18.0, 16.0, -1.0],
+      "noise": {
+        "enabled": true,
+        "frequency": 0.5,
+        "amplitude": 0.15,
+        "mode": "position"
+      }
     },
 
     "fog": {
-      "enabled": true,
+      "enabled": false,
       "sigma_a": 0.0,
       "sigma_s": 0.04,
       "g": 0.0
     },
 
     "zones": [
-      { "enabled": true, "position": 0.2, "wavelength": 650, "width": 0.050, "strength": 12.0 },
-      { "enabled": true, "position": 0.4, "wavelength": 580, "width": 0.050, "strength": 12.0 },
-      { "enabled": true, "position": 0.6, "wavelength": 510, "width": 0.050, "strength": 12.5 },
-      { "enabled": true, "position": 0.8, "wavelength": 450, "width": 0.050, "strength": 12.0 }
+      { "enabled": true, "position": 0.2, "wavelength": 650, "width": 0.150, "strength": 12.0 },
+      { "enabled": true, "position": 0.4, "wavelength": 580, "width": 0.150, "strength": 12.0 },
+      { "enabled": true, "position": 0.6, "wavelength": 510, "width": 0.150, "strength": 12.5 },
+      { "enabled": true, "position": 0.8, "wavelength": 450, "width": 0.150, "strength": 12.0 }
     ]
   }
 }

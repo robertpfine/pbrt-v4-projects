@@ -22,6 +22,7 @@ Usage:
 import os
 import sys
 import json
+from noise import pnoise3
 
 
 # ==============================================================
@@ -135,14 +136,25 @@ def compute_rgbgrid(grid_cfg, zones):
                 elif axis == "Y": t = (j + 0.5) / ny
                 else:             t = (k + 0.5) / nz
 
+                # Noise modulation
+                noise_cfg = grid_cfg.get("noise", {})
+                noise_enabled = noise_cfg.get("enabled", False)
+                if noise_enabled:
+                    freq = noise_cfg.get("frequency", 0.5)
+                    amp  = noise_cfg.get("amplitude", 0.15)
+                    n = pnoise3(i * freq / nx, j * freq / ny, k * freq / nz)
+                else:
+                    n = 0.0
+
                 # Accumulate RGB scattering from all enabled zones
                 sr = sg = sb = 0.0
                 for zone in zones:
                     if not zone.get("enabled", True):
                         continue
 
-                    # Tent-function weight: 1.0 at zone center, 0.0 at zone edge
-                    d = abs(t - zone["position"])
+                    # Tent-function weight with optional noise position shift
+                    t_shifted = t + n * amp if noise_enabled else t
+                    d = abs(t_shifted - zone["position"])
                     w = max(0.0, 1.0 - d / zone["width"])
 
                     rgb = wavelength_to_rgb(zone["wavelength"])
@@ -377,7 +389,7 @@ def write_lights(lines, lights):
                 f'  "{mode} I" [ {temp} ]'
                 f'  "float scale" [ {scale} ]'
             )
-
+ 
     
         elif ltype == "spot":
             p = light["position"]
@@ -392,6 +404,16 @@ def write_lights(lines, lights):
                 f'  "float scale" [ {scale} ]'
             )
     
+        elif ltype == "distant":
+            f = light["from"]
+            t = light["to"]
+            lines.append(
+                f'LightSource "distant"'
+                f'  "point3 from" [ {f[0]} {f[1]} {f[2]} ]'
+                f'  "point3 to"   [ {t[0]} {t[1]} {t[2]} ]'
+                f'  "{light["color_mode"]} L" [ {light["temperature"]} ]'
+                f'  "float scale" [ {light["scale"]} ]'
+            )
     
     lines.append("")
 
