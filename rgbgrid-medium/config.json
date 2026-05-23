@@ -157,9 +157,21 @@
       "world_max": [ 18.0, 16.0, -1.0],
       "noise": {
         "enabled": true,
-        "frequency": 0.5,
-        "amplitude": 0.15,
-        "mode": "position"
+        "mode": "position",
+        "position": {
+          "frequency": 1.5,
+          "amplitude": 0.3,
+          "octaves": 4,
+          "persistence": 0.5,
+          "lacunarity": 2.0
+        },
+        "density": {
+          "frequency": 2.0,
+          "amplitude": 0.8,
+          "octaves": 6,
+          "persistence": 0.6,
+          "lacunarity": 2.0
+        }
       }
     },
 

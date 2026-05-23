@@ -139,12 +139,36 @@ def compute_rgbgrid(grid_cfg, zones):
                 # Noise modulation
                 noise_cfg = grid_cfg.get("noise", {})
                 noise_enabled = noise_cfg.get("enabled", False)
+                mode = noise_cfg.get("mode", "position")
+
                 if noise_enabled:
-                    freq = noise_cfg.get("frequency", 0.5)
-                    amp  = noise_cfg.get("amplitude", 0.15)
-                    n = pnoise3(i * freq / nx, j * freq / ny, k * freq / nz)
+                    pos_cfg = noise_cfg.get("position", {})
+                    den_cfg = noise_cfg.get("density", {})
+
+                    if mode in ("position", "both"):
+                        pf = pos_cfg.get("frequency", 0.5)
+                        n_pos = pnoise3(
+                            i * pf / nx, j * pf / ny, k * pf / nz,
+                            octaves     = pos_cfg.get("octaves",     4),
+                            persistence = pos_cfg.get("persistence", 0.5),
+                            lacunarity  = pos_cfg.get("lacunarity",  2.0)
+                        )
+                    else:
+                        n_pos = 0.0
+
+                    if mode in ("density", "both"):
+                        df = den_cfg.get("frequency", 2.0)
+                        n_den = pnoise3(
+                            i * df / nx, j * df / ny, k * df / nz,
+                            octaves     = den_cfg.get("octaves",     6),
+                            persistence = den_cfg.get("persistence", 0.6),
+                            lacunarity  = den_cfg.get("lacunarity",  2.0)
+                        )
+                    else:
+                        n_den = 0.0
                 else:
-                    n = 0.0
+                    n_pos = 0.0
+                    n_den = 0.0
 
                 # Accumulate RGB scattering from all enabled zones
                 sr = sg = sb = 0.0
@@ -152,15 +176,21 @@ def compute_rgbgrid(grid_cfg, zones):
                     if not zone.get("enabled", True):
                         continue
 
-                    # Tent-function weight with optional noise position shift
-                    t_shifted = t + n * amp if noise_enabled else t
+                    # Position shift
+                    pos_amp = noise_cfg.get("position", {}).get("amplitude", 0.15)
+                    t_shifted = t + n_pos * pos_amp if noise_enabled else t
                     d = abs(t_shifted - zone["position"])
                     w = max(0.0, 1.0 - d / zone["width"])
 
+                    # Density modulation
+                    den_amp = noise_cfg.get("density", {}).get("amplitude", 0.8)
+                    density_scale = 1.0 + n_den * den_amp if noise_enabled else 1.0
+                    density_scale = max(0.0, density_scale)
+
                     rgb = wavelength_to_rgb(zone["wavelength"])
-                    sr += w * zone["strength"] * rgb[0]
-                    sg += w * zone["strength"] * rgb[1]
-                    sb += w * zone["strength"] * rgb[2]
+                    sr += w * zone["strength"] * density_scale * rgb[0]
+                    sg += w * zone["strength"] * density_scale * rgb[1]
+                    sb += w * zone["strength"] * density_scale * rgb[2]
 
                 sigma_s      += [sr, sg, sb]
                 sigma_a_flat += [sigma_a_val, sigma_a_val, sigma_a_val]
