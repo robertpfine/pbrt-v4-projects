@@ -76,7 +76,7 @@
         "scale": 500.0
       },
       {
-        "enabled": true,
+        "enabled": false,
         "type": "distant",
         "from": [0, 2.0, 10],
         "to": [0, 0, 0],
@@ -155,6 +155,10 @@
       "sigma_a": 0.4,
       "world_min": [-18.0, -2.0, -9.0],
       "world_max": [ 18.0, 16.0, -1.0],
+      "emission": {
+        "enabled": true,
+        "le_scale": 0.010
+      },
       "noise": {
         "enabled": true,
         "mode": "position",

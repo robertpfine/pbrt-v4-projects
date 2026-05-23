@@ -126,6 +126,7 @@ def compute_rgbgrid(grid_cfg, zones):
 
     sigma_s      = []
     sigma_a_flat = []
+    le_flat      = []
 
     for k in range(nz):
         for j in range(ny):
@@ -194,8 +195,9 @@ def compute_rgbgrid(grid_cfg, zones):
 
                 sigma_s      += [sr, sg, sb]
                 sigma_a_flat += [sigma_a_val, sigma_a_val, sigma_a_val]
+                le_flat      += [sr, sg, sb]
 
-    return sigma_s, sigma_a_flat
+    return sigma_s, sigma_a_flat, le_flat
 
 
 # ==============================================================
@@ -254,7 +256,18 @@ def write_medium(cfg, project_root):
     print(f"  Building {g_cfg['nx']}x{g_cfg['ny']}x{g_cfg['nz']} rgbgrid "
           f"(axis={g_cfg['axis']}, sigma_a={g_cfg['sigma_a']})...")
 
-    sigma_s, sigma_a_flat = compute_rgbgrid(g_cfg, zones)
+    sigma_s, sigma_a_flat, le_flat = compute_rgbgrid(g_cfg, zones)
+
+    emission_cfg = g_cfg.get("emission", {})
+    emission_enabled = emission_cfg.get("enabled", False)
+    le_scale = emission_cfg.get("le_scale", 1.0)
+
+    le_block = (
+        f'    "float Lescale" [ {le_scale} ]\n'
+        f'    "rgb Le"   [\n'
+        f'{fmt_floats(le_flat)}\n'
+        f'    ]\n'
+    ) if emission_enabled else ""
 
     content = (
         f'MakeNamedMedium "rgb_vol"\n'
@@ -262,10 +275,8 @@ def write_medium(cfg, project_root):
         f'    "integer nx"    [ {g_cfg["nx"]} ]\n'
         f'    "integer ny"    [ {g_cfg["ny"]} ]\n'
         f'    "integer nz"    [ {g_cfg["nz"]} ]\n'
-        # p0/p1 define the world-space bounding box of the volume
         f'    "point3 p0"     [ {g_cfg["world_min"][0]} {g_cfg["world_min"][1]} {g_cfg["world_min"][2]} ]\n'
         f'    "point3 p1"     [ {g_cfg["world_max"][0]} {g_cfg["world_max"][1]} {g_cfg["world_max"][2]} ]\n'
-        # g is the Henyey-Greenstein anisotropy parameter: 0.0 = isotropic
         f'    "float g"       [ 0.0 ]\n'
         f'    "rgb sigma_a"   [\n'
         f'{fmt_floats(sigma_a_flat)}\n'
@@ -273,6 +284,7 @@ def write_medium(cfg, project_root):
         f'    "rgb sigma_s"   [\n'
         f'{fmt_floats(sigma_s)}\n'
         f'    ]\n'
+        f'{le_block}'
     )
 
     os.makedirs(os.path.dirname(out), exist_ok=True)
