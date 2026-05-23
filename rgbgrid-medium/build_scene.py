@@ -602,6 +602,10 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_medium_include(lines, medium_rel_path)
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
+    # Include tree geometry if enabled
+    tree_cfg = cfg["scene"].get("tree", {})
+    if tree_cfg.get("enabled", False):
+        lines.append('Include "scene_files/tree.pbrt"')
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w") as f:

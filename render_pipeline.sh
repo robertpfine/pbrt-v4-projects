@@ -63,6 +63,24 @@ else
     echo "Skipping build_scene.py (disabled in config)."
 fi
 
+# --- 5b. RUN SPACE COLONIZATION (if enabled) ---
+TREE_ENABLED=$(jq -r '.scene.tree.enabled // false' "$CONFIG_FILE")
+if [ "$TREE_ENABLED" = "true" ]; then
+    SPACE_COL="${REPO_ROOT}/space_col.py"
+    if [ ! -f "$SPACE_COL" ]; then
+        echo "ERROR: space_col.py not found in repo root."
+        exit 1
+    fi
+    echo "Running space_col.py for project: $PROJECT_NAME"
+    python3 "$SPACE_COL" "$CONFIG_FILE"
+    if [ $? -ne 0 ]; then
+        echo "ERROR: space_col.py failed."
+        exit 1
+    fi
+else
+    echo "Skipping space_col.py (tree disabled in config)."
+fi
+
 # --- 6. VALIDATE SCENE FILE EXISTS ---
 if [ ! -f "$SCENE_PATH" ]; then
     echo "ERROR: Scene file not found at: $SCENE_PATH"
