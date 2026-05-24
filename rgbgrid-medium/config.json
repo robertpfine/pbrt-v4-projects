@@ -194,6 +194,14 @@
       { "enabled": true, "position": 0.8, "wavelength": 450, "width": 0.150, "strength": 12.0 }
     ],
 
+    "foliage": {
+      "enabled": true,
+      "internode_distance": 0.3,
+      "leaf_angle": 45.0,
+      "min_loop_index": 5,
+      "max_branch_radius": 0.05,
+      "leaf_scale": 0.3 
+      },
 
     "tree": {
       "enabled": true,
