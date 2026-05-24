@@ -109,8 +109,8 @@ class Tree3D:
         self.cfg         = cfg
         D                = cfg['D']
         self.growth_dist = D
-        self.min_dist    = cfg['dk'] * D
-        self.max_dist    = cfg['di'] * D
+        self.min_dist    = cfg['dk_multiplier'] * D
+        self.max_dist    = cfg['di_multiplier'] * D
         self.max_loops   = cfg['max_loops']
         self.min_leaves  = cfg['min_leaves']
         self.actual_loops = 0
@@ -119,6 +119,7 @@ class Tree3D:
 
         # Generate attraction points
         self.leaves   = self._generate_leaves()
+        self.leaves_initial = len(self.leaves)
         
         # Initialize root branch growing upward from configured position
         self.branches = []
@@ -246,11 +247,24 @@ class Tree3D:
             gx, gy, gz = tropism['x'], tropism['y'], tropism['z']
             tropism_strength = tropism.get('strength', 0.1)
 
+        prev_leaf_count = len(self.leaves)
+        stuck_iterations = 0
+        max_stuck = 5
+
         for iteration in range(max_loops):
 
             if len(self.leaves) < min_leaves:
                 print(f"  Growth complete: {len(self.leaves)} leaves remaining")
                 break
+
+            if len(self.leaves) == prev_leaf_count and len(self.leaves) < self.leaves_initial:
+                stuck_iterations += 1
+                if stuck_iterations >= max_stuck:
+                    print(f"  Growth stalled: {len(self.leaves)} leaves unreachable, stopping.")
+                    break
+            else:
+                stuck_iterations = 0
+                prev_leaf_count = len(self.leaves)
 
             self.actual_loops = iteration
 
@@ -376,6 +390,7 @@ class Tree3D:
                 visited.add(node_id)
 
         # Assign radii basipetally
+        max_radius = cfg.get('trunk_radius', r0)
         for branch in order:
             node_id = id(branch)
             kids = children[node_id]
@@ -383,8 +398,11 @@ class Tree3D:
                 # Tip node
                 radii[node_id] = r0
             else:
-                # Murray's law
-                radii[node_id] = sum(radii[id(k)]**n for k in kids) ** (1.0/n)
+                # Murray's law — capped at trunk_radius
+                radii[node_id] = min(
+                    sum(radii[id(k)]**n for k in kids) ** (1.0/n),
+                    max_radius
+                )
 
         self._radii = radii
         self._children = children        
