@@ -44,8 +44,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 1500,
-      "y_resolution": 1000
+      "x_resolution": 5000,
+      "y_resolution": 4000
     },
 
     "lights": [
