@@ -390,7 +390,7 @@ class Tree3D:
                 visited.add(node_id)
 
         # Assign radii basipetally
-        max_radius = cfg.get('trunk_radius', r0)
+        max_radius = self.cfg.get('trunk_radius', r0)
         for branch in order:
             node_id = id(branch)
             kids = children[node_id]
@@ -440,7 +440,9 @@ class Tree3D:
         results = []
         for branch in self.branches[1:]:
             bx, by, bz = branch.pos()
-            radius = self._radii.get(id(branch), self.cfg.get('base_radius', 0.015))
+            joint_mult = self.cfg.get('joint_radius_multiplier', 1.2)
+            joint_cap = self.cfg.get('joint_radius_cap', self.cfg.get('base_radius', 0.015) * 10)
+            radius = min(self._radii.get(id(branch), self.cfg.get('base_radius', 0.015)) * joint_mult, joint_cap)
             results.append(((bx, by, bz), radius))
 
         return results
