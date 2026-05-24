@@ -171,34 +171,314 @@ def compute_phyllotaxis_points(tree, frames, foliage_cfg):
 # 4. Leaf Venation
 # =============================================================================
 
+class LeafBoundary:
+    """
+    Parametric leaf boundary in 2D local space.
+    x axis — along leaf length (petiole to tip)
+    y axis — across leaf width
+
+    Supported types:
+      ellipse  — simple elliptical boundary
+      ovate    — wider near base, narrower at tip (most common dicot leaf)
+    """
+
+    def __init__(self, cfg):
+        self.type   = cfg.get('type', 'ovate')
+        self.length = cfg.get('length', 1.0)   # along x axis
+        self.width  = cfg.get('width',  0.5)   # along y axis
+
+    def contains(self, x, y):
+        """Returns True if point (x,y) is inside the leaf boundary."""
+        if self.type == 'ellipse':
+            return self._ellipse(x, y)
+        elif self.type == 'ovate':
+            return self._ovate(x, y)
+        return False
+
+    def _ellipse(self, x, y):
+        cx = self.length / 2
+        return ((x - cx) / (self.length / 2))**2 + (y / (self.width / 2))**2 <= 1.0
+
+    def _ovate(self, x, y):
+        # Ovate: widest at ~1/3 from base, narrows toward tip
+        # x in [0, length], y in [-width/2, width/2]
+        if x < 0 or x > self.length:
+            return False
+        t = x / self.length  # normalized position 0=base 1=tip
+        # Half-width varies along x: peaks at t=0.35, zero at t=0 and t=1
+        half_w = self.width / 2 * 4 * t * (1 - t) * (1 + 0.4 * (0.35 - t))
+        return abs(y) <= half_w
+
+    def sample_poisson(self, n_sources, birth_dist, seed=42):
+        """
+        Dart throwing (Poisson disk) within boundary.
+        Returns list of (x, y) auxin source positions.
+        """
+        random.seed(seed)
+        sources  = []
+        src_arr  = np.empty((0, 2))
+        attempts = 0
+        max_att  = n_sources * 50
+
+        while len(sources) < n_sources and attempts < max_att:
+            attempts += 1
+            x = random.uniform(0, self.length)
+            y = random.uniform(-self.width / 2, self.width / 2)
+
+            if not self.contains(x, y):
+                continue
+
+            if len(sources) > 0:
+                dists = np.sqrt(((src_arr[:, 0] - x)**2) +
+                                ((src_arr[:, 1] - y)**2))
+                if np.min(dists) < birth_dist:
+                    continue
+
+            sources.append((x, y))
+            src_arr = (np.vstack([src_arr, [x, y]])
+                       if len(sources) > 1 else np.array([[x, y]]))
+
+        return sources
+    
+
+class LeafVenation:
+    """
+    2D space colonization for leaf venation.
+    Runs in local leaf coordinate space.
+    Reference: Runions et al. 2005, Section 3.
+
+    Vein nodes grow toward auxin sources (attraction points).
+    Sources removed when within kill distance dk.
+    """
+
+    def __init__(self, boundary, vcfg):
+        self.boundary   = boundary
+        self.D          = vcfg.get('D', 0.05)
+        self.dk         = vcfg.get('dk_multiplier', 2.0) * self.D
+        self.di         = vcfg.get('di_multiplier', 999.0) * self.D
+        self.n_sources  = vcfg.get('num_sources', 200)
+        self.birth_dist = vcfg.get('birth_dist', 0.05)
+        self.max_loops  = vcfg.get('max_loops', 100)
+        self.max_stuck  = vcfg.get('max_stuck', 5)
+
+        # Generate auxin sources via Poisson disk
+        self.sources = boundary.sample_poisson(
+            self.n_sources, self.birth_dist
+        )
+
+        # Vein nodes — start from base of leaf (petiole attachment)
+        # Single seed node at (0, 0) — base of leaf
+        self.nodes  = [(0.0, 0.0)]
+        self.edges  = []  # list of (parent_idx, child_idx)
+        self.radii  = [0.0]  # will be computed via Murray's law
+
+    def grow(self):
+        """Run venation growth loop."""
+        from scipy.spatial import KDTree
+
+        sources    = list(self.sources)
+        nodes      = self.nodes
+        D          = self.D
+        dk         = self.dk
+        di         = self.di
+        max_loops  = self.max_loops
+        max_stuck  = self.max_stuck
+
+        prev_count    = len(sources)
+        stuck_iters   = 0
+        initial_count = len(sources)
+
+        for iteration in range(max_loops):
+            if len(sources) < 3:
+                break
+
+            node_arr   = np.array(nodes)
+            source_arr = np.array(sources)
+            kdtree     = KDTree(node_arr)
+
+            # For each source find closest node
+            dists, indices = kdtree.query(source_arr)
+
+            # Accumulate direction influences per node
+            influence = {}
+            to_remove = set()
+
+            for i, (sx, sy) in enumerate(sources):
+                dist  = dists[i]
+                n_idx = indices[i]
+
+                if dist < dk:
+                    to_remove.add(i)
+                    continue
+
+                if dist <= di:
+                    nx, ny = nodes[n_idx]
+                    dx = sx - nx
+                    dy = sy - ny
+                    mag = math.sqrt(dx*dx + dy*dy)
+                    if mag > 0:
+                        dx /= mag
+                        dy /= mag
+                    if n_idx not in influence:
+                        influence[n_idx] = [0.0, 0.0, 0]
+                    influence[n_idx][0] += dx
+                    influence[n_idx][1] += dy
+                    influence[n_idx][2] += 1
+
+            # Spawn new nodes
+            for n_idx, (dx, dy, count) in influence.items():
+                mag = math.sqrt(dx*dx + dy*dy)
+                if mag > 0:
+                    dx /= mag
+                    dy /= mag
+                nx, ny = nodes[n_idx]
+                new_x = nx + dx * D
+                new_y = ny + dy * D
+                if self.boundary.contains(new_x, new_y):
+                    new_idx = len(nodes)
+                    nodes.append((new_x, new_y))
+                    self.edges.append((n_idx, new_idx))
+                    self.radii.append(0.0)
+
+            # Remove reached sources
+            sources = [s for i, s in enumerate(sources)
+                       if i not in to_remove]
+
+            # Stall detection
+            if len(sources) == prev_count and len(sources) < initial_count:
+                stuck_iters += 1
+                if stuck_iters >= max_stuck:
+                    break
+            else:
+                stuck_iters   = 0
+                prev_count    = len(sources)
+
+        self.nodes   = nodes
+        self.sources = sources
+        self._compute_radii()
+
+    def _compute_radii(self):
+        """Murray's law radius computation basipetally."""
+        r0 = 0.003  # tip radius
+
+        children = {i: [] for i in range(len(self.nodes))}
+        for parent, child in self.edges:
+            children[parent].append(child)
+
+        # Post-order traversal
+        order   = []
+        visited = set()
+        stack   = [0]
+        while stack:
+            n = stack[-1]
+            kids = [k for k in children[n] if k not in visited]
+            if kids:
+                stack.append(kids[0])
+            else:
+                stack.pop()
+                order.append(n)
+                visited.add(n)
+
+        radii = {}
+        for n in order:
+            kids = children[n]
+            if not kids:
+                radii[n] = r0
+            else:
+                radii[n] = min(
+                    sum(radii[k]**2 for k in kids) ** 0.5,
+                    0.015
+                )
+        self.radii = [radii.get(i, r0) for i in range(len(self.nodes))]
+    
+
+
+
+
+
 # =============================================================================
-# 5. Leaf Mesh Generation (POC — simple disk placeholder)
+# 5. Leaf Mesh Generation
 # =============================================================================
+
+def generate_canonical_leaf(foliage_cfg):
+    """
+    Generate a single canonical leaf in local 2D space.
+    Runs venation algorithm, builds mesh from vein network.
+    Returns (nodes_2d, edges, radii, boundary) for later 3D placement.
+
+    Local coordinate system:
+      x — along leaf length (petiole=0 to tip=length)
+      y — across leaf width
+      z — out of leaf plane (for curvature)
+    """
+    leaf_cfg = foliage_cfg.get('leaf', {})
+    vcfg     = leaf_cfg.get('venation', {})
+
+    # Build boundary and run venation
+    boundary = LeafBoundary(leaf_cfg)
+    venation = LeafVenation(boundary, vcfg)
+    venation.grow()
+
+    print(f"  Canonical leaf: {len(venation.nodes)} vein nodes, "
+          f"{len(venation.edges)} segments")
+
+    return venation.nodes, venation.edges, venation.radii, boundary
+
+
+def leaf_to_world(nodes_2d, edges, radii, pos, leaf_right, leaf_up,
+                  leaf_normal, leaf_cfg, scale):
+    """
+    Transform canonical leaf from local 2D space to world 3D space.
+    Applies curvature deformation, then transport frame orientation.
+
+    Local x -> leaf_right (across width)
+    Local y -> leaf_up (along length, petiole to tip)
+    Curvature -> leaf_normal displacement
+    """
+    midrib_k = leaf_cfg.get('midrib_curvature', 0.1)
+    blade_k  = leaf_cfg.get('blade_curvature', 0.05)
+    length   = leaf_cfg.get('length', 1.0)
+    width    = leaf_cfg.get('width', 0.5)
+
+    world_nodes = []
+    for (lx, ly) in nodes_2d:
+        # Normalize to [0,1]
+        t = ly / length if length > 0 else 0   # along length
+        s = lx / (width / 2) if width > 0 else 0  # across width
+
+        # Midrib curvature — arch along length
+        z_mid = midrib_k * 4 * t * (1 - t)
+
+        # Blade curvature — cup across width
+        z_blade = blade_k * (1 - s*s)
+
+        z = z_mid + z_blade
+
+        # Scale and transform to world space
+        wx = (pos +
+              lx * scale * leaf_right +
+              ly * scale * leaf_up +
+              z  * scale * leaf_normal)
+        world_nodes.append(wx)
+
+    return world_nodes
+
 
 def make_disk_leaf(pos, leaf_right, leaf_up, leaf_normal, scale):
     """
-    Generate a simple triangulated disk as a leaf placeholder.
-    Returns (points, indices) for a trianglemesh.
-    8 triangles, 9 vertices (center + 8 perimeter).
+    Fallback simple disk leaf — used if venation disabled.
     """
     n_segments = 8
-    center = pos
-    verts  = [center]
-
+    verts  = [pos]
     for i in range(n_segments):
         angle = 2 * math.pi * i / n_segments
-        v = (center +
+        v = (pos +
              scale * math.cos(angle) * leaf_right +
              scale * math.sin(angle) * leaf_up)
         verts.append(v)
-
     indices = []
     for i in range(n_segments):
-        i0 = 0
-        i1 = i + 1
-        i2 = (i + 1) % n_segments + 1
-        indices.extend([i0, i1, i2])
-
+        indices.extend([0, i + 1, (i + 1) % n_segments + 1])
     return verts, indices
 
 
@@ -206,33 +486,81 @@ def make_disk_leaf(pos, leaf_right, leaf_up, leaf_normal, scale):
 # 6. write_foliage
 # =============================================================================
 
-def write_foliage(placements, foliage_cfg, project_root):
+def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
     """
-    Write scene_files/foliage.pbrt — trianglemesh disks at phyllotaxis points.
+    Write scene_files/foliage.pbrt.
+    Uses canonical leaf transformed to each phyllotaxis placement.
+    Falls back to disk if no canonical leaf provided.
     """
     scale    = foliage_cfg.get('leaf_scale', 0.3)
     color    = foliage_cfg.get('leaf_color', [0.15, 0.35, 0.10])
+    leaf_cfg = foliage_cfg.get('leaf', {})
     out_path = os.path.join(project_root, 'scene_files', 'foliage.pbrt')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     lines = ['# foliage.pbrt — generated by foliage.py', '']
 
-    for pos, leaf_right, leaf_up, leaf_normal in placements:
-        verts, indices = make_disk_leaf(pos, leaf_right, leaf_up, leaf_normal, scale)
+    if canonical_leaf is not None:
+        nodes_2d, edges, radii, boundary = canonical_leaf
+        for pos, leaf_right, leaf_up, leaf_normal in placements:
+            world_nodes = leaf_to_world(
+                nodes_2d, edges, radii,
+                pos, leaf_right, leaf_up, leaf_normal,
+                leaf_cfg, scale
+            )
+            # Emit each vein segment as a thin trianglemesh ribbon
+            min_vein = leaf_cfg.get('min_vein_width', 0.005)
+            for parent_idx, child_idx in edges:
+                p0 = world_nodes[parent_idx]
+                p1 = world_nodes[child_idx]
+                r = max(radii[parent_idx] * scale, min_vein)
 
-        pts_str = '  '.join(f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}' for v in verts)
-        idx_str = '  '.join(str(i) for i in indices)
+                # Build a flat quad ribbon for each vein segment
+                perp = np.cross(p1 - p0, leaf_normal)
+                pmag = np.linalg.norm(perp)
+                if pmag < 1e-6:
+                    continue
+                perp /= pmag
 
-        lines += [
-            'AttributeBegin',
-            f'    Material "diffuse"  "rgb reflectance" '
-            f'[ {color[0]} {color[1]} {color[2]} ]',
-            '    Shape "trianglemesh"',
-            f'        "integer indices" [ {idx_str} ]',
-            f'        "point3 P"        [ {pts_str} ]',
-            'AttributeEnd',
-            ''
-        ]
+                v0 = p0 + perp * r
+                v1 = p0 - perp * r
+                v2 = p1 - perp * r
+                v3 = p1 + perp * r
+
+                pts = ' '.join(
+                    f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}'
+                    for v in [v0, v1, v2, v3]
+                )
+                lines += [
+                    'AttributeBegin',
+                    f'    Material "diffuse"  "rgb reflectance" '
+                    f'[ {color[0]} {color[1]} {color[2]} ]',
+                    '    Shape "trianglemesh"',
+                    '        "integer indices" [ 0 1 2  0 2 3 ]',
+                    f'        "point3 P"        [ {pts} ]',
+                    'AttributeEnd',
+                    ''
+                ]
+    else:
+        # Fallback to disk placeholders
+        for pos, leaf_right, leaf_up, leaf_normal in placements:
+            verts, indices = make_disk_leaf(
+                pos, leaf_right, leaf_up, leaf_normal, scale
+            )
+            pts_str = '  '.join(
+                f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}' for v in verts
+            )
+            idx_str = '  '.join(str(i) for i in indices)
+            lines += [
+                'AttributeBegin',
+                f'    Material "diffuse"  "rgb reflectance" '
+                f'[ {color[0]} {color[1]} {color[2]} ]',
+                '    Shape "trianglemesh"',
+                f'        "integer indices" [ {idx_str} ]',
+                f'        "point3 P"        [ {pts_str} ]',
+                'AttributeEnd',
+                ''
+            ]
 
     with open(out_path, 'w') as f:
         f.write('\n'.join(lines))
@@ -251,7 +579,8 @@ def run(tree, foliage_cfg, project_root):
 
     Phase 1: Compute parallel transport frames
     Phase 2: Compute phyllotaxis placement points
-    Phase 5: Generate leaf meshes (POC: disk placeholders)
+    Phase 3: Generate canonical leaf via venation algorithm
+    Phase 5: Transform leaf to each placement
     Phase 6: Write foliage.pbrt
     """
     print("  Computing parallel transport frames...")
@@ -261,5 +590,8 @@ def run(tree, foliage_cfg, project_root):
     placements = compute_phyllotaxis_points(tree, frames, foliage_cfg)
     print(f"  Leaf placements: {len(placements)}")
 
+    print("  Generating canonical leaf via venation...")
+    canonical_leaf = generate_canonical_leaf(foliage_cfg)
+
     print("  Writing foliage geometry...")
-    write_foliage(placements, foliage_cfg, project_root)
+    write_foliage(placements, canonical_leaf, foliage_cfg, project_root)

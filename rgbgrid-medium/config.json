@@ -198,11 +198,29 @@
       "enabled": true,
       "internode_distance": 0.3,
       "leaf_angle": 45.0,
-      "min_loop_index": 5,
+      "min_loop_index": 15,
       "max_branch_radius": 0.05,
-      "leaf_scale": 0.3 
-      },
-
+      "leaf_scale": 0.8,
+      "leaf_color": [0.15, 0.35, 0.10],
+      "leaf": {
+        "type": "ovate",
+        "length": 1.0,
+        "width": 0.5,
+        "midrib_curvature": 0.1,
+        "blade_curvature": 0.05,
+        "min_vein_width": 0.008,
+        "venation": {
+          "D": 0.05,
+          "dk_multiplier": 2.0,
+          "di_multiplier": 999.0,
+          "num_sources": 200,
+          "birth_dist": 0.05,
+          "max_loops": 100,
+          "max_stuck": 5 
+          }
+      }
+    },  
+        
     "tree": {
       "enabled": true,
       "num_leaves": 12000,
