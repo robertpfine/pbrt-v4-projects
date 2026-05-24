@@ -28,4 +28,7 @@ __pycache__/
 Thumbs.db
 
 # --- Logs ---
-render_log.txtrgbgrid-medium/scene_files/foliage.pbrt
+render_log.txt
+**/scene_files/foliage.pbrt
+
+**/scene_files/tree.pbrt
