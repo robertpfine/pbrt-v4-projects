@@ -23,8 +23,8 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 0, 10.0],
-        "look": [0, 3.0, 0],
+        "eye":  [0, 0, 16.0],
+        "look": [0, 2.0, 0],
         "up":   [0, 1, 0]
       },
       "fov": 70
@@ -33,7 +33,7 @@
     "sampler": {
       "enabled": true,
       "type": "halton",
-      "pixel_samples": 128
+      "pixel_samples": 256
     },
 
     "integrator": {
@@ -44,8 +44,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 500,
-      "y_resolution": 333
+      "x_resolution": 1500,
+      "y_resolution": 1000
     },
 
     "lights": [
@@ -76,7 +76,7 @@
         "scale": 500.0
       },
       {
-        "enabled": false,
+        "enabled": true,
         "type": "distant",
         "from": [0, 2.0, 10],
         "to": [0, 0, 0],
@@ -120,7 +120,7 @@
       },
 
       {
-        "enabled": true,
+        "enabled": false,
         "label": "volume_box",
         "material": { "type": "interface" },
         "medium": "rgb_vol",
@@ -148,6 +148,7 @@
     ],
 
     "grid": {
+      "enabled": false,
       "nx": 256,
       "ny": 64,
       "nz": 128,
@@ -196,23 +197,21 @@
 
     "tree": {
       "enabled": true,
-      "num_leaves": 25000,
-      "max_loops": 45,
+      "num_leaves": 12000,
+      "max_loops": 200,
       "seed": 1,
       "min_leaves": 30,
-      "min_dist": 0.1,
-      "max_dist": 0.8,
-      "growth_dist": 0.15,
-      "dim_width": 6.0,
-      "dim_height": 6.0,
-      "dim_depth": 6.0,
+      "D": 0.1,
+      "dk": 20.0,
+      "di": 999.0,
+      "birth_dist": 0.15,
       "leaf_width": 1.0,
       "leaf_height": 1.0,
       "leaf_depth": 1.0,
-      "point_cloud_center": [0, 1.50, -3.0],
-      "point_cloud_radius": 1.0,
+      "point_cloud_center": [0, 5.0, -3.0],
+      "point_cloud_radius": 4.0,
       "base_radius": 0.015,
-      "root_position": [0, -1.0, -3.0],
+      "root_position": [0, 0.0, -3.0],
       "trunk_material": {
           "type": "diffuse",
           "reflectance": [0.40, 0.35, 0.10]

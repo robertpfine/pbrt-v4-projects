@@ -250,6 +250,9 @@ def write_medium(cfg, project_root):
     """
     scene  = cfg["scene"]
     g_cfg  = scene["grid"]
+    if not g_cfg.get("enabled", True):
+        print("  Grid disabled — skipping rgbgrid generation.")
+        return None
     zones  = scene["zones"]
     out    = os.path.join(project_root, scene["generated_medium"])
 
@@ -599,7 +602,8 @@ def write_scene(cfg, project_root, medium_rel_path):
     # --- World section ---
     lines += ["WorldBegin", ""]
     
-    write_medium_include(lines, medium_rel_path)
+    if medium_rel_path is not None:
+        write_medium_include(lines, medium_rel_path)
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
     # Include tree geometry if enabled

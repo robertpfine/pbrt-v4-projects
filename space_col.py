@@ -107,9 +107,10 @@ class Tree3D:
 
     def __init__(self, cfg):
         self.cfg         = cfg
-        self.min_dist    = cfg['min_dist']
-        self.max_dist    = cfg['max_dist']
-        self.growth_dist = cfg['growth_dist']
+        D                = cfg['D']
+        self.growth_dist = D
+        self.min_dist    = cfg['dk'] * D
+        self.max_dist    = cfg['di'] * D
         self.max_loops   = cfg['max_loops']
         self.min_leaves  = cfg['min_leaves']
         self.actual_loops = 0
@@ -130,43 +131,57 @@ class Tree3D:
 
     def _generate_leaves(self):
         """
-        Generate attraction points within an ellipsoidal envelope.
-        Uses rejection sampling — generates random points within the
-        bounding box and keeps those inside the ellipsoid.
+        Generate attraction points within an ellipsoidal envelope
+        using Poisson disk (dart throwing) sampling — Runions et al.
+        Points are guaranteed to be at least birth_dist apart,
+        producing a uniform natural distribution.
         """
-        cfg    = self.cfg
-        cx, cy, cz = cfg['point_cloud_center']
-        r      = cfg['point_cloud_radius']
-        lw     = cfg['leaf_width']
-        lh     = cfg['leaf_height']
-        ld     = cfg['leaf_depth']
-        target = cfg['num_leaves']
-        dw     = cfg['dim_width']
-        dh     = cfg['dim_height']
-        dd     = cfg['dim_depth']
+        cfg         = self.cfg
+        cx, cy, cz  = cfg['point_cloud_center']
+        radius      = cfg['point_cloud_radius']
+        lw          = cfg['leaf_width']
+        lh          = cfg['leaf_height']
+        ld          = cfg['leaf_depth']
+        target      = cfg['num_leaves']
+        birth_dist  = cfg.get('birth_dist', 0.1)
+        max_attempts = target * 50
 
-        leaves = []
+        leaves     = []
+        leaf_positions = np.empty((0, 3))  # numpy array for fast distance queries
+
         attempts = 0
-        max_attempts = target * 20
-
         while len(leaves) < target and attempts < max_attempts:
             attempts += 1
-            x = random.uniform(-dw / 2, dw / 2)
-            y = random.uniform(-dh / 2, dh / 2)
-            z = random.uniform(-dd / 2, dd / 2)
 
-            # Ellipsoidal envelope test — matches C++ implementation
-            inside = (
-                ((x - cx) ** 2 / (lw * r) ** 2) +
-                ((y - cy) ** 2 / (lh * r) ** 2) +
-                ((z - cz) ** 2 / (ld * r) ** 2)
-            ) <= 1.0
+            # Direct ellipsoid sampling — Marsaglia method for unit sphere
+            while True:
+                u = random.uniform(-1, 1)
+                v = random.uniform(-1, 1)
+                w = random.uniform(-1, 1)
+                if u*u + v*v + w*w <= 1.0:
+                    break
 
-            if inside:
-                leaves.append(Leaf3D(x, y, z))
+            # Scale to ellipsoid and translate to center
+            x = cx + u * radius * lw
+            y = cy + v * radius * lh
+            z = cz + w * radius * ld
+
+            # Poisson disk check — must be at least birth_dist from all existing points
+            if len(leaves) > 0:
+                dists = np.sqrt(
+                    ((leaf_positions[:, 0] - x) ** 2) +
+                    ((leaf_positions[:, 1] - y) ** 2) +
+                    ((leaf_positions[:, 2] - z) ** 2)
+                )
+                if np.min(dists) < birth_dist:
+                    continue
+
+            leaves.append(Leaf3D(x, y, z))
+            leaf_positions = np.vstack([leaf_positions, [x, y, z]]) \
+                if len(leaves) > 1 else np.array([[x, y, z]])
 
         print(f"  Generated {len(leaves)} attraction points "
-              f"({attempts} attempts)")
+              f"({attempts} attempts, birth_dist={birth_dist})")
         return leaves
     
 
@@ -324,27 +339,74 @@ class Tree3D:
                   f"{len(self.leaves)} leaves remaining")
             
 
+    def _compute_murray_radii(self, n=2):
+        """
+        Compute branch radii using Murray's law, basipetally from tips to root.
+        r^n = sum of children r^n
+        Tip radius = base_radius from config.
+        n=2 gives good results for trees (MacDonald 1983).
+        """
+        r0 = self.cfg.get('base_radius', 0.015)
+
+        # Build children map
+        children = {id(b): [] for b in self.branches}
+        for branch in self.branches:
+            if branch.parent is not None:
+                children[id(branch.parent)].append(branch)
+
+        # Assign radii dict keyed by branch id
+        radii = {}
+
+        # Process tips first, then work toward root
+        # Use iterative post-order traversal
+        stack = [self.branches[0]]  # start at root
+        order = []
+        visited = set()
+
+        while stack:
+            node = stack[-1]
+            node_id = id(node)
+            kids = children[node_id]
+            unvisited_kids = [k for k in kids if id(k) not in visited]
+            if unvisited_kids:
+                stack.append(unvisited_kids[0])
+            else:
+                stack.pop()
+                order.append(node)
+                visited.add(node_id)
+
+        # Assign radii basipetally
+        for branch in order:
+            node_id = id(branch)
+            kids = children[node_id]
+            if not kids:
+                # Tip node
+                radii[node_id] = r0
+            else:
+                # Murray's law
+                radii[node_id] = sum(radii[id(k)]**n for k in kids) ** (1.0/n)
+
+        self._radii = radii
+        self._children = children        
+            
+
             
     def get_cylinders(self):
         """
         Returns list of (parent_pos, child_pos, radius) tuples.
-        Radius tapers using pipe model approximation:
-        thicker at base (low loop_index), thinner at tips (high loop_index).
+        Radius computed using Murray's law via _compute_murray_radii().
         """
-        cfg        = self.cfg
-        base_radius = cfg.get('base_radius', 0.03)
-        results    = []
+        # Compute Murray radii if not already done
+        if not hasattr(self, '_radii'):
+            self._compute_murray_radii()
 
+        results = []
         for branch in self.branches[1:]:  # skip root
             if branch.parent is None:
                 continue
             px, py, pz = branch.parent.pos()
             bx, by, bz = branch.pos()
-
-            # Radius tapers from base to tip
-            radius = base_radius * (self.max_loops - branch.loop_index)
-            radius = max(radius, base_radius * 0.5)  # minimum radius at tips
-
+            radius = self._radii.get(id(branch.parent), self.cfg.get('base_radius', 0.015))
             results.append(((px, py, pz), (bx, by, bz), radius))
 
         return results
@@ -352,18 +414,15 @@ class Tree3D:
     def get_joints(self):
         """
         Returns list of (pos, radius) tuples for joint spheres.
-        Joint spheres cover gaps between cylinder segments.
-        Tip spheres are smaller than joint spheres.
+        Radius matches the cylinder radius at each node.
         """
-        cfg          = self.cfg
-        base_radius  = cfg.get('base_radius', 0.03)
-        results      = []
+        if not hasattr(self, '_radii'):
+            self._compute_murray_radii()
 
-        for branch in self.branches[1:]:  # skip root
+        results = []
+        for branch in self.branches[1:]:
             bx, by, bz = branch.pos()
-            is_tip     = branch.num_children == 0
-
-            radius = base_radius * 0.5 if is_tip else base_radius
+            radius = self._radii.get(id(branch), self.cfg.get('base_radius', 0.015))
             results.append(((bx, by, bz), radius))
 
         return results
