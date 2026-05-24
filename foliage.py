@@ -425,8 +425,7 @@ def generate_canonical_leaf(foliage_cfg):
     return venation.nodes, venation.edges, venation.radii, boundary
 
 
-def leaf_to_world(nodes_2d, edges, radii, pos, leaf_right, leaf_up,
-                  leaf_normal, leaf_cfg, scale):
+def leaf_to_world(nodes_2d, pos, leaf_right, leaf_up, leaf_normal, leaf_cfg, scale):
     """
     Transform canonical leaf from local 2D space to world 3D space.
     Applies curvature deformation, then transport frame orientation.
@@ -442,19 +441,13 @@ def leaf_to_world(nodes_2d, edges, radii, pos, leaf_right, leaf_up,
 
     world_nodes = []
     for (lx, ly) in nodes_2d:
-        # Normalize to [0,1]
-        t = ly / length if length > 0 else 0   # along length
-        s = lx / (width / 2) if width > 0 else 0  # across width
+        t = ly / length if length > 0 else 0
+        s = lx / (width / 2) if width > 0 else 0
 
-        # Midrib curvature — arch along length
-        z_mid = midrib_k * 4 * t * (1 - t)
-
-        # Blade curvature — cup across width
+        z_mid   = midrib_k * 4 * t * (1 - t)
         z_blade = blade_k * (1 - s*s)
+        z       = z_mid + z_blade
 
-        z = z_mid + z_blade
-
-        # Scale and transform to world space
         wx = (pos +
               lx * scale * leaf_right +
               ly * scale * leaf_up +
@@ -481,6 +474,61 @@ def make_disk_leaf(pos, leaf_right, leaf_up, leaf_normal, scale):
         indices.extend([0, i + 1, (i + 1) % n_segments + 1])
     return verts, indices
 
+def triangulate_leaf_blade(boundary, resolution=20):
+    """
+    Option C — grid sampling within leaf boundary.
+    Generates a triangulated mesh filling the leaf blade.
+    
+    Samples a regular grid within the bounding box,
+    keeps points inside the boundary, Delaunay triangulates.
+    
+    Returns (points_2d, indices) where points_2d is list of (x,y)
+    and indices is list of triangle vertex index triples.
+    """
+    from scipy.spatial import Delaunay
+
+    length = boundary.length
+    width  = boundary.width
+
+    # Sample grid points inside boundary
+    pts = []
+    for i in range(resolution + 1):
+        for j in range(resolution + 1):
+            x = i * length / resolution
+            y = -width/2 + j * width / resolution
+            if boundary.contains(x, y):
+                pts.append((x, y))
+
+    # Add boundary perimeter points for clean edges
+    n_perim = resolution * 2
+    for k in range(n_perim):
+        t = k / n_perim
+        # Parametric boundary trace
+        x = t * length
+        if boundary.type == 'ovate':
+            hw = boundary.width / 2 * 4 * t * (1 - t) * (1 + 0.4 * (0.35 - t))
+        else:
+            hw = boundary.width / 2 * math.sqrt(max(0, 1 - ((x - length/2)/(length/2))**2))
+        if hw > 0:
+            pts.append((x,  hw))
+            pts.append((x, -hw))
+
+    if len(pts) < 3:
+        return [], []
+
+    pts_arr = np.array(pts)
+    tri     = Delaunay(pts_arr)
+
+    # Filter triangles — keep only those whose centroid is inside boundary
+    valid_indices = []
+    for simplex in tri.simplices:
+        cx = (pts_arr[simplex[0]][0] + pts_arr[simplex[1]][0] + pts_arr[simplex[2]][0]) / 3
+        cy = (pts_arr[simplex[0]][1] + pts_arr[simplex[1]][1] + pts_arr[simplex[2]][1]) / 3
+        if boundary.contains(cx, cy):
+            valid_indices.extend(simplex.tolist())
+
+    return pts, valid_indices
+
 
 # =============================================================================
 # 6. write_foliage
@@ -504,10 +552,41 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
         nodes_2d, edges, radii, boundary = canonical_leaf
         for pos, leaf_right, leaf_up, leaf_normal in placements:
             world_nodes = leaf_to_world(
-                nodes_2d, edges, radii,
-                pos, leaf_right, leaf_up, leaf_normal,
+                nodes_2d, pos, leaf_right, leaf_up, leaf_normal,
                 leaf_cfg, scale
             )
+            
+            # Emit blade surface if enabled
+            blade_cfg = leaf_cfg.get('blade', {})
+            show_veins_only = leaf_cfg.get('show_veins_only', False)
+
+            if blade_cfg.get('enabled', False) and not show_veins_only:
+                blade_color = blade_cfg.get('color', [0.08, 0.25, 0.06])
+                blade_pts, blade_idx = triangulate_leaf_blade(
+                    boundary,
+                    resolution=blade_cfg.get('resolution', 20)
+                )
+                if blade_pts and blade_idx:
+                    world_blade = leaf_to_world(
+                        blade_pts, pos, leaf_right, leaf_up, leaf_normal,
+                        leaf_cfg, scale
+                    )
+                    pts_str = '  '.join(
+                        f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}'
+                        for v in world_blade
+                    )
+                    idx_str = ' '.join(str(i) for i in blade_idx)
+                    lines += [
+                        'AttributeBegin',
+                        f'    Material "diffuse"  "rgb reflectance" '
+                        f'[ {blade_color[0]} {blade_color[1]} {blade_color[2]} ]',
+                        '    Shape "trianglemesh"',
+                        f'        "integer indices" [ {idx_str} ]',
+                        f'        "point3 P"        [ {pts_str} ]',
+                        'AttributeEnd',
+                        ''
+                    ]
+            
             # Emit each vein segment as a thin trianglemesh ribbon
             min_vein = leaf_cfg.get('min_vein_width', 0.005)
             for parent_idx, child_idx in edges:
