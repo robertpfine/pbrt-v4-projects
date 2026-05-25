@@ -44,8 +44,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 5000,
-      "y_resolution": 4000
+      "x_resolution": 1500,
+      "y_resolution": 1000
     },
 
     "lights": [
@@ -83,8 +83,8 @@
         "color_mode": "blackbody",
         "temperature": 5500,
         "scale": 4.0
-    }
-  ],
+      }
+    ],
 
     "geometry": [
       {
@@ -100,7 +100,6 @@
           "radius": 20.0
         }
       },
-
       {
         "enabled": false,
         "label": "volume_sphere",
@@ -118,7 +117,6 @@
           "radius": 1.5
         }
       },
-
       {
         "enabled": false,
         "label": "volume_box",
@@ -132,7 +130,6 @@
           "z_min": -9.0,  "z_max": -1.0
         }
       },
-
       {
         "enabled": false,
         "label": "fog_volume",
@@ -194,74 +191,143 @@
       { "enabled": true, "position": 0.8, "wavelength": 450, "width": 0.150, "strength": 12.0 }
     ],
 
-    "foliage": {
-      "enabled": true,
-      "internode_distance": 0.3,
-      "leaf_angle": 45.0,
-      "min_loop_index": 5,
-      "max_branch_radius": 0.05,
-      "leaf_scale": 0.8,
-      "vein_color": [0.15, 0.35, 0.10],
-      "leaf": {
-        "type": "ovate",
-        "length": 1.0,
-        "width": 0.5,
-        "midrib_curvature": 0.1,
-        "blade_curvature": 0.05,
-        "min_vein_width": 0.008,
-        "show_veins_only": false,
-        "blade": {
-          "enabled": true,
-          "resolution": 20,
-          "color": [0.08, 0.25, 0.06],
-          "palette": [
-            { "enabled": true, "color": [0.08, 0.25, 0.06] },
-            { "enabled": true, "color": [0.12, 0.30, 0.05] },
-            { "enabled": true, "color": [0.70, 0.60, 0.02] },
-            { "enabled": true, "color": [0.10, 0.28, 0.04] }
-          ]
-      },
-      "venation": {
-        "D": 0.02,
+    "trees": [
+      {
+        "enabled": true,
+        "num_leaves": 12000,
+        "max_loops": 200,
+        "max_stuck": 5,
+        "seed": 1,
+        "min_leaves": 30,
+        "D": 0.2,
         "dk_multiplier": 2.0,
         "di_multiplier": 999.0,
-        "num_sources": 400,
-        "birth_dist": 0.02,
-        "max_loops": 100,
-        "max_stuck": 5
-      }
-    }
-  },
-        
-    "tree": {
-      "enabled": true,
-      "num_leaves": 12000,
-      "max_loops": 200,
-      "max_stuck": 5,
-      "seed": 1,
-      "min_leaves": 30,
-      "D": 0.2,
-      "dk_multiplier": 2.0,
-      "di_multiplier": 999.0,
-      "birth_dist": 0.15,
-      "leaf_width": 1.0,
-      "leaf_height": 1.0,
-      "leaf_depth": 1.0,
-      "point_cloud_center": [0, 5.0, -3.0],
-      "point_cloud_radius": 4.0,
-      "trunk_radius": 999.0,
-      "base_radius": 0.003,
-      "joint_radius_multiplier": 1.3,
-      "joint_radius_cap": 0.02,
-      "root_position": [0, 0.5, -3.0],
-      "trunk_material": {
+        "birth_dist": 0.15,
+        "leaf_width": 1.0,
+        "leaf_height": 1.0,
+        "leaf_depth": 1.0,
+        "point_cloud_center": [-4, 5.0, -3.0],
+        "point_cloud_radius": 4.0,
+        "trunk_radius": 999.0,
+        "base_radius": 0.003,
+        "joint_radius_multiplier": 1.3,
+        "joint_radius_cap": 0.02,
+        "root_position": [-4, 0.5, -3.0],
+        "trunk_material": {
           "type": "diffuse",
           "reflectance": [0.40, 0.35, 0.10]
+        },
+        "joint_material": {
+          "type": "diffuse",
+          "reflectance": [0.40, 0.35, 0.10]
+        },
+        "foliage": {
+          "enabled": true,
+          "internode_distance": 0.3,
+          "leaf_angle": 45.0,
+          "min_loop_index": 5,
+          "max_branch_radius": 0.05,
+          "leaf_scale": 0.8,
+          "vein_color": [0.15, 0.35, 0.10],
+          "leaf": {
+            "type": "ovate",
+            "length": 1.0,
+            "width": 0.5,
+            "midrib_curvature": 0.1,
+            "blade_curvature": 0.05,
+            "min_vein_width": 0.008,
+            "show_veins_only": false,
+            "blade": {
+              "enabled": true,
+              "resolution": 20,
+              "color": [0.08, 0.25, 0.06],
+              "palette": [
+                { "enabled": true, "color": [0.08, 0.25, 0.06] },
+                { "enabled": true, "color": [0.12, 0.30, 0.05] },
+                { "enabled": true, "color": [0.70, 0.60, 0.02] },
+                { "enabled": true, "color": [0.10, 0.28, 0.04] }
+              ]
+            },
+            "venation": {
+              "D": 0.02,
+              "dk_multiplier": 2.0,
+              "di_multiplier": 999.0,
+              "num_sources": 400,
+              "birth_dist": 0.02,
+              "max_loops": 100,
+              "max_stuck": 5
+            }
+          }
+        }
       },
-      "joint_material": {
+      {
+        "enabled": true,
+        "num_leaves": 12000,
+        "max_loops": 200,
+        "max_stuck": 5,
+        "seed": 2,
+        "min_leaves": 30,
+        "D": 0.2,
+        "dk_multiplier": 2.0,
+        "di_multiplier": 999.0,
+        "birth_dist": 0.15,
+        "leaf_width": 1.0,
+        "leaf_height": 1.0,
+        "leaf_depth": 1.0,
+        "point_cloud_center": [4, 5.0, -3.0],
+        "point_cloud_radius": 4.0,
+        "trunk_radius": 999.0,
+        "base_radius": 0.003,
+        "joint_radius_multiplier": 1.3,
+        "joint_radius_cap": 0.02,
+        "root_position": [4, 0.5, -3.0],
+        "trunk_material": {
           "type": "diffuse",
           "reflectance": [0.40, 0.35, 0.10]
+        },
+        "joint_material": {
+          "type": "diffuse",
+          "reflectance": [0.40, 0.35, 0.10]
+        },
+        "foliage": {
+          "enabled": true,
+          "internode_distance": 0.3,
+          "leaf_angle": 45.0,
+          "min_loop_index": 5,
+          "max_branch_radius": 0.05,
+          "leaf_scale": 0.8,
+          "vein_color": [0.15, 0.35, 0.10],
+          "leaf": {
+            "type": "ovate",
+            "length": 1.0,
+            "width": 0.5,
+            "midrib_curvature": 0.1,
+            "blade_curvature": 0.05,
+            "min_vein_width": 0.008,
+            "show_veins_only": false,
+            "blade": {
+              "enabled": true,
+              "resolution": 20,
+              "color": [0.08, 0.25, 0.06],
+              "palette": [
+                { "enabled": true, "color": [0.08, 0.25, 0.06] },
+                { "enabled": true, "color": [0.12, 0.30, 0.05] },
+                { "enabled": true, "color": [0.50, 0.20, 0.02] },
+                { "enabled": true, "color": [0.10, 0.28, 0.04] }
+              ]
+            },
+            "venation": {
+              "D": 0.02,
+              "dk_multiplier": 2.0,
+              "di_multiplier": 999.0,
+              "num_sources": 400,
+              "birth_dist": 0.02,
+              "max_loops": 100,
+              "max_stuck": 5
+            }
+          }
+        }
       }
-    }
+    ]
   }
 }

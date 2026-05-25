@@ -453,7 +453,7 @@ class Tree3D:
 # 5. write_tree — outputs pbrt Include file
 # =============================================================================
 
-def write_tree(cfg, cylinders, joints, project_root):
+def write_tree(cfg, cylinders, joints, project_root, index=0):
     """
     Writes scene_files/tree.pbrt — an Include file for scene.pbrt.
     Contains cylinders for branch segments and spheres for joints.
@@ -465,7 +465,7 @@ def write_tree(cfg, cylinders, joints, project_root):
     trunk_r   = cfg['trunk_material']['reflectance']
     joint_r   = cfg['joint_material']['reflectance']
 
-    out_path  = os.path.join(project_root, 'scene_files', 'tree.pbrt')
+    out_path  = os.path.join(project_root, 'scene_files', f'tree_{index}.pbrt')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     lines = []
@@ -551,7 +551,7 @@ def write_tree(cfg, cylinders, joints, project_root):
     print(f"  Written: {out_path}")
     print(f"  Cylinders: {len(cylinders)}  Joints: {len(joints)}")
 
-    return 'scene_files/tree.pbrt'
+    return f'scene_files/tree_{index}.pbrt'
 
 
 

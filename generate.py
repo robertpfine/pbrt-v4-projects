@@ -28,26 +28,29 @@ def main():
         cfg = json.load(f)
 
     scene_cfg = cfg.get('scene', {})
+    trees_cfg = scene_cfg.get('trees', [])
 
-    # --- Space colonization ---
-    tree_cfg = scene_cfg.get('tree', {})
-    tree     = None
+    for i, tree_cfg in enumerate(trees_cfg):
+        if not tree_cfg.get('enabled', False):
+            print(f"  Tree {i}: disabled, skipping.")
+            continue
 
-    if tree_cfg.get('enabled', False):
-        print(f"  Growing tree: {tree_cfg['num_leaves']} leaves, "
-              f"{tree_cfg['max_loops']} max iterations...")
+        print(f"  Growing tree {i}: {tree_cfg['num_leaves']} leaves, "
+              f"{tree_cfg['max_loops']} max iterations, seed {tree_cfg['seed']}...")
+
+        # --- Space colonization ---
         tree = space_col.Tree3D(tree_cfg)
         tree.grow()
         cylinders = tree.get_cylinders()
         joints    = tree.get_joints()
-        space_col.write_tree(tree_cfg, cylinders, joints, project_root)
+        space_col.write_tree(tree_cfg, cylinders, joints, project_root, index=i)
 
-    # --- Foliage ---
-    foliage_cfg = scene_cfg.get('foliage', {})
-    if foliage_cfg.get('enabled', False) and tree is not None:
-        foliage.run(tree, foliage_cfg, project_root)
-    elif foliage_cfg.get('enabled', False) and tree is None:
-        print("  WARNING: foliage enabled but tree is disabled — skipping foliage.")
+        # --- Foliage ---
+        foliage_cfg = tree_cfg.get('foliage', {})
+        if foliage_cfg.get('enabled', False):
+            foliage.run(tree, foliage_cfg, project_root, index=i)
+        else:
+            print(f"  Tree {i}: foliage disabled, skipping.")
 
 if __name__ == "__main__":
     main()
