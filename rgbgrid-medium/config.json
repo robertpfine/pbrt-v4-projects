@@ -216,11 +216,11 @@
           "color": [0.08, 0.25, 0.06]
       },
       "venation": {
-        "D": 0.05,
+        "D": 0.02,
         "dk_multiplier": 2.0,
         "di_multiplier": 999.0,
-        "num_sources": 50,
-        "birth_dist": 0.05,
+        "num_sources": 400,
+        "birth_dist": 0.02,
         "max_loops": 100,
         "max_stuck": 5
       }

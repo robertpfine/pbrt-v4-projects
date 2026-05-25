@@ -536,9 +536,10 @@ def triangulate_leaf_blade(boundary, resolution=20):
 
 def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
     """
-    Write scene_files/foliage.pbrt.
-    Uses canonical leaf transformed to each phyllotaxis placement.
-    Falls back to disk if no canonical leaf provided.
+    Write scene_files/foliage.pbrt using pbrt-v4 instancing.
+    Defines canonical leaf once as ObjectBegin/ObjectEnd,
+    then places it with ObjectInstance + Transform for each placement.
+    Reduces BVH from millions of primitives to one leaf definition.
     """
     scale    = foliage_cfg.get('leaf_scale', 0.3)
     color    = foliage_cfg.get('leaf_color', [0.15, 0.35, 0.10])
@@ -550,52 +551,64 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
 
     if canonical_leaf is not None:
         nodes_2d, edges, radii, boundary = canonical_leaf
-        for pos, leaf_right, leaf_up, leaf_normal in placements:
-            world_nodes = leaf_to_world(
-                nodes_2d, pos, leaf_right, leaf_up, leaf_normal,
+        blade_cfg      = leaf_cfg.get('blade', {})
+        show_veins_only = leaf_cfg.get('show_veins_only', False)
+
+        # --- Define canonical leaf in local space ---
+        lines += ['ObjectBegin "leaf"', '']
+
+        # Blade surface
+        if blade_cfg.get('enabled', False) and not show_veins_only:
+            blade_color = blade_cfg.get('color', [0.08, 0.25, 0.06])
+            blade_pts, blade_idx = triangulate_leaf_blade(
+                boundary,
+                resolution=blade_cfg.get('resolution', 20)
+            )
+            if blade_pts and blade_idx:
+                # Transform blade to local 3D with curvature — use identity frame
+                identity_pos    = np.array([0.0, 0.0, 0.0])
+                identity_right  = np.array([1.0, 0.0, 0.0])
+                identity_up     = np.array([0.0, 1.0, 0.0])
+                identity_normal = np.array([0.0, 0.0, 1.0])
+                world_blade = leaf_to_world(
+                    blade_pts, identity_pos,
+                    identity_right, identity_up, identity_normal,
+                    leaf_cfg, scale
+                )
+                pts_str = '  '.join(
+                    f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}'
+                    for v in world_blade
+                )
+                idx_str = ' '.join(str(i) for i in blade_idx)
+                lines += [
+                    'AttributeBegin',
+                    f'    Material "diffuse"  "rgb reflectance" '
+                    f'[ {blade_color[0]} {blade_color[1]} {blade_color[2]} ]',
+                    '    Shape "trianglemesh"',
+                    f'        "integer indices" [ {idx_str} ]',
+                    f'        "point3 P"        [ {pts_str} ]',
+                    'AttributeEnd',
+                    ''
+                ]
+
+        # Vein ribbons in local space
+        if not show_veins_only or True:
+            identity_pos    = np.array([0.0, 0.0, 0.0])
+            identity_right  = np.array([1.0, 0.0, 0.0])
+            identity_up     = np.array([0.0, 1.0, 0.0])
+            identity_normal = np.array([0.0, 0.0, 1.0])
+            local_nodes = leaf_to_world(
+                nodes_2d, identity_pos,
+                identity_right, identity_up, identity_normal,
                 leaf_cfg, scale
             )
-            
-            # Emit blade surface if enabled
-            blade_cfg = leaf_cfg.get('blade', {})
-            show_veins_only = leaf_cfg.get('show_veins_only', False)
-
-            if blade_cfg.get('enabled', False) and not show_veins_only:
-                blade_color = blade_cfg.get('color', [0.08, 0.25, 0.06])
-                blade_pts, blade_idx = triangulate_leaf_blade(
-                    boundary,
-                    resolution=blade_cfg.get('resolution', 20)
-                )
-                if blade_pts and blade_idx:
-                    world_blade = leaf_to_world(
-                        blade_pts, pos, leaf_right, leaf_up, leaf_normal,
-                        leaf_cfg, scale
-                    )
-                    pts_str = '  '.join(
-                        f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}'
-                        for v in world_blade
-                    )
-                    idx_str = ' '.join(str(i) for i in blade_idx)
-                    lines += [
-                        'AttributeBegin',
-                        f'    Material "diffuse"  "rgb reflectance" '
-                        f'[ {blade_color[0]} {blade_color[1]} {blade_color[2]} ]',
-                        '    Shape "trianglemesh"',
-                        f'        "integer indices" [ {idx_str} ]',
-                        f'        "point3 P"        [ {pts_str} ]',
-                        'AttributeEnd',
-                        ''
-                    ]
-            
-            # Emit each vein segment as a thin trianglemesh ribbon
             min_vein = leaf_cfg.get('min_vein_width', 0.005)
             for parent_idx, child_idx in edges:
-                p0 = world_nodes[parent_idx]
-                p1 = world_nodes[child_idx]
-                r = max(radii[parent_idx] * scale, min_vein)
+                p0 = local_nodes[parent_idx]
+                p1 = local_nodes[child_idx]
+                r  = max(radii[parent_idx] * scale, min_vein)
 
-                # Build a flat quad ribbon for each vein segment
-                perp = np.cross(p1 - p0, leaf_normal)
+                perp = np.cross(p1 - p0, identity_normal)
                 pmag = np.linalg.norm(perp)
                 if pmag < 1e-6:
                     continue
@@ -620,8 +633,33 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
                     'AttributeEnd',
                     ''
                 ]
+
+        lines += ['ObjectEnd', '']
+
+        # --- Place instances ---
+        for pos, leaf_right, leaf_up, leaf_normal in placements:
+            # Build 4x4 transform matrix from transport frame
+            # Columns: [leaf_right | leaf_up | leaf_normal | pos]
+            m = np.eye(4)
+            m[0:3, 0] = leaf_right
+            m[0:3, 1] = leaf_up
+            m[0:3, 2] = leaf_normal
+            m[0:3, 3] = pos
+
+            # pbrt Transform takes row-major 4x4
+            mt = m.T.flatten()
+            mt_str = ' '.join(f'{v:.6f}' for v in mt)
+
+            lines += [
+                'AttributeBegin',
+                f'    Transform [ {mt_str} ]',
+                '    ObjectInstance "leaf"',
+                'AttributeEnd',
+                ''
+            ]
+
     else:
-        # Fallback to disk placeholders
+        # Fallback — disk placeholders without instancing
         for pos, leaf_right, leaf_up, leaf_normal in placements:
             verts, indices = make_disk_leaf(
                 pos, leaf_right, leaf_up, leaf_normal, scale
