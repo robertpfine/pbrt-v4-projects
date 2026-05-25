@@ -542,7 +542,7 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
     Reduces BVH from millions of primitives to one leaf definition.
     """
     scale    = foliage_cfg.get('leaf_scale', 0.3)
-    color    = foliage_cfg.get('leaf_color', [0.15, 0.35, 0.10])
+    color    = foliage_cfg.get('vein_color', [0.15, 0.35, 0.10])
     leaf_cfg = foliage_cfg.get('leaf', {})
     out_path = os.path.join(project_root, 'scene_files', 'foliage.pbrt')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -554,27 +554,64 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
         blade_cfg      = leaf_cfg.get('blade', {})
         show_veins_only = leaf_cfg.get('show_veins_only', False)
 
-        # --- Define canonical leaf in local space ---
-        lines += ['ObjectBegin "leaf"', '']
+        # Build active color palette
+        palette = blade_cfg.get('palette', [])
+        active_colors = [e['color'] for e in palette if e.get('enabled', True)]
+        if not active_colors:
+            active_colors = [blade_cfg.get('color', [0.08, 0.25, 0.06])]
 
-        # Blade surface
+        # --- Define canonical leaf variants — one per palette color ---
+        # Pre-compute geometry shared across all variants — done once
+        blade_pts, blade_idx = [], []
         if blade_cfg.get('enabled', False) and not show_veins_only:
-            blade_color = blade_cfg.get('color', [0.08, 0.25, 0.06])
             blade_pts, blade_idx = triangulate_leaf_blade(
                 boundary,
                 resolution=blade_cfg.get('resolution', 20)
             )
-            if blade_pts and blade_idx:
-                # Transform blade to local 3D with curvature — use identity frame
-                identity_pos    = np.array([0.0, 0.0, 0.0])
-                identity_right  = np.array([1.0, 0.0, 0.0])
-                identity_up     = np.array([0.0, 1.0, 0.0])
-                identity_normal = np.array([0.0, 0.0, 1.0])
-                world_blade = leaf_to_world(
-                    blade_pts, identity_pos,
-                    identity_right, identity_up, identity_normal,
-                    leaf_cfg, scale
-                )
+
+        identity_pos    = np.array([0.0, 0.0, 0.0])
+        identity_right  = np.array([1.0, 0.0, 0.0])
+        identity_up     = np.array([0.0, 1.0, 0.0])
+        identity_normal = np.array([0.0, 0.0, 1.0])
+
+        world_blade = []
+        if blade_pts:
+            world_blade = leaf_to_world(
+                blade_pts, identity_pos,
+                identity_right, identity_up, identity_normal,
+                leaf_cfg, scale
+            )
+
+        local_nodes = leaf_to_world(
+            nodes_2d, identity_pos,
+            identity_right, identity_up, identity_normal,
+            leaf_cfg, scale
+        )
+        min_vein = leaf_cfg.get('min_vein_width', 0.005)
+
+        # Pre-compute vein ribbon geometry — done once
+        vein_quads = []
+        for parent_idx, child_idx in edges:
+            p0 = local_nodes[parent_idx]
+            p1 = local_nodes[child_idx]
+            r  = max(radii[parent_idx] * scale, min_vein)
+            perp = np.cross(p1 - p0, identity_normal)
+            pmag = np.linalg.norm(perp)
+            if pmag < 1e-6:
+                continue
+            perp /= pmag
+            v0 = p0 + perp * r
+            v1 = p0 - perp * r
+            v2 = p1 - perp * r
+            v3 = p1 + perp * r
+            vein_quads.append((v0, v1, v2, v3))
+
+        # Loop over palette colors — emit one ObjectBegin block per color
+        for color_idx, blade_color in enumerate(active_colors):
+            lines += [f'ObjectBegin "leaf_{color_idx}"', '']
+
+            # Blade surface — color varies per variant
+            if world_blade and blade_idx:
                 pts_str = '  '.join(
                     f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}'
                     for v in world_blade
@@ -591,34 +628,8 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
                     ''
                 ]
 
-        # Vein ribbons in local space
-        if not show_veins_only or True:
-            identity_pos    = np.array([0.0, 0.0, 0.0])
-            identity_right  = np.array([1.0, 0.0, 0.0])
-            identity_up     = np.array([0.0, 1.0, 0.0])
-            identity_normal = np.array([0.0, 0.0, 1.0])
-            local_nodes = leaf_to_world(
-                nodes_2d, identity_pos,
-                identity_right, identity_up, identity_normal,
-                leaf_cfg, scale
-            )
-            min_vein = leaf_cfg.get('min_vein_width', 0.005)
-            for parent_idx, child_idx in edges:
-                p0 = local_nodes[parent_idx]
-                p1 = local_nodes[child_idx]
-                r  = max(radii[parent_idx] * scale, min_vein)
-
-                perp = np.cross(p1 - p0, identity_normal)
-                pmag = np.linalg.norm(perp)
-                if pmag < 1e-6:
-                    continue
-                perp /= pmag
-
-                v0 = p0 + perp * r
-                v1 = p0 - perp * r
-                v2 = p1 - perp * r
-                v3 = p1 + perp * r
-
+            # Vein ribbons — same vein_color across all variants
+            for v0, v1, v2, v3 in vein_quads:
                 pts = ' '.join(
                     f'{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}'
                     for v in [v0, v1, v2, v3]
@@ -634,10 +645,12 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
                     ''
                 ]
 
-        lines += ['ObjectEnd', '']
+            lines += ['ObjectEnd', '']
 
         # --- Place instances ---
+        n_variants = len(active_colors)
         for pos, leaf_right, leaf_up, leaf_normal in placements:
+            variant = random.randint(0, n_variants - 1)
             # Build 4x4 transform matrix from transport frame
             # Columns: [leaf_right | leaf_up | leaf_normal | pos]
             m = np.eye(4)
@@ -653,7 +666,7 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root):
             lines += [
                 'AttributeBegin',
                 f'    Transform [ {mt_str} ]',
-                '    ObjectInstance "leaf"',
+                f'    ObjectInstance "leaf_{variant}"',
                 'AttributeEnd',
                 ''
             ]
