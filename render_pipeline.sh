@@ -64,8 +64,8 @@ else
 fi
 
 # --- 5b. RUN PROCEDURAL GEOMETRY (if enabled) ---
-TREE_ENABLED=$(jq -r '.scene.tree.enabled // false' "$CONFIG_FILE")
-FOLIAGE_ENABLED=$(jq -r '.scene.foliage.enabled // false' "$CONFIG_FILE")
+TREE_ENABLED=$(jq -r '[.scene.trees[]? | select(.enabled == true)] | length > 0' "$CONFIG_FILE")
+FOLIAGE_ENABLED=$(jq -r '[.scene.trees[]? | select(.foliage.enabled == true)] | length > 0' "$CONFIG_FILE")
 if [ "$TREE_ENABLED" = "true" ] || [ "$FOLIAGE_ENABLED" = "true" ]; then
     GENERATE="${REPO_ROOT}/generate.py"
     if [ ! -f "$GENERATE" ]; then
