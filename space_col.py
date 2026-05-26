@@ -186,6 +186,70 @@ class Tree3D:
         return leaves
     
 
+
+    def _inject_attraction_points(self, iteration, ca_cfg):
+        """
+        Inject new attraction points into the cloud during growth.
+        Called each iteration when continuous_attraction.enabled is true.
+        Implements Runions Figure 8 — continuously added attraction points
+        with gradually decreasing birth distance, producing a hierarchy
+        of branch sizes from large limbs to fine twigs.
+
+        Config reads: continuous_attraction (points_per_iteration,
+                    initial_birth_dist, final_birth_dist,
+                    iterations_to_full_density)
+        """
+        cfg                   = self.cfg
+        cx, cy, cz            = cfg['point_cloud_center']
+        radius                = cfg['point_cloud_radius']
+        lw                    = cfg['leaf_width']
+        lh                    = cfg['leaf_height']
+        ld                    = cfg['leaf_depth']
+        points_per_iter       = ca_cfg.get('points_per_iteration', 100)
+        initial_birth_dist    = ca_cfg.get('initial_birth_dist', 2.0)
+        final_birth_dist      = ca_cfg.get('final_birth_dist', 0.5)
+        iters_to_full_density = ca_cfg.get('iterations_to_full_density', 100)
+
+        # Linearly interpolate birth_dist from coarse to fine
+        t = min(1.0, iteration / max(1, iters_to_full_density))
+        birth_dist = initial_birth_dist + t * (final_birth_dist - initial_birth_dist)
+
+        # Build current leaf positions for Poisson disk check
+        if len(self.leaves) > 0:
+            leaf_positions = np.array([l.pos() for l in self.leaves])
+            kdtree = KDTree(leaf_positions)
+        else:
+            kdtree = None
+
+        injected = 0
+        attempts = 0
+        max_attempts = points_per_iter * 20
+
+        while injected < points_per_iter and attempts < max_attempts:
+            attempts += 1
+
+            # Sample within ellipsoid — Marsaglia method
+            while True:
+                u = random.uniform(-1, 1)
+                v = random.uniform(-1, 1)
+                w = random.uniform(-1, 1)
+                if u*u + v*v + w*w <= 1.0:
+                    break
+
+            x = cx + u * radius * lw
+            y = cy + v * radius * lh
+            z = cz + w * radius * ld
+
+            # Poisson disk check against existing points
+            if kdtree is not None:
+                dist, _ = kdtree.query([x, y, z])
+                if dist < birth_dist:
+                    continue
+
+            self.leaves.append(Leaf3D(x, y, z))
+            injected += 1
+
+
     def _grow_trunk(self):
         """
         Grow trunk upward from root until within max_dist of any leaf.
@@ -252,6 +316,11 @@ class Tree3D:
         max_stuck = 5
 
         for iteration in range(max_loops):
+
+            # Inject new attraction points if continuous addition enabled
+            ca_cfg = self.cfg.get('continuous_attraction', {})
+            if ca_cfg.get('enabled', False):
+                self._inject_attraction_points(iteration, ca_cfg)
 
             if len(self.leaves) < min_leaves:
                 print(f"  Growth complete: {len(self.leaves)} leaves remaining")
