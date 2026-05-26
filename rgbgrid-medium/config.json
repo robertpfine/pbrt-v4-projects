@@ -23,8 +23,8 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 0, 16.0],
-        "look": [0, 2.0, 0],
+        "eye":  [0, 0, 10.0],
+        "look": [0, 0.0, 0],
         "up":   [0, 1, 0]
       },
       "fov": 70
@@ -197,22 +197,22 @@
         "num_leaves": 12000,
         "max_loops": 200,
         "max_stuck": 5,
-        "seed": 1,
+        "seed": 7,
         "min_leaves": 30,
         "D": 0.2,
         "dk_multiplier": 2.0,
-        "di_multiplier": 999.0,
+        "di_multiplier": 8.0,
         "birth_dist": 0.15,
         "leaf_width": 1.0,
         "leaf_height": 1.0,
         "leaf_depth": 1.0,
-        "point_cloud_center": [-4, 5.0, -3.0],
+        "point_cloud_center": [0.0, 6.0, 0.0],
         "point_cloud_radius": 4.0,
         "trunk_radius": 999.0,
         "base_radius": 0.003,
         "joint_radius_multiplier": 1.3,
         "joint_radius_cap": 0.02,
-        "root_position": [-4, 0.5, -3.0],
+        "root_position": [0.0, 0.0, 0.0],
         "trunk_material": {
           "type": "diffuse",
           "reflectance": [0.40, 0.35, 0.10]
@@ -222,7 +222,7 @@
           "reflectance": [0.40, 0.35, 0.10]
         },
         "foliage": {
-          "enabled": true,
+          "enabled": false,
           "internode_distance": 0.3,
           "leaf_angle": 45.0,
           "min_loop_index": 5,
@@ -261,7 +261,7 @@
         }
       },
       {
-        "enabled": true,
+        "enabled": false,
         "num_leaves": 12000,
         "max_loops": 200,
         "max_stuck": 5,
@@ -290,7 +290,7 @@
           "reflectance": [0.40, 0.35, 0.10]
         },
         "foliage": {
-          "enabled": true,
+          "enabled": false,
           "internode_distance": 0.3,
           "leaf_angle": 45.0,
           "min_loop_index": 5,
