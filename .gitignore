@@ -29,6 +29,5 @@ Thumbs.db
 
 # --- Logs ---
 render_log.txt
-**/scene_files/foliage.pbrt
-
-**/scene_files/tree.pbrt
+**/scene_files/foliage*.pbrt
+**/scene_files/tree*.pbrt
