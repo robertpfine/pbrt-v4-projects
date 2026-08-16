@@ -76,9 +76,11 @@ class Branch3D:
         return (self.x, self.y, self.z)
 
     def reset(self):
-        """Reset growth direction to original after each iteration."""
-        self.dir = list(self.orig_dir)
+        """Clear the attraction-direction accumulator for the next iteration."""
+        self.dir = [0.0, 0.0, 0.0]
         self.nearest_leaf_count = 0
+
+
 
     def next(self, growth_dist, loop_index):
         """Spawn and return the next branch node in current growth direction."""
@@ -130,6 +132,21 @@ class Tree3D:
         # Grow trunk until within max_dist of any leaf
         self._grow_trunk()
 
+    def _point_inside_crown(self, x, y, z):
+        """
+        Return True if an attraction point is allowed inside the crown volume.
+        """
+
+        cfg = self.cfg
+
+        _, cy, _ = cfg['point_cloud_center']
+        radius = cfg['point_cloud_radius']
+
+        lower_fraction = cfg.get('lower_crown_fraction', 0.0)
+        lower_y = cy - lower_fraction * radius
+
+        return y >= lower_y    
+
     def _generate_leaves(self):
         """
         Generate attraction points within an ellipsoidal envelope
@@ -167,6 +184,11 @@ class Tree3D:
             y = cy + v * radius * lh
             z = cz + w * radius * ld
 
+            if not self._point_inside_crown(x, y, z):
+                continue
+
+            
+
             # Poisson disk check — must be at least birth_dist from all existing points
             if len(leaves) > 0:
                 dists = np.sqrt(
@@ -190,65 +212,110 @@ class Tree3D:
     def _inject_attraction_points(self, iteration, ca_cfg):
         """
         Inject new attraction points into the cloud during growth.
-        Called each iteration when continuous_attraction.enabled is true.
-        Implements Runions Figure 8 — continuously added attraction points
-        with gradually decreasing birth distance, producing a hierarchy
-        of branch sizes from large limbs to fine twigs.
 
-        Config reads: continuous_attraction (points_per_iteration,
-                    initial_birth_dist, final_birth_dist,
-                    iterations_to_full_density)
+        Implements the Figure 8 idea from Runions et al.:
+        new attraction points are continuously added while the
+        minimum spacing between points gradually decreases.
+
+        Important:
+        Every newly accepted point is also included in the spacing
+        test for subsequent candidates in the same injection pass.
         """
+
         cfg                   = self.cfg
         cx, cy, cz            = cfg['point_cloud_center']
         radius                = cfg['point_cloud_radius']
         lw                    = cfg['leaf_width']
         lh                    = cfg['leaf_height']
         ld                    = cfg['leaf_depth']
+
         points_per_iter       = ca_cfg.get('points_per_iteration', 100)
         initial_birth_dist    = ca_cfg.get('initial_birth_dist', 2.0)
         final_birth_dist      = ca_cfg.get('final_birth_dist', 0.5)
         iters_to_full_density = ca_cfg.get('iterations_to_full_density', 100)
 
-        # Linearly interpolate birth_dist from coarse to fine
+        # Gradually reduce the minimum spacing between attraction points.
         t = min(1.0, iteration / max(1, iters_to_full_density))
-        birth_dist = initial_birth_dist + t * (final_birth_dist - initial_birth_dist)
+        birth_dist = (
+            initial_birth_dist
+            + t * (final_birth_dist - initial_birth_dist)
+        )
 
-        # Build current leaf positions for Poisson disk check
-        if len(self.leaves) > 0:
-            leaf_positions = np.array([l.pos() for l in self.leaves])
-            kdtree = KDTree(leaf_positions)
+        # Positions of all currently existing attraction points.
+        if self.leaves:
+            existing_positions = np.array(
+                [leaf.pos() for leaf in self.leaves],
+                dtype=float
+            )
         else:
-            kdtree = None
+            existing_positions = np.empty((0, 3), dtype=float)
+
+        # Keep newly accepted points separately so that candidates are
+        # checked against points added earlier in THIS SAME iteration.
+        new_positions = []
 
         injected = 0
         attempts = 0
-        max_attempts = points_per_iter * 20
+        max_attempts = points_per_iter * 50
 
         while injected < points_per_iter and attempts < max_attempts:
             attempts += 1
 
-            # Sample within ellipsoid — Marsaglia method
+            # Random point inside unit sphere.
             while True:
-                u = random.uniform(-1, 1)
-                v = random.uniform(-1, 1)
-                w = random.uniform(-1, 1)
+                u = random.uniform(-1.0, 1.0)
+                v = random.uniform(-1.0, 1.0)
+                w = random.uniform(-1.0, 1.0)
+
                 if u*u + v*v + w*w <= 1.0:
                     break
 
+            # Transform unit sphere into configured ellipsoid.
             x = cx + u * radius * lw
             y = cy + v * radius * lh
             z = cz + w * radius * ld
 
-            # Poisson disk check against existing points
-            if kdtree is not None:
-                dist, _ = kdtree.query([x, y, z])
-                if dist < birth_dist:
+            if not self._point_inside_crown(x, y, z):
+                continue
+
+            
+
+            candidate = np.array([x, y, z], dtype=float)
+
+            # Check against attraction points that existed before
+            # this injection pass.
+            if len(existing_positions) > 0:
+                distances = np.linalg.norm(
+                    existing_positions - candidate,
+                    axis=1
+                )
+
+                if np.min(distances) < birth_dist:
                     continue
 
+            # ALSO check against points already accepted during
+            # this same injection pass.
+            if new_positions:
+                new_array = np.array(new_positions)
+
+                distances = np.linalg.norm(
+                    new_array - candidate,
+                    axis=1
+                )
+
+                if np.min(distances) < birth_dist:
+                    continue
+
+            # Candidate satisfies the current spacing requirement.
             self.leaves.append(Leaf3D(x, y, z))
+            new_positions.append(candidate)
+
             injected += 1
 
+        print(
+            f"  Injected {injected} attraction points "
+            f"(birth_dist={birth_dist:.3f}, attempts={attempts})"
+        )
 
     def _grow_trunk(self):
         """
@@ -315,6 +382,11 @@ class Tree3D:
         stuck_iterations = 0
         max_stuck = 5
 
+        # Equation 2 uses only the attraction vectors from the current iteration.
+        # Clear the directions inherited from trunk construction.
+        for branch in self.branches:
+            branch.reset()
+
         for iteration in range(max_loops):
 
             # Inject new attraction points if continuous addition enabled
@@ -352,9 +424,9 @@ class Tree3D:
                 b_idx = indices[i]
 
                 # Kill distance — leaf reached, mark for removal
-                if dist < min_dist:
-                    leaf.reached = True
-                    continue
+                #if dist < min_dist:
+                #    leaf.reached = True
+                #    continue
 
                 # Radius of influence — leaf influences closest branch
                 if dist <= max_dist:
@@ -410,7 +482,22 @@ class Tree3D:
 
             self.branches.extend(new_branches)
 
-            # --- Step 5: remove reached leaves ---
+            
+
+            # --- Step 5: remove attraction points reached by the newly grown tree ---
+
+            if self.leaves:
+                branch_positions = np.array([b.pos() for b in self.branches])
+                branch_tree = KDTree(branch_positions)
+
+                leaf_positions = np.array([l.pos() for l in self.leaves])
+
+                dists, _ = branch_tree.query(leaf_positions)
+
+                for i, leaf in enumerate(self.leaves):
+                    if dists[i] < min_dist:
+                        leaf.reached = True
+
             self.leaves = [l for l in self.leaves if not l.reached]
 
             # --- Step 6: reset branch directions ---
@@ -578,8 +665,8 @@ def write_tree(cfg, cylinders, joints, project_root, index=0):
         ux, uy, uz = dx/length, dy/length, dz/length
 
         # Cross product of +Z (0,0,1) with branch direction
-        cx_ =  uy
-        cy_ = -ux
+        cx_ = -uy
+        cy_ =  ux
         cz_ =  0.0
         cross_mag = math.sqrt(cx_*cx_ + cy_*cy_)
 

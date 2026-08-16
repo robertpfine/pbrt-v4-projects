@@ -44,8 +44,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 1500,
-      "y_resolution": 1000
+      "x_resolution": 2500,
+      "y_resolution": 2000
     },
 
     "lights": [
@@ -200,7 +200,7 @@
         "seed": 7,
         "min_leaves": 30,
         "D": 1.0,
-        "dk_multiplier": 1.50,
+        "dk_multiplier": 2.0,
         "di_multiplier": 8.0,
         "birth_dist": 4.0,
         "leaf_width": 1.0,
@@ -208,16 +208,17 @@
         "leaf_depth": 1.0,
         "point_cloud_center": [0.0, 26.0, 0.0],
         "point_cloud_radius": 20.0,
+        "lower_crown_fraction": 0.20,
         "trunk_radius": 999.0,
         "base_radius": 0.015,
         "joint_radius_multiplier": 1.3,
         "joint_radius_cap": 0.1,
         "root_position": [0.0, 0.0, 0.0],
         "continuous_attraction": {
-          "enabled": true,
-          "points_per_iteration": 200,
+          "enabled": false,
+          "points_per_iteration": 50,
           "initial_birth_dist": 4.0,
-          "final_birth_dist": 0.3,
+          "final_birth_dist": 1.0,
           "iterations_to_full_density": 100
         },
         "trunk_material": {
