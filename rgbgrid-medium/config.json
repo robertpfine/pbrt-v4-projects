@@ -234,6 +234,10 @@
           "z": 0.0,
           "strength": 0.350
         },
+        "direction_persistence": {
+          "enabled": true,
+          "strength": 0.5
+        },
         "continuous_attraction": {
           "enabled": true,
           "exclude_near_tree": false,
