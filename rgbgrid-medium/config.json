@@ -195,7 +195,7 @@
       {
         "enabled": true,
         "num_leaves": 25,
-        "max_loops": 300,
+        "max_loops": 500,
         "max_stuck": 5,
         "seed": 7,
         "min_leaves": 1,
