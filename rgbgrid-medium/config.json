@@ -236,6 +236,7 @@
         },
         "continuous_attraction": {
           "enabled": true,
+          "exclude_near_tree": false,
           "points_per_iteration": 5,
           "initial_birth_dist": 20.0,
           "final_birth_dist": 5.0,
