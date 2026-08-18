@@ -625,16 +625,15 @@ class Tree3D:
 
         render_branches = self._get_render_branches()
         retained_ids = {id(branch) for branch in render_branches}
+        render_positions = self._get_render_positions()
 
         results = []
         for branch in render_branches[1:]:  # skip root
-            render_parent = branch.parent
-            while render_parent is not None and id(render_parent) not in retained_ids:
-                render_parent = render_parent.parent
+            render_parent = self._get_render_parent(branch, retained_ids)
             if render_parent is None:
                 continue
-            px, py, pz = render_parent.pos()
-            bx, by, bz = branch.pos()
+            px, py, pz = render_positions[id(render_parent)]
+            bx, by, bz = render_positions[id(branch)]
             radius = self._radii.get(id(branch), self.cfg.get('base_radius', 0.015))
             results.append(((px, py, pz), (bx, by, bz), radius))
 
@@ -648,15 +647,58 @@ class Tree3D:
         if not hasattr(self, '_radii'):
             self._compute_murray_radii()
 
+        render_positions = self._get_render_positions()
+
         results = []
         for branch in self._get_render_branches()[1:]:
-            bx, by, bz = branch.pos()
+            bx, by, bz = render_positions[id(branch)]
             joint_mult = self.cfg.get('joint_radius_multiplier', 1.2)
             joint_cap = self.cfg.get('joint_radius_cap', self.cfg.get('base_radius', 0.015) * 10)
             radius = min(self._radii.get(id(branch), self.cfg.get('base_radius', 0.015)) * joint_mult, joint_cap)
             results.append(((bx, by, bz), radius))
 
         return results
+
+    @staticmethod
+    def _get_render_parent(branch, retained_ids):
+        """Return the nearest retained ancestor of a render node."""
+        render_parent = branch.parent
+        while render_parent is not None and id(render_parent) not in retained_ids:
+            render_parent = render_parent.parent
+        return render_parent
+
+    def _get_render_positions(self):
+        """Return output positions, optionally relocated toward basal neighbors."""
+        render_branches = self._get_render_branches()
+        if not hasattr(self, '_render_positions'):
+            positions = {id(branch): branch.pos() for branch in render_branches}
+            relocation_cfg = self.cfg.get('branch_relocation', {})
+
+            if relocation_cfg.get('enabled', False):
+                fraction = relocation_cfg.get('basal_fraction', 0.5)
+                if not 0.0 <= fraction <= 1.0:
+                    raise ValueError("branch_relocation basal_fraction must be between 0 and 1")
+
+                retained_ids = set(positions)
+                original_positions = positions.copy()
+                for branch in render_branches[1:]:
+                    render_parent = self._get_render_parent(branch, retained_ids)
+                    if render_parent is None:
+                        continue
+                    position = np.asarray(original_positions[id(branch)], dtype=float)
+                    basal_position = np.asarray(
+                        original_positions[id(render_parent)], dtype=float
+                    )
+                    positions[id(branch)] = tuple(
+                        position + fraction * (basal_position - position)
+                    )
+
+                print(f"  Relocated {len(render_branches) - 1} render nodes "
+                      f"{fraction:.3f} toward their basal neighbors")
+
+            self._render_positions = positions
+
+        return self._render_positions
 
     def _get_render_branches(self):
         """Return the original or decimated node list used for output geometry."""
@@ -843,5 +885,4 @@ if __name__ == "__main__":
     else:
         print("  Tree disabled in config — nothing to do.")
     
-
 
