@@ -214,7 +214,7 @@
         "pipe_exponent": 2.2,
         "decimation": {
           "enabled": true,
-          "curvature_angle_degrees": 5.0
+          "spacing_multiplier": 2.0
         },
         "branch_relocation": {
           "enabled": true,
