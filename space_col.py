@@ -300,6 +300,7 @@ class Tree3D:
         initial_birth_dist    = ca_cfg.get('initial_birth_dist', 2.0)
         final_birth_dist      = ca_cfg.get('final_birth_dist', 0.5)
         iters_to_full_density = ca_cfg.get('iterations_to_full_density', 100)
+        exclude_near_tree     = ca_cfg.get('exclude_near_tree', False)
 
         # Gradually reduce the minimum spacing between attraction points.
         t = min(1.0, iteration / max(1, iters_to_full_density))
@@ -317,11 +318,13 @@ class Tree3D:
         else:
             existing_positions = np.empty((0, 3), dtype=float)
 
-        branch_positions = np.array(
-            [branch.pos() for branch in self.branches],
-            dtype=float
-        )
-        branch_tree = KDTree(branch_positions)
+        branch_tree = None
+        if exclude_near_tree:
+            branch_positions = np.array(
+                [branch.pos() for branch in self.branches],
+                dtype=float
+            )
+            branch_tree = KDTree(branch_positions)
 
         # Keep newly accepted points separately so that candidates are
         # checked against points added earlier in THIS SAME iteration.
@@ -355,9 +358,10 @@ class Tree3D:
 
             candidate = np.array([x, y, z], dtype=float)
 
-            distance_to_tree, _ = branch_tree.query(candidate)
-            if distance_to_tree < self.min_dist:
-                continue
+            if branch_tree is not None:
+                distance_to_tree, _ = branch_tree.query(candidate)
+                if distance_to_tree < self.min_dist:
+                    continue
 
             # Check against attraction points that existed before
             # this injection pass.
