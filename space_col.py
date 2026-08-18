@@ -94,41 +94,45 @@ class Branch3D:
         return Branch3D(nx, ny, nz, self.dir, loop_index, self)
 
 
-def decimate_branches(branches, curvature_angle_degrees):
-    """Return render nodes after removing low-curvature degree-two nodes."""
-    if not 0.0 <= curvature_angle_degrees <= 180.0:
-        raise ValueError("decimation curvature_angle_degrees must be between 0 and 180")
+def decimate_branches(branches, minimum_spacing):
+    """Decimate each branch using accumulated distance from base to tip."""
+    if minimum_spacing <= 0.0:
+        raise ValueError("decimation minimum spacing must be greater than zero")
 
     children = {id(branch): [] for branch in branches}
     for branch in branches:
         if branch.parent is not None:
             children[id(branch.parent)].append(branch)
 
-    retained = []
-    for branch in branches:
-        kids = children[id(branch)]
+    retained_ids = {id(branches[0])}
 
-        # Roots, bifurcations, and terminal tips define tree topology.
-        if branch.parent is None or len(kids) != 1:
-            retained.append(branch)
-            continue
+    def process_branch(base, first_node):
+        """Process one maximal path from a root or fork toward its next endpoint."""
+        accumulated_distance = 0.0
+        previous = base
+        node = first_node
 
-        child = kids[0]
-        incoming = np.subtract(branch.pos(), branch.parent.pos())
-        outgoing = np.subtract(child.pos(), branch.pos())
-        incoming_length = np.linalg.norm(incoming)
-        outgoing_length = np.linalg.norm(outgoing)
+        while True:
+            accumulated_distance += math.dist(previous.pos(), node.pos())
+            kids = children[id(node)]
+            is_endpoint = len(kids) != 1
 
-        if incoming_length == 0.0 or outgoing_length == 0.0:
-            retained.append(branch)
-            continue
+            if accumulated_distance >= minimum_spacing or is_endpoint:
+                retained_ids.add(id(node))
+                accumulated_distance = 0.0
 
-        cosine = np.dot(incoming, outgoing) / (incoming_length * outgoing_length)
-        turn_angle = math.degrees(math.acos(float(np.clip(cosine, -1.0, 1.0))))
-        if turn_angle >= curvature_angle_degrees:
-            retained.append(branch)
+            if is_endpoint:
+                for child in kids:
+                    process_branch(node, child)
+                return
 
-    return retained
+            previous = node
+            node = kids[0]
+
+    for child in children[id(branches[0])]:
+        process_branch(branches[0], child)
+
+    return [branch for branch in branches if id(branch) in retained_ids]
     
 
     # =============================================================================
@@ -707,11 +711,14 @@ class Tree3D:
             return self.branches
 
         if not hasattr(self, '_decimated_branches'):
-            tolerance = decimation_cfg.get('curvature_angle_degrees', 5.0)
-            self._decimated_branches = decimate_branches(self.branches, tolerance)
+            spacing_multiplier = decimation_cfg.get('spacing_multiplier', 2.0)
+            minimum_spacing = spacing_multiplier * self.growth_dist
+            self._decimated_branches = decimate_branches(
+                self.branches, minimum_spacing
+            )
             print(f"  Decimated render skeleton: {len(self.branches)} -> "
                   f"{len(self._decimated_branches)} nodes "
-                  f"(curvature threshold={tolerance:.3f} degrees)")
+                  f"(minimum spacing={minimum_spacing:.3f})")
 
         return self._decimated_branches
     
@@ -885,4 +892,3 @@ if __name__ == "__main__":
     else:
         print("  Tree disabled in config — nothing to do.")
     
-
