@@ -459,6 +459,13 @@ class Tree3D:
             gx, gy, gz = tropism['x'], tropism['y'], tropism['z']
             tropism_strength = tropism.get('strength', 0.1)
 
+        direction_persistence = cfg.get('direction_persistence', {})
+        persistence_strength = (
+            direction_persistence.get('strength', 0.0)
+            if direction_persistence.get('enabled', False)
+            else 0.0
+        )
+
         prev_leaf_count = len(self.leaves)
         stuck_iterations = 0
         max_stuck = 5
@@ -545,6 +552,18 @@ class Tree3D:
                         branch.dir[0] /= mag
                         branch.dir[1] /= mag
                         branch.dir[2] /= mag
+
+                    # Experimental directional persistence: bias growth toward
+                    # the direction of the segment entering this branch node.
+                    if persistence_strength > 0.0:
+                        px = branch.dir[0] + branch.orig_dir[0] * persistence_strength
+                        py = branch.dir[1] + branch.orig_dir[1] * persistence_strength
+                        pz = branch.dir[2] + branch.orig_dir[2] * persistence_strength
+                        pmag = math.sqrt(px*px + py*py + pz*pz)
+                        if pmag > 0:
+                            branch.dir[0] = px / pmag
+                            branch.dir[1] = py / pmag
+                            branch.dir[2] = pz / pmag
 
                     # Apply tropism bias (Runions eq. 3)
                     if tropism:
