@@ -220,6 +220,11 @@
           "enabled": true,
           "basal_fraction": 0.5
         },
+        "subdivision": {
+          "enabled": true,
+          "iterations": 2,
+          "corner_cut_ratio": 0.25
+        },
         "joint_radius_multiplier": 1.3,
         "joint_radius_cap": 0.1,
         "root_position": [0.0, 0.0, 0.0],
