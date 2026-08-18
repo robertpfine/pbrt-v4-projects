@@ -133,6 +133,31 @@ def decimate_branches(branches, minimum_spacing):
         process_branch(branches[0], child)
 
     return [branch for branch in branches if id(branch) in retained_ids]
+
+
+def subdivide_polyline(samples, iterations, corner_cut_ratio):
+    """Apply open-curve corner cutting while preserving both endpoints."""
+    if iterations < 0 or not isinstance(iterations, int):
+        raise ValueError("subdivision iterations must be a non-negative integer")
+    if not 0.0 < corner_cut_ratio < 0.5:
+        raise ValueError("subdivision corner_cut_ratio must be between 0 and 0.5")
+
+    result = samples
+    for _ in range(iterations):
+        if len(result) < 3:
+            break
+
+        refined = [result[0]]
+        for (p0, r0), (p1, r1) in zip(result, result[1:]):
+            q_position = (1.0 - corner_cut_ratio) * p0 + corner_cut_ratio * p1
+            q_radius = (1.0 - corner_cut_ratio) * r0 + corner_cut_ratio * r1
+            r_position = corner_cut_ratio * p0 + (1.0 - corner_cut_ratio) * p1
+            r_radius = corner_cut_ratio * r0 + (1.0 - corner_cut_ratio) * r1
+            refined.extend(((q_position, q_radius), (r_position, r_radius)))
+        refined.append(result[-1])
+        result = refined
+
+    return result
     
 
     # =============================================================================
@@ -627,21 +652,7 @@ class Tree3D:
         if not hasattr(self, '_radii'):
             self._compute_murray_radii()
 
-        render_branches = self._get_render_branches()
-        retained_ids = {id(branch) for branch in render_branches}
-        render_positions = self._get_render_positions()
-
-        results = []
-        for branch in render_branches[1:]:  # skip root
-            render_parent = self._get_render_parent(branch, retained_ids)
-            if render_parent is None:
-                continue
-            px, py, pz = render_positions[id(render_parent)]
-            bx, by, bz = render_positions[id(branch)]
-            radius = self._radii.get(id(branch), self.cfg.get('base_radius', 0.015))
-            results.append(((px, py, pz), (bx, by, bz), radius))
-
-        return results
+        return self._get_output_geometry()[0]
 
     def get_joints(self):
         """
@@ -651,17 +662,87 @@ class Tree3D:
         if not hasattr(self, '_radii'):
             self._compute_murray_radii()
 
-        render_positions = self._get_render_positions()
+        return self._get_output_geometry()[1]
 
-        results = []
-        for branch in self._get_render_branches()[1:]:
-            bx, by, bz = render_positions[id(branch)]
-            joint_mult = self.cfg.get('joint_radius_multiplier', 1.2)
-            joint_cap = self.cfg.get('joint_radius_cap', self.cfg.get('base_radius', 0.015) * 10)
-            radius = min(self._radii.get(id(branch), self.cfg.get('base_radius', 0.015)) * joint_mult, joint_cap)
-            results.append(((bx, by, bz), radius))
+    def _get_output_geometry(self):
+        """Build cylinder and joint geometry, optionally with curve subdivision."""
+        if hasattr(self, '_output_geometry'):
+            return self._output_geometry
 
-        return results
+        render_branches = self._get_render_branches()
+        retained_ids = {id(branch) for branch in render_branches}
+        positions = self._get_render_positions()
+        base_radius = self.cfg.get('base_radius', 0.015)
+        joint_mult = self.cfg.get('joint_radius_multiplier', 1.2)
+        joint_cap = self.cfg.get('joint_radius_cap', base_radius * 10)
+        subdivision_cfg = self.cfg.get('subdivision', {})
+
+        render_children = {id(branch): [] for branch in render_branches}
+        render_parents = {}
+        for branch in render_branches[1:]:
+            render_parent = self._get_render_parent(branch, retained_ids)
+            if render_parent is not None:
+                render_parents[id(branch)] = render_parent
+                render_children[id(render_parent)].append(branch)
+
+        if not subdivision_cfg.get('enabled', False):
+            cylinders = []
+            joints = []
+            for branch in render_branches[1:]:
+                render_parent = render_parents.get(id(branch))
+                if render_parent is None:
+                    continue
+                radius = self._radii.get(id(branch), base_radius)
+                cylinders.append((
+                    positions[id(render_parent)], positions[id(branch)], radius
+                ))
+                joints.append((
+                    positions[id(branch)], min(radius * joint_mult, joint_cap)
+                ))
+            self._output_geometry = (cylinders, joints)
+            return self._output_geometry
+
+        iterations = subdivision_cfg.get('iterations', 2)
+        corner_cut_ratio = subdivision_cfg.get('corner_cut_ratio', 0.25)
+        cylinders = []
+        joint_by_position = {}
+
+        # Subdivide maximal paths between roots, forks, and tips independently.
+        path_bases = [
+            branch for branch in render_branches
+            if branch.parent is None or len(render_children[id(branch)]) != 1
+        ]
+        for base in path_bases:
+            for first_node in render_children[id(base)]:
+                path = [base, first_node]
+                node = first_node
+                while len(render_children[id(node)]) == 1:
+                    node = render_children[id(node)][0]
+                    path.append(node)
+
+                samples = [
+                    (
+                        np.asarray(positions[id(branch)], dtype=float),
+                        self._radii.get(id(branch), base_radius)
+                    )
+                    for branch in path
+                ]
+                refined = subdivide_polyline(
+                    samples, iterations, corner_cut_ratio
+                )
+
+                for (p0, _), (p1, radius) in zip(refined, refined[1:]):
+                    start = tuple(p0)
+                    end = tuple(p1)
+                    cylinders.append((start, end, radius))
+                    joint_by_position[end] = min(radius * joint_mult, joint_cap)
+
+        joints = list(joint_by_position.items())
+        print(f"  Subdivided render skeleton: {len(render_branches) - 1} -> "
+              f"{len(cylinders)} segments ({iterations} iterations, "
+              f"corner cut={corner_cut_ratio:.3f})")
+        self._output_geometry = (cylinders, joints)
+        return self._output_geometry
 
     @staticmethod
     def _get_render_parent(branch, retained_ids):
