@@ -92,6 +92,43 @@ class Branch3D:
         nz = self.z + (self.dir[2] / mag) * growth_dist
         self.num_children += 1
         return Branch3D(nx, ny, nz, self.dir, loop_index, self)
+
+
+def decimate_branches(branches, curvature_angle_degrees):
+    """Return render nodes after removing low-curvature degree-two nodes."""
+    if not 0.0 <= curvature_angle_degrees <= 180.0:
+        raise ValueError("decimation curvature_angle_degrees must be between 0 and 180")
+
+    children = {id(branch): [] for branch in branches}
+    for branch in branches:
+        if branch.parent is not None:
+            children[id(branch.parent)].append(branch)
+
+    retained = []
+    for branch in branches:
+        kids = children[id(branch)]
+
+        # Roots, bifurcations, and terminal tips define tree topology.
+        if branch.parent is None or len(kids) != 1:
+            retained.append(branch)
+            continue
+
+        child = kids[0]
+        incoming = np.subtract(branch.pos(), branch.parent.pos())
+        outgoing = np.subtract(child.pos(), branch.pos())
+        incoming_length = np.linalg.norm(incoming)
+        outgoing_length = np.linalg.norm(outgoing)
+
+        if incoming_length == 0.0 or outgoing_length == 0.0:
+            retained.append(branch)
+            continue
+
+        cosine = np.dot(incoming, outgoing) / (incoming_length * outgoing_length)
+        turn_angle = math.degrees(math.acos(float(np.clip(cosine, -1.0, 1.0))))
+        if turn_angle >= curvature_angle_degrees:
+            retained.append(branch)
+
+    return retained
     
 
     # =============================================================================
@@ -112,7 +149,8 @@ class Tree3D:
         D                = cfg['D']
         self.growth_dist = D
         self.min_dist    = cfg['dk_multiplier'] * D
-        self.max_dist    = cfg['di_multiplier'] * D
+        di_multiplier    = cfg['di_multiplier']
+        self.max_dist    = math.inf if di_multiplier is None else di_multiplier * D
         self.max_loops   = cfg['max_loops']
         self.min_leaves  = cfg['min_leaves']
         self.actual_loops = 0
@@ -250,6 +288,12 @@ class Tree3D:
         else:
             existing_positions = np.empty((0, 3), dtype=float)
 
+        branch_positions = np.array(
+            [branch.pos() for branch in self.branches],
+            dtype=float
+        )
+        branch_tree = KDTree(branch_positions)
+
         # Keep newly accepted points separately so that candidates are
         # checked against points added earlier in THIS SAME iteration.
         new_positions = []
@@ -281,6 +325,10 @@ class Tree3D:
             
 
             candidate = np.array([x, y, z], dtype=float)
+
+            distance_to_tree, _ = branch_tree.query(candidate)
+            if distance_to_tree < self.min_dist:
+                continue
 
             # Check against attraction points that existed before
             # this injection pass.
@@ -509,14 +557,15 @@ class Tree3D:
                   f"{len(self.leaves)} leaves remaining")
             
 
-    def _compute_murray_radii(self, n=2):
+    def _compute_murray_radii(self):
         """
         Compute branch radii using Murray's law, basipetally from tips to root.
         r^n = sum of children r^n
         Tip radius = base_radius from config.
-        n=2 gives good results for trees (MacDonald 1983).
+        The pipe-model exponent is read from pipe_exponent in config.
         """
         r0 = self.cfg.get('base_radius', 0.015)
+        n = self.cfg.get('pipe_exponent', 2.0)
 
         # Build children map
         children = {id(b): [] for b in self.branches}
@@ -574,13 +623,19 @@ class Tree3D:
         if not hasattr(self, '_radii'):
             self._compute_murray_radii()
 
+        render_branches = self._get_render_branches()
+        retained_ids = {id(branch) for branch in render_branches}
+
         results = []
-        for branch in self.branches[1:]:  # skip root
-            if branch.parent is None:
+        for branch in render_branches[1:]:  # skip root
+            render_parent = branch.parent
+            while render_parent is not None and id(render_parent) not in retained_ids:
+                render_parent = render_parent.parent
+            if render_parent is None:
                 continue
-            px, py, pz = branch.parent.pos()
+            px, py, pz = render_parent.pos()
             bx, by, bz = branch.pos()
-            radius = self._radii.get(id(branch.parent), self.cfg.get('base_radius', 0.015))
+            radius = self._radii.get(id(branch), self.cfg.get('base_radius', 0.015))
             results.append(((px, py, pz), (bx, by, bz), radius))
 
         return results
@@ -594,7 +649,7 @@ class Tree3D:
             self._compute_murray_radii()
 
         results = []
-        for branch in self.branches[1:]:
+        for branch in self._get_render_branches()[1:]:
             bx, by, bz = branch.pos()
             joint_mult = self.cfg.get('joint_radius_multiplier', 1.2)
             joint_cap = self.cfg.get('joint_radius_cap', self.cfg.get('base_radius', 0.015) * 10)
@@ -602,6 +657,21 @@ class Tree3D:
             results.append(((bx, by, bz), radius))
 
         return results
+
+    def _get_render_branches(self):
+        """Return the original or decimated node list used for output geometry."""
+        decimation_cfg = self.cfg.get('decimation', {})
+        if not decimation_cfg.get('enabled', False):
+            return self.branches
+
+        if not hasattr(self, '_decimated_branches'):
+            tolerance = decimation_cfg.get('curvature_angle_degrees', 5.0)
+            self._decimated_branches = decimate_branches(self.branches, tolerance)
+            print(f"  Decimated render skeleton: {len(self.branches)} -> "
+                  f"{len(self._decimated_branches)} nodes "
+                  f"(curvature threshold={tolerance:.3f} degrees)")
+
+        return self._decimated_branches
     
 
 
@@ -773,7 +843,5 @@ if __name__ == "__main__":
     else:
         print("  Tree disabled in config — nothing to do.")
     
-
-
 
 
