@@ -218,6 +218,11 @@
           "age_exponent": 1.0,
           "support_exponent": 1.5
         },
+        "trunk_transition": {
+          "enabled": true,
+          "length": 20.0,
+          "exponent": 1.5
+        },
         "decimation": {
           "enabled": true,
           "spacing_multiplier": 2.0

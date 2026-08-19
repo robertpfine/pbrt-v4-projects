@@ -740,6 +740,51 @@ class Tree3D:
                     * support_fraction ** support_exponent
                 )
 
+        transition_cfg = self.cfg.get('trunk_transition', {})
+        if transition_cfg.get('enabled', False):
+            transition_length = transition_cfg.get('length', 0.0)
+            transition_exponent = transition_cfg.get('exponent', 1.0)
+            if transition_length <= 0.0:
+                raise ValueError(
+                    "trunk_transition length must be greater than zero"
+                )
+            if transition_exponent <= 0.0:
+                raise ValueError(
+                    "trunk_transition exponent must be greater than zero"
+                )
+
+            # Follow the unbranched root axis to its first fork.  Blend the
+            # final portion of that axis toward its best-supported child so
+            # the leader flows into the crown without an oversized collar.
+            trunk_axis = [self.branches[0]]
+            fork = self.branches[0]
+            while len(children[id(fork)]) == 1:
+                fork = children[id(fork)][0]
+                trunk_axis.append(fork)
+
+            fork_children = children[id(fork)]
+            if len(fork_children) > 1:
+                target_radius = max(radii[id(kid)] for kid in fork_children)
+                distance_to_fork = 0.0
+                for index in range(len(trunk_axis) - 1, -1, -1):
+                    branch = trunk_axis[index]
+                    if distance_to_fork <= transition_length:
+                        blend = (
+                            1.0 - distance_to_fork / transition_length
+                        ) ** transition_exponent
+                        radii[id(branch)] = (
+                            radii[id(branch)] * (1.0 - blend)
+                            + target_radius * blend
+                        )
+                    if index > 0:
+                        distance_to_fork += math.dist(
+                            trunk_axis[index - 1].pos(), branch.pos()
+                        )
+                print(
+                    f"  Trunk transition: {transition_length:.3f} to "
+                    f"dominant-child radius {target_radius:.3f}"
+                )
+
         self._radii = radii
         self._children = children        
             
