@@ -23,11 +23,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 170.0, 1100.0],
-        "look": [0, 170.0, 0],
+        "eye":  [0, 230.0, 2500.0],
+        "look": [0, 230.0, 0],
         "up":   [0, 1, 0]
       },
-      "fov": 25
+      "fov": 11.2
     },
 
     "sampler": {
@@ -206,7 +206,7 @@
         "leaf_width": 1.0,
         "leaf_height": 1.0,
         "leaf_depth": 1.0,
-        "point_cloud_center": [0.0, 60.0, 0.0],
+        "point_cloud_center": [0.0, 120.0, 0.0],
         "point_cloud_radius": 400.0,
         "lower_crown_fraction": 0.0,
         "trunk_radius": 999.0,
@@ -222,6 +222,16 @@
           "enabled": true,
           "length": 20.0,
           "exponent": 1.5
+        },
+        "trunk_form": {
+          "enabled": true,
+          "sway_amplitude": 1.5,
+          "sway_cycles": 0.75,
+          "shaft_radius_increment": 0.75,
+          "shaft_radius_exponent": 1.0,
+          "basal_flare_increment": 1.5,
+          "basal_flare_length": 12.0,
+          "basal_flare_exponent": 2.0
         },
         "decimation": {
           "enabled": true,
@@ -240,7 +250,7 @@
         "joint_radius_multiplier": 1.0,
         "joint_radius_cap": 6.0,
         "root_position": [0.0, 0.0, 0.0],
-        "initial_trunk_length": 60.0,
+        "initial_trunk_length": 120.0,
         "tropism": {
           "x": 0.0,
           "y": 1.0,

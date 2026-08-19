@@ -202,6 +202,13 @@ class Tree3D:
         initial_trunk_length = cfg.get('initial_trunk_length', 0.0)
         if initial_trunk_length < 0.0:
             raise ValueError("initial_trunk_length must be non-negative")
+        trunk_form_cfg = cfg.get('trunk_form', {})
+        sway_amplitude = trunk_form_cfg.get('sway_amplitude', 0.0)
+        sway_cycles = trunk_form_cfg.get('sway_cycles', 0.75)
+        if sway_amplitude < 0.0:
+            raise ValueError("trunk_form sway_amplitude must be non-negative")
+        if sway_cycles <= 0.0:
+            raise ValueError("trunk_form sway_cycles must be positive")
         trunk_segment_count = (
             math.ceil(initial_trunk_length / self.growth_dist)
             if initial_trunk_length > 0.0 else 0
@@ -219,6 +226,10 @@ class Tree3D:
             )
             self.branches.append(current)
             remaining_trunk -= segment_length
+        self._prescribed_trunk_ids = {
+            id(branch) for branch in self.branches
+        }
+        self._initial_trunk_length = initial_trunk_length
         if initial_trunk_length > 0.0:
             print(f"  Prescribed trunk: {initial_trunk_length:.3f} "
                   f"({len(self.branches) - 1} segments)")
@@ -785,6 +796,83 @@ class Tree3D:
                     f"dominant-child radius {target_radius:.3f}"
                 )
 
+        trunk_form_cfg = self.cfg.get('trunk_form', {})
+        if trunk_form_cfg.get('enabled', False):
+            shaft_increment = trunk_form_cfg.get(
+                'shaft_radius_increment', 0.0
+            )
+            shaft_exponent = trunk_form_cfg.get('shaft_radius_exponent', 1.0)
+            flare_increment = trunk_form_cfg.get(
+                'basal_flare_increment', 0.0
+            )
+            flare_length = trunk_form_cfg.get('basal_flare_length', 0.0)
+            flare_exponent = trunk_form_cfg.get('basal_flare_exponent', 2.0)
+            if shaft_increment < 0.0:
+                raise ValueError(
+                    "trunk_form shaft_radius_increment must be non-negative"
+                )
+            if shaft_exponent <= 0.0:
+                raise ValueError(
+                    "trunk_form shaft_radius_exponent must be positive"
+                )
+            if flare_increment < 0.0:
+                raise ValueError(
+                    "trunk_form basal_flare_increment must be non-negative"
+                )
+            if flare_increment > 0.0 and flare_length <= 0.0:
+                raise ValueError(
+                    "trunk_form basal_flare_length must be positive when "
+                    "basal flare is used"
+                )
+            if flare_exponent <= 0.0:
+                raise ValueError(
+                    "trunk_form basal_flare_exponent must be positive"
+                )
+
+            if shaft_increment > 0.0 or flare_increment > 0.0:
+                initial_trunk_length = getattr(
+                    self, '_initial_trunk_length', 0.0
+                )
+                distance_from_root = 0.0
+                node = self.branches[0]
+                while True:
+                    if (
+                        shaft_increment > 0.0
+                        and initial_trunk_length > 0.0
+                    ):
+                        shaft_fraction = max(
+                            0.0,
+                            1.0 - distance_from_root / initial_trunk_length
+                        )
+                        radii[id(node)] += (
+                            shaft_increment
+                            * shaft_fraction ** shaft_exponent
+                        )
+                    if distance_from_root <= flare_length:
+                        flare_fraction = (
+                            1.0 - distance_from_root / flare_length
+                        )
+                        radii[id(node)] += (
+                            flare_increment
+                            * flare_fraction ** flare_exponent
+                        )
+                    kids = children[id(node)]
+                    if len(kids) != 1:
+                        break
+                    child = kids[0]
+                    distance_from_root += math.dist(node.pos(), child.pos())
+                    node = child
+                if shaft_increment > 0.0:
+                    print(
+                        f"  Trunk shaft thickening: +{shaft_increment:.3f} "
+                        f"at base, fading to crown"
+                    )
+            if flare_increment > 0.0:
+                print(
+                    f"  Basal flare: +{flare_increment:.3f} over "
+                    f"{flare_length:.3f}"
+                )
+
         self._radii = radii
         self._children = children        
             
@@ -964,6 +1052,48 @@ class Tree3D:
 
                 print(f"  Relocated {len(render_branches) - 1} render nodes "
                       f"{fraction:.3f} toward their basal neighbors")
+
+            trunk_form_cfg = self.cfg.get('trunk_form', {})
+            sway_amplitude = trunk_form_cfg.get('sway_amplitude', 0.0)
+            initial_trunk_length = getattr(
+                self, '_initial_trunk_length', 0.0
+            )
+            if (
+                trunk_form_cfg.get('enabled', False)
+                and sway_amplitude > 0.0
+                and initial_trunk_length > 0.0
+            ):
+                rp = self.cfg.get('root_position', [0, 0, 0])
+                sway_cycles = trunk_form_cfg.get('sway_cycles', 0.75)
+                sway_phase = (
+                    self.cfg['seed'] * 0.61803398875
+                ) % (2.0 * math.pi)
+                for branch in render_branches:
+                    if id(branch) not in self._prescribed_trunk_ids:
+                        continue
+                    height_fraction = min(
+                        1.0,
+                        max(0.0, (branch.y - rp[1]) / initial_trunk_length)
+                    )
+                    envelope = math.sin(math.pi * height_fraction)
+                    angle = (
+                        2.0 * math.pi * sway_cycles * height_fraction
+                        + sway_phase
+                    )
+                    position = np.asarray(positions[id(branch)], dtype=float)
+                    position[0] += (
+                        sway_amplitude * envelope * math.sin(angle)
+                    )
+                    position[2] += (
+                        sway_amplitude * envelope
+                        * math.sin(angle + 0.5 * math.pi)
+                    )
+                    positions[id(branch)] = tuple(position)
+
+                print(
+                    f"  Render-only trunk sway: amplitude "
+                    f"{sway_amplitude:.3f}, cycles {sway_cycles:.3f}"
+                )
 
             self._render_positions = positions
 
