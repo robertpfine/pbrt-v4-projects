@@ -235,7 +235,7 @@
           "strength": 0.350
         },
         "direction_persistence": {
-          "enabled": true,
+          "enabled": false,
           "strength": 0.5
         },
         "continuous_attraction": {
