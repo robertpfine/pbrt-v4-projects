@@ -122,8 +122,26 @@ def compute_phyllotaxis_points(tree, frames, foliage_cfg):
     leaf_angle   = foliage_cfg.get('leaf_angle', 45.0)  # degrees from branch axis
     min_loop     = foliage_cfg.get('min_loop_index', 5)  # skip early trunk nodes
     max_radius   = foliage_cfg.get('max_branch_radius', 0.05)  # skip thick branches
+    max_leaves   = foliage_cfg.get('max_leaves')
+    seed         = foliage_cfg.get('seed', 42)
+
+    if h <= 0.0:
+        raise ValueError("foliage internode_distance must be greater than zero")
+    if max_leaves is not None and max_leaves < 1:
+        raise ValueError("foliage max_leaves must be a positive integer")
 
     placements = []
+
+    # Accumulated path length lets internode_distance control actual spatial
+    # spacing instead of placing a leaf at every growth node.  Child axes
+    # inherit the parent's phyllotactic phase at forks.
+    distance_from_root = {id(tree.branches[0]): 0.0}
+    for branch in tree.branches[1:]:
+        parent = branch.parent
+        distance_from_root[id(branch)] = (
+            distance_from_root[id(parent)]
+            + math.dist(parent.pos(), branch.pos())
+        )
 
     for i, branch in enumerate(tree.branches):
         if branch.loop_index < min_loop:
@@ -135,6 +153,14 @@ def compute_phyllotaxis_points(tree, frames, foliage_cfg):
             continue
 
         if id(branch) not in frames:
+            continue
+
+        parent = branch.parent
+        if parent is None:
+            continue
+        branch_distance = distance_from_root[id(branch)]
+        parent_distance = distance_from_root[id(parent)]
+        if int(branch_distance / h) <= int(parent_distance / h):
             continue
 
         T, N, B = frames[id(branch)]
@@ -164,6 +190,11 @@ def compute_phyllotaxis_points(tree, frames, foliage_cfg):
         leaf_up = np.cross(leaf_right, leaf_normal)
 
         placements.append((pos, leaf_right, leaf_up, leaf_normal))
+
+    if max_leaves is not None and len(placements) > max_leaves:
+        rng = random.Random(seed)
+        retained = sorted(rng.sample(range(len(placements)), max_leaves))
+        placements = [placements[index] for index in retained]
 
     return placements
 
@@ -544,6 +575,7 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root, index=0
     scale    = foliage_cfg.get('leaf_scale', 0.3)
     color    = foliage_cfg.get('vein_color', [0.15, 0.35, 0.10])
     leaf_cfg = foliage_cfg.get('leaf', {})
+    rng      = random.Random(foliage_cfg.get('seed', 42))
     out_path = os.path.join(project_root, 'scene_files', f'foliage_{index}.pbrt')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
@@ -650,7 +682,7 @@ def write_foliage(placements, canonical_leaf, foliage_cfg, project_root, index=0
         # --- Place instances ---
         n_variants = len(active_colors)
         for pos, leaf_right, leaf_up, leaf_normal in placements:
-            variant = random.randint(0, n_variants - 1)
+            variant = rng.randint(0, n_variants - 1)
             # Build 4x4 transform matrix from transport frame
             # Columns: [leaf_right | leaf_up | leaf_normal | pos]
             m = np.eye(4)
