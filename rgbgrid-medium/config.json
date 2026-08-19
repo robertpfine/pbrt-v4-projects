@@ -23,11 +23,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 45.0, 160.0],
-        "look": [0, 45.0, 0],
+        "eye":  [0, 95.0, 700.0],
+        "look": [0, 95.0, 0],
         "up":   [0, 1, 0]
       },
-      "fov": 50
+      "fov": 25
     },
 
     "sampler": {
@@ -195,7 +195,7 @@
       {
         "enabled": true,
         "num_leaves": 25,
-        "max_loops": 500,
+        "max_loops": 200,
         "max_stuck": 5,
         "seed": 7,
         "min_leaves": 1,
@@ -203,12 +203,12 @@
         "dk_multiplier": 5.0,
         "di_multiplier": null,
         "birth_dist": 20.0,
-        "leaf_width": 1.444444,
+        "leaf_width": 1.0,
         "leaf_height": 1.0,
-        "leaf_depth": 1.444444,
-        "point_cloud_center": [0.0, 45.0, 0.0],
-        "point_cloud_radius": 45.0,
-        "lower_crown_fraction": 1.0,
+        "leaf_depth": 1.0,
+        "point_cloud_center": [0.0, 0.0, 0.0],
+        "point_cloud_radius": 250.0,
+        "lower_crown_fraction": 0.0,
         "trunk_radius": 999.0,
         "base_radius": 0.045,
         "pipe_exponent": 2.2,
@@ -237,6 +237,9 @@
         "direction_persistence": {
           "enabled": false,
           "strength": 0.5
+        },
+        "topology": {
+          "max_children_per_node": 2
         },
         "continuous_attraction": {
           "enabled": true,
