@@ -339,6 +339,67 @@ class Tree3D:
         final_birth_dist      = ca_cfg.get('final_birth_dist', 0.5)
         iters_to_full_density = ca_cfg.get('iterations_to_full_density', 100)
         exclude_near_tree     = ca_cfg.get('exclude_near_tree', False)
+        infill_cfg             = ca_cfg.get('infill', {})
+        infill_active          = (
+            infill_cfg.get('enabled', False)
+            and iteration >= infill_cfg.get('start_iteration', 0)
+        )
+        infill_min_dist        = (
+            infill_cfg.get('min_tree_distance_multiplier', 0.0)
+            * self.growth_dist
+        )
+        infill_max_dist        = (
+            infill_cfg.get('max_tree_distance_multiplier', 20.0)
+            * self.growth_dist
+        )
+        if infill_active:
+            if infill_min_dist < self.min_dist:
+                raise ValueError(
+                    "continuous_attraction infill minimum tree distance "
+                    "must be at least dk"
+                )
+            if infill_max_dist <= infill_min_dist:
+                raise ValueError(
+                    "continuous_attraction infill maximum tree distance "
+                    "must exceed its minimum tree distance"
+                )
+
+            if not hasattr(self, '_infill_bounds'):
+                crown_positions = np.array(
+                    [
+                        branch.pos() for branch in self.branches
+                        if id(branch) not in self._prescribed_trunk_ids
+                    ],
+                    dtype=float
+                )
+                if len(crown_positions) == 0:
+                    raise ValueError(
+                        "continuous_attraction infill requires crown branches"
+                    )
+                self._infill_bounds = (
+                    np.min(crown_positions, axis=0),
+                    np.max(crown_positions, axis=0)
+                )
+
+                crown_tree = KDTree(crown_positions)
+                retained_leaves = []
+                for leaf in self.leaves:
+                    candidate = np.asarray(leaf.pos(), dtype=float)
+                    inside_bounds = np.all(
+                        candidate >= self._infill_bounds[0]
+                    ) and np.all(candidate <= self._infill_bounds[1])
+                    if not inside_bounds:
+                        continue
+                    distance_to_tree, _ = crown_tree.query(candidate)
+                    if infill_min_dist <= distance_to_tree <= infill_max_dist:
+                        retained_leaves.append(leaf)
+
+                removed = len(self.leaves) - len(retained_leaves)
+                self.leaves = retained_leaves
+                print(
+                    f"  Infill activated at iteration {iteration + 1}: "
+                    f"froze crown bounds and removed {removed} frontier points"
+                )
 
         # Gradually reduce the minimum spacing between attraction points.
         t = min(1.0, iteration / max(1, iters_to_full_density))
@@ -357,9 +418,13 @@ class Tree3D:
             existing_positions = np.empty((0, 3), dtype=float)
 
         branch_tree = None
-        if exclude_near_tree:
+        if exclude_near_tree or infill_active:
             branch_positions = np.array(
-                [branch.pos() for branch in self.branches],
+                [
+                    branch.pos() for branch in self.branches
+                    if not infill_active
+                    or id(branch) not in self._prescribed_trunk_ids
+                ],
                 dtype=float
             )
             branch_tree = KDTree(branch_positions)
@@ -370,27 +435,37 @@ class Tree3D:
 
         injected = 0
         attempts = 0
-        max_attempts = points_per_iter * 50
+        attempt_multiplier = (
+            infill_cfg.get('attempts_per_point', 200)
+            if infill_active else 50
+        )
+        max_attempts = points_per_iter * attempt_multiplier
 
         while injected < points_per_iter and attempts < max_attempts:
             attempts += 1
 
-            # Random point inside unit sphere.
-            while True:
-                u = random.uniform(-1.0, 1.0)
-                v = random.uniform(-1.0, 1.0)
-                w = random.uniform(-1.0, 1.0)
+            if infill_active:
+                lower, upper = self._infill_bounds
+                x = random.uniform(lower[0], upper[0])
+                y = random.uniform(lower[1], upper[1])
+                z = random.uniform(lower[2], upper[2])
+            else:
+                # Random point inside unit sphere.
+                while True:
+                    u = random.uniform(-1.0, 1.0)
+                    v = random.uniform(-1.0, 1.0)
+                    w = random.uniform(-1.0, 1.0)
 
-                if u*u + v*v + w*w <= 1.0:
-                    break
+                    if u*u + v*v + w*w <= 1.0:
+                        break
 
-            # Transform unit sphere into configured ellipsoid.
-            x = cx + u * radius * lw
-            y = cy + v * radius * lh
-            z = cz + w * radius * ld
+                # Transform unit sphere into configured ellipsoid.
+                x = cx + u * radius * lw
+                y = cy + v * radius * lh
+                z = cz + w * radius * ld
 
-            if not self._point_inside_crown(x, y, z):
-                continue
+                if not self._point_inside_crown(x, y, z):
+                    continue
 
             
 
@@ -398,7 +473,12 @@ class Tree3D:
 
             if branch_tree is not None:
                 distance_to_tree, _ = branch_tree.query(candidate)
-                if distance_to_tree < self.min_dist:
+                minimum_tree_distance = (
+                    infill_min_dist if infill_active else self.min_dist
+                )
+                if distance_to_tree < minimum_tree_distance:
+                    continue
+                if infill_active and distance_to_tree > infill_max_dist:
                     continue
 
             # Check against attraction points that existed before
@@ -433,7 +513,8 @@ class Tree3D:
 
         print(
             f"  Injected {injected} attraction points "
-            f"(birth_dist={birth_dist:.3f}, attempts={attempts})"
+            f"(birth_dist={birth_dist:.3f}, attempts={attempts}, "
+            f"mode={'infill' if infill_active else 'envelope'})"
         )
 
     def _grow_trunk(self):
@@ -713,6 +794,10 @@ class Tree3D:
                     max_radius
                 )
 
+        # Preserve the pipe-model radii for selecting strongly supported
+        # crown axes independently of later age and trunk-form additions.
+        pipe_radii = radii.copy()
+
         age_cfg = self.cfg.get('age_thickening', {})
         if age_cfg.get('enabled', False):
             max_increment = age_cfg.get('max_radius_increment', 0.0)
@@ -749,6 +834,57 @@ class Tree3D:
                     max_increment
                     * age_fraction ** age_exponent
                     * support_fraction ** support_exponent
+                )
+
+        support_cfg = self.cfg.get('supporting_branch_thickening', {})
+        if support_cfg.get('enabled', False):
+            max_increment = (
+                support_cfg.get('max_radius_increment_multiplier', 0.0)
+                * self.growth_dist
+            )
+            percentile = support_cfg.get('support_percentile', 90.0)
+            exponent = support_cfg.get('exponent', 1.0)
+            if max_increment < 0.0:
+                raise ValueError(
+                    "supporting_branch_thickening maximum increment must "
+                    "be non-negative"
+                )
+            if not 0.0 <= percentile < 100.0:
+                raise ValueError(
+                    "supporting_branch_thickening support_percentile must "
+                    "be in [0, 100)"
+                )
+            if exponent <= 0.0:
+                raise ValueError(
+                    "supporting_branch_thickening exponent must be positive"
+                )
+
+            prescribed_ids = getattr(self, '_prescribed_trunk_ids', set())
+            crown = [
+                branch for branch in self.branches
+                if id(branch) not in prescribed_ids
+            ]
+            if crown and max_increment > 0.0:
+                support_values = np.asarray(
+                    [pipe_radii[id(branch)] for branch in crown],
+                    dtype=float
+                )
+                threshold = float(np.percentile(support_values, percentile))
+                strongest = float(np.max(support_values))
+                span = strongest - threshold
+                thickened = 0
+                if span > 0.0:
+                    for branch in crown:
+                        support = pipe_radii[id(branch)]
+                        if support <= threshold:
+                            continue
+                        weight = (support - threshold) / span
+                        radii[id(branch)] += max_increment * weight ** exponent
+                        thickened += 1
+                print(
+                    f"  Supporting-branch thickening: {thickened} crown "
+                    f"nodes above percentile {percentile:.1f}, "
+                    f"up to +{max_increment:.3f}"
                 )
 
         transition_cfg = self.cfg.get('trunk_transition', {})

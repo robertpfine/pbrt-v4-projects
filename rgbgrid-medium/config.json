@@ -194,8 +194,8 @@
     "trees": [
       {
         "enabled": true,
-        "num_leaves": 25,
-        "max_loops": 300,
+        "num_leaves": 5000,
+        "max_loops": 500,
         "max_stuck": 5,
         "seed": 7,
         "min_leaves": 1,
@@ -217,6 +217,12 @@
           "max_radius_increment": 5.0,
           "age_exponent": 1.0,
           "support_exponent": 1.5
+        },
+        "supporting_branch_thickening": {
+          "enabled": true,
+          "max_radius_increment_multiplier": 1.5,
+          "support_percentile": 90.0,
+          "exponent": 1.0
         },
         "trunk_transition": {
           "enabled": true,
@@ -270,7 +276,14 @@
           "points_per_iteration": 5,
           "initial_birth_dist": 20.0,
           "final_birth_dist": 5.0,
-          "iterations_to_full_density": 100
+          "iterations_to_full_density": 100,
+          "infill": {
+            "enabled": true,
+            "start_iteration": 300,
+            "min_tree_distance_multiplier": 5.0,
+            "max_tree_distance_multiplier": 20.0,
+            "attempts_per_point": 200
+          }
         },
         "trunk_material": {
           "type": "diffuse",
