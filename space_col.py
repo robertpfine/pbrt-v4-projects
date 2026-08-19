@@ -466,6 +466,14 @@ class Tree3D:
             else 0.0
         )
 
+        topology_cfg = cfg.get('topology', {})
+        max_children_per_node = topology_cfg.get('max_children_per_node')
+        if max_children_per_node is not None:
+            if not isinstance(max_children_per_node, int) or max_children_per_node < 1:
+                raise ValueError(
+                    "topology max_children_per_node must be a positive integer"
+                )
+
         prev_leaf_count = len(self.leaves)
         stuck_iterations = 0
         max_stuck = 5
@@ -542,6 +550,12 @@ class Tree3D:
             new_branches = []
             for branch in self.branches:
                 if branch.nearest_leaf_count > 0:
+                    # Experimental topology constraint: prevent a single node
+                    # from repeatedly originating many branches over time.
+                    if (max_children_per_node is not None
+                            and branch.num_children >= max_children_per_node):
+                        continue
+
                     # Normalize accumulated direction
                     mag = math.sqrt(
                         branch.dir[0]**2 +
