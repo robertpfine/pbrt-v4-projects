@@ -196,6 +196,33 @@ class Tree3D:
         root = Branch3D(rp[0], rp[1], rp[2], [0, 1, 0], 0, None)
         self.branches.append(root)
 
+        # Optional prescribed trunk below the attraction field. This is
+        # independent of di, so it also works when the radius of influence
+        # is infinite.
+        initial_trunk_length = cfg.get('initial_trunk_length', 0.0)
+        if initial_trunk_length < 0.0:
+            raise ValueError("initial_trunk_length must be non-negative")
+        trunk_segment_count = (
+            math.ceil(initial_trunk_length / self.growth_dist)
+            if initial_trunk_length > 0.0 else 0
+        )
+        root.loop_index = -trunk_segment_count
+        remaining_trunk = initial_trunk_length
+        current = root
+        trunk_segment_index = 0
+        while remaining_trunk > 1e-12:
+            segment_length = min(self.growth_dist, remaining_trunk)
+            trunk_segment_index += 1
+            current = current.next(
+                segment_length,
+                -trunk_segment_count + trunk_segment_index
+            )
+            self.branches.append(current)
+            remaining_trunk -= segment_length
+        if initial_trunk_length > 0.0:
+            print(f"  Prescribed trunk: {initial_trunk_length:.3f} "
+                  f"({len(self.branches) - 1} segments)")
+
         # Grow trunk until within max_dist of any leaf
         self._grow_trunk()
 
@@ -675,6 +702,44 @@ class Tree3D:
                     max_radius
                 )
 
+        age_cfg = self.cfg.get('age_thickening', {})
+        if age_cfg.get('enabled', False):
+            max_increment = age_cfg.get('max_radius_increment', 0.0)
+            age_exponent = age_cfg.get(
+                'age_exponent', age_cfg.get('exponent', 1.0)
+            )
+            support_exponent = age_cfg.get('support_exponent', 0.0)
+            if max_increment < 0.0:
+                raise ValueError(
+                    "age_thickening max_radius_increment must be non-negative"
+                )
+            if age_exponent <= 0.0:
+                raise ValueError(
+                    "age_thickening age_exponent must be positive"
+                )
+            if support_exponent < 0.0:
+                raise ValueError(
+                    "age_thickening support_exponent must be non-negative"
+                )
+
+            oldest_step = min(branch.loop_index for branch in self.branches)
+            newest_step = max(self.actual_loops, 0)
+            total_age_span = max(1, newest_step - oldest_step)
+            root_pipe_radius = radii[id(self.branches[0])]
+            for branch in self.branches:
+                age_fraction = (
+                    (newest_step - branch.loop_index) / total_age_span
+                )
+                support_fraction = (
+                    radii[id(branch)] / root_pipe_radius
+                    if root_pipe_radius > 0.0 else 0.0
+                )
+                radii[id(branch)] += (
+                    max_increment
+                    * age_fraction ** age_exponent
+                    * support_fraction ** support_exponent
+                )
+
         self._radii = radii
         self._children = children        
             
@@ -744,17 +809,53 @@ class Tree3D:
         cylinders = []
         joint_by_position = {}
 
-        # Subdivide maximal paths between roots, forks, and tips independently.
-        path_bases = [
-            branch for branch in render_branches
-            if branch.parent is None or len(render_children[id(branch)]) != 1
-        ]
-        for base in path_bases:
-            for first_node in render_children[id(base)]:
+        # Optionally treat the best-supported child at each fork as the
+        # continuation of its parent axis.  This lets corner cutting blend the
+        # trunk through a fork instead of preserving a hard path endpoint
+        # there; less-supported children remain independent lateral axes.
+        continue_through_forks = subdivision_cfg.get(
+            'continue_through_forks', False
+        )
+        primary_children = {}
+        if continue_through_forks:
+            for branch in render_branches:
+                kids = render_children[id(branch)]
+                if kids:
+                    primary_children[id(branch)] = max(
+                        kids,
+                        key=lambda child: self._radii.get(
+                            id(child), base_radius
+                        )
+                    )
+
+            path_starts = []
+            root = render_branches[0]
+            if render_children[id(root)]:
+                path_starts.append((root, primary_children[id(root)]))
+            for base in render_branches:
+                primary = primary_children.get(id(base))
+                for child in render_children[id(base)]:
+                    if child is not primary:
+                        path_starts.append((base, child))
+        else:
+            path_starts = [
+                (base, child)
+                for base in render_branches
+                if base.parent is None
+                or len(render_children[id(base)]) != 1
+                for child in render_children[id(base)]
+            ]
+
+        for base, first_node in path_starts:
                 path = [base, first_node]
                 node = first_node
-                while len(render_children[id(node)]) == 1:
-                    node = render_children[id(node)][0]
+                while render_children[id(node)]:
+                    if continue_through_forks:
+                        node = primary_children[id(node)]
+                    elif len(render_children[id(node)]) == 1:
+                        node = render_children[id(node)][0]
+                    else:
+                        break
                     path.append(node)
 
                 samples = [
@@ -777,7 +878,8 @@ class Tree3D:
         joints = list(joint_by_position.items())
         print(f"  Subdivided render skeleton: {len(render_branches) - 1} -> "
               f"{len(cylinders)} segments ({iterations} iterations, "
-              f"corner cut={corner_cut_ratio:.3f})")
+              f"corner cut={corner_cut_ratio:.3f}, "
+              f"fork continuation={continue_through_forks})")
         self._output_geometry = (cylinders, joints)
         return self._output_geometry
 
