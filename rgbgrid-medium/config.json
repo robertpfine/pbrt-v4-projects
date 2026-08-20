@@ -23,11 +23,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 230.0, 2500.0],
-        "look": [0, 230.0, 0],
+        "eye":  [0, 60.0, 1700.0],
+        "look": [0, 180.0, -430.0],
         "up":   [0, 1, 0]
       },
-      "fov": 11.2
+      "fov": 40.0
     },
 
     "sampler": {
@@ -44,17 +44,17 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 2500,
-      "y_resolution": 2000
+      "x_resolution": 2400,
+      "y_resolution": 3000
     },
 
     "lights": [
       {
-        "enabled": false,
+        "enabled": true,
         "type": "infinite",
-        "color_mode": "blackbody",
-        "temperature": 4500,
-        "scale": 0.18
+        "color_mode": "rgb",
+        "color": [0.20, 0.40, 0.80],
+        "scale": 0.60
       },
       {
         "enabled": false,
@@ -78,11 +78,11 @@
       {
         "enabled": true,
         "type": "distant",
-        "from": [0, 2.0, 10],
+        "from": [0, 0.35, 10],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
-        "temperature": 5500,
-        "scale": 4.0
+        "temperature": 2700,
+        "scale": 6.0
       }
     ],
 
@@ -90,14 +90,18 @@
       {
         "enabled": true,
         "label": "ground_plane",
-        "material": { "type": "diffuse", "reflectance": [0.35, 0.32, 0.28] },
+        "material": {
+          "type": "conductor",
+          "reflectance": [0.98, 0.98, 0.98],
+          "roughness": 0.012
+        },
         "transform": {
           "translate": [0, -1.0, 0],
           "rotate": [{ "angle": 90, "axis": [1, 0, 0] }]
         },
         "shape": {
           "type": "disk",
-          "radius": 20.0
+          "radius": 10000.0
         }
       },
       {
@@ -190,6 +194,20 @@
       { "enabled": true, "position": 0.6, "wavelength": 510, "width": 0.150, "strength": 12.5 },
       { "enabled": true, "position": 0.8, "wavelength": 450, "width": 0.150, "strength": 12.0 }
     ],
+
+    "grove": {
+      "enabled": true,
+      "tree_index": 0,
+      "instances": [
+        { "position": [-150.0, 0.0, 0.0], "rotation_y": 18.0, "scale": 1.00 },
+        { "position": [170.0, 0.0, -48.0], "rotation_y": -27.0, "scale": 0.96 },
+        { "position": [-320.0, 0.0, -390.0], "rotation_y": 43.0, "scale": 0.92 },
+        { "position": [0.0, 0.0, -432.0], "rotation_y": -8.0, "scale": 1.05 },
+        { "position": [330.0, 0.0, -360.0], "rotation_y": 31.0, "scale": 0.94 },
+        { "position": [-170.0, 0.0, -810.0], "rotation_y": -38.0, "scale": 0.90 },
+        { "position": [190.0, 0.0, -852.0], "rotation_y": 12.0, "scale": 0.98 }
+      ]
+    },
 
     "trees": [
       {
@@ -301,7 +319,7 @@
           "max_branch_radius": 0.08,
           "max_leaves": 12000,
           "seed": 7,
-          "leaf_scale": 3.0,
+          "leaf_scale": 4.0,
           "vein_color": [0.15, 0.35, 0.10],
           "leaf": {
             "type": "ovate",

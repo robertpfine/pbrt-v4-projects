@@ -401,7 +401,8 @@ def write_lights(lines, lights):
     """
     Write all enabled LightSource directives.
     Must appear after WorldBegin.
-    Config reads: scene.lights[] (enabled, type, color_mode, temperature, scale, position)
+    Config reads: scene.lights[] (enabled, type, color_mode, temperature/color,
+                                 scale, position)
 
     Supported light types:
       "infinite" — environment/sky light, no position
@@ -409,6 +410,7 @@ def write_lights(lines, lights):
 
     Supported color modes:
       "blackbody" — color temperature in Kelvin (physically based)
+      "rgb"       — explicit RGB color triplet
     """
     for light in lights:
         if not light.get("enabled", True):
@@ -416,13 +418,15 @@ def write_lights(lines, lights):
 
         ltype = light["type"]
         mode  = light["color_mode"]
-        temp  = light["temperature"]
+        color = light.get("color", light.get("temperature"))
+        if isinstance(color, list):
+            color = " ".join(str(component) for component in color)
         scale = light["scale"]
 
         if ltype == "infinite":
             lines.append(
                 f'LightSource "infinite"'
-                f'  "{mode} L" [ {temp} ]'
+                f'  "{mode} L" [ {color} ]'
                 f'  "float scale" [ {scale} ]'
             )
 
@@ -431,7 +435,7 @@ def write_lights(lines, lights):
             lines.append(
                 f'LightSource "point"'
                 f'  "point3 from" [ {p[0]} {p[1]} {p[2]} ]'
-                f'  "{mode} I" [ {temp} ]'
+                f'  "{mode} I" [ {color} ]'
                 f'  "float scale" [ {scale} ]'
             )
  
@@ -445,7 +449,7 @@ def write_lights(lines, lights):
                 f'  "point3 to"   [ {l[0]} {l[1]} {l[2]} ]'
                 f'  "float coneangle"      [ {light["cone_angle"]} ]'
                 f'  "float conedeltaangle" [ {light["cone_delta_angle"]} ]'
-                f'  "{mode} I" [ {temp} ]'
+                f'  "{mode} I" [ {color} ]'
                 f'  "float scale" [ {scale} ]'
             )
     
@@ -456,8 +460,8 @@ def write_lights(lines, lights):
                 f'LightSource "distant"'
                 f'  "point3 from" [ {f[0]} {f[1]} {f[2]} ]'
                 f'  "point3 to"   [ {t[0]} {t[1]} {t[2]} ]'
-                f'  "{light["color_mode"]} L" [ {light["temperature"]} ]'
-                f'  "float scale" [ {light["scale"]} ]'
+                f'  "{mode} L" [ {color} ]'
+                f'  "float scale" [ {scale} ]'
             )
     
     lines.append("")
@@ -500,6 +504,14 @@ def write_geometry(lines, geometry):
         if mat["type"] == "diffuse":
             r = mat["reflectance"]
             lines.append(f'    Material "diffuse"  "rgb reflectance" [ {r[0]} {r[1]} {r[2]} ]')
+        elif mat["type"] == "conductor":
+            r = mat["reflectance"]
+            roughness = mat.get("roughness", 0.0)
+            lines.append(
+                f'    Material "conductor"'
+                f'  "rgb reflectance" [ {r[0]} {r[1]} {r[2]} ]'
+                f'  "float roughness" [ {roughness} ]'
+            )
         elif mat["type"] == "interface":
             # "interface" material marks the boundary of a participating medium.
             # It has no surface appearance of its own.
@@ -607,14 +619,42 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
 
-    # Include tree and foliage geometry for each enabled tree
+    grove_cfg = scene.get("grove", {})
+    grove_tree_index = grove_cfg.get("tree_index", 0)
+
+    # Define each generated tree once, then place either one ordinary
+    # instance or the configured grove instances.
     for i, tree_cfg in enumerate(cfg["scene"].get("trees", [])):
         if not tree_cfg.get("enabled", False):
             continue
-        lines.append(f'Include "scene_files/tree_{i}.pbrt"')
+        lines += [
+            f'ObjectBegin "tree_{i}_wood"',
+            f'Include "scene_files/tree_{i}.pbrt"',
+            'ObjectEnd',
+            ''
+        ]
         foliage_cfg = tree_cfg.get("foliage", {})
         if foliage_cfg.get("enabled", False):
-            lines.append(f'Include "scene_files/foliage_{i}.pbrt"')    
+            lines.append(f'Include "scene_files/foliage_defs_{i}.pbrt"')
+
+        instances = [{}]
+        if grove_cfg.get("enabled", False) and i == grove_tree_index:
+            instances = grove_cfg.get("instances", [])
+
+        for instance in instances:
+            position = instance.get("position", [0.0, 0.0, 0.0])
+            rotation = instance.get("rotation_y", 0.0)
+            scale = instance.get("scale", 1.0)
+            lines += [
+                'AttributeBegin',
+                f'    Translate {position[0]} {position[1]} {position[2]}',
+                f'    Rotate {rotation} 0 1 0',
+                f'    Scale {scale} {scale} {scale}',
+                f'    ObjectInstance "tree_{i}_wood"'
+            ]
+            if foliage_cfg.get("enabled", False):
+                lines.append(f'    Include "scene_files/foliage_{i}.pbrt"')
+            lines += ['AttributeEnd', '']
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w") as f:
