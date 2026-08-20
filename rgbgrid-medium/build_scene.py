@@ -208,7 +208,7 @@ def write_fog_medium(cfg, lines):
     """
     Write a homogeneous fog medium named "fog" into the world section.
     This creates the exterior atmospheric medium that makes god rays visible.
-    Config reads: scene.fog (enabled, sigma_a, sigma_s, g)
+    Config reads: scene.fog (enabled, sigma_a, sigma_s, g, camera_inside)
 
     pbrt note: MakeNamedMedium for homogeneous media can appear inside
     the world section, unlike rgbgrid which uses Include.
@@ -217,6 +217,8 @@ def write_fog_medium(cfg, lines):
     if not fog or not fog.get("enabled", True):
         return
 
+    camera_medium = "fog" if fog.get("camera_inside", True) else ""
+
     lines += [
         'MakeNamedMedium "fog"',
         '    "string type"  [ "homogeneous" ]',
@@ -224,7 +226,7 @@ def write_fog_medium(cfg, lines):
         f'    "rgb sigma_s" [ {fog["sigma_s"]} {fog["sigma_s"]} {fog["sigma_s"]} ]',
         f'    "float g"     [ {fog["g"]} ]',
         '',
-        'MediumInterface "" "fog"',
+        f'MediumInterface "" "{camera_medium}"',
         '',
     ]
 
