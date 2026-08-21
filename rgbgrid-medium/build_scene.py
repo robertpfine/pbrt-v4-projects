@@ -22,7 +22,14 @@ Usage:
 import os
 import sys
 import json
+import math
 from noise import pnoise3
+
+REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPOSITORY_ROOT not in sys.path:
+    sys.path.insert(0, REPOSITORY_ROOT)
+
+from phyllotaxis import dome_height, vogel_points
 
 
 # ==============================================================
@@ -583,6 +590,205 @@ def write_geometry(lines, geometry):
         lines.append("")
 
 
+def write_phyllotaxis_organ(lines, object_name, organ):
+    """Define one reusable PBRT-v4 organ for a phyllotactic zone."""
+
+    shape = organ.get("shape", "sphere")
+    material = organ.get("material", {})
+    reflectance = material.get("reflectance", [0.15, 0.08, 0.02])
+    if len(reflectance) != 3:
+        raise ValueError("phyllotaxis reflectance must contain three values")
+
+    lines += [
+        f'ObjectBegin "{object_name}"',
+        (
+            '    Material "diffuse"  "rgb reflectance" '
+            f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+        ),
+    ]
+
+    if shape in ("sphere", "disk"):
+        radius = float(organ.get("radius", 0.45))
+        if radius <= 0:
+            raise ValueError("phyllotaxis organ radius must be positive")
+        if shape == "sphere":
+            lines.append(f'    Shape "sphere"  "float radius" [ {radius} ]')
+        else:
+            lines += [
+                '    Rotate 90 1 0 0',
+                f'    Shape "disk"  "float radius" [ {radius} ]',
+            ]
+    elif shape == "ellipsoid":
+        radius = float(organ.get("radius", 0.45))
+        height = float(organ.get("height", 0.8))
+        if radius <= 0 or height <= 0:
+            raise ValueError("ellipsoid radius and height must be positive")
+        lines += [
+            f'    Scale {radius} {height} {radius}',
+            '    Shape "sphere"  "float radius" [ 1 ]',
+        ]
+    elif shape == "petal":
+        length = float(organ.get("length", 6.0))
+        width = float(organ.get("width", 2.0))
+        camber = float(organ.get("camber", 0.35))
+        droop = float(organ.get("droop", 0.0))
+        segments = int(organ.get("segments", 10))
+        if length <= 0 or width <= 0:
+            raise ValueError("petal length and width must be positive")
+        if segments < 3:
+            raise ValueError("petal segments must be at least three")
+
+        vertices = []
+        normals = []
+        indices = []
+        for segment in range(segments + 1):
+            t = segment / segments
+            x = length * t
+            width_profile = math.sin(math.pi * t) ** 0.65
+            if segment == 0:
+                width_profile = 0.16
+            elif segment == segments:
+                width_profile = 0.015
+            half_width = 0.5 * width * width_profile * (1.0 - 0.12 * t)
+            y = camber * math.sin(math.pi * t) - droop * t * t
+            dydx = (
+                camber * math.pi * math.cos(math.pi * t) - 2.0 * droop * t
+            ) / length
+            nx, ny = -dydx, 1.0
+            normal_length = math.hypot(nx, ny)
+            nx, ny = nx / normal_length, ny / normal_length
+            vertices += [x, y, -half_width, x, y, half_width]
+            normals += [nx, ny, 0.0, nx, ny, 0.0]
+
+        for segment in range(segments):
+            left0 = 2 * segment
+            right0 = left0 + 1
+            left1 = left0 + 2
+            right1 = left0 + 3
+            indices += [left0, right0, left1, right0, right1, left1]
+
+        points = " ".join(f"{value:.8f}" for value in vertices)
+        normal_values = " ".join(f"{value:.8f}" for value in normals)
+        index_values = " ".join(str(value) for value in indices)
+        lines += [
+            '    Shape "trianglemesh"',
+            f'        "integer indices" [ {index_values} ]',
+            f'        "point3 P" [ {points} ]',
+            f'        "normal N" [ {normal_values} ]',
+        ]
+    else:
+        raise ValueError(f"Unsupported phyllotaxis organ shape: {shape}")
+
+    lines += ['ObjectEnd', '']
+
+
+def write_planar_phyllotaxis(lines, patterns):
+    """Write Vogel-model patterns, including optional sunflower head zones."""
+
+    for pattern_index, pattern in enumerate(patterns):
+        if not pattern.get("enabled", True):
+            continue
+
+        count = pattern["count"]
+        spacing = float(pattern.get("spacing", 1.0))
+        center = pattern.get("center", [0.0, 0.0, 0.0])
+        surface = pattern.get("surface", {"type": "plane"})
+        surface_type = surface.get("type", "plane")
+        dome_height_value = 0.0
+        if surface_type == "plane":
+            height_function = None
+        elif surface_type == "dome":
+            dome_height_value = float(surface.get("height", 0.0))
+            height_function = dome_height(dome_height_value)
+        else:
+            raise ValueError(
+                f"Unsupported planar phyllotaxis surface: {surface_type}"
+            )
+
+        points = vogel_points(
+            count=count,
+            divergence_angle=float(pattern.get("divergence_angle", 137.5)),
+            spacing=spacing,
+            center=center,
+            height_function=height_function,
+        )
+        max_radius = spacing * (max(1, count - 1) ** 0.5)
+
+        receptacle = pattern.get("receptacle", {})
+        if receptacle.get("enabled", False):
+            receptacle_radius = float(receptacle.get("radius", max_radius + spacing))
+            receptacle_height = float(receptacle.get("height", dome_height_value))
+            reflectance = receptacle.get("reflectance", [0.20, 0.12, 0.025])
+            lines += [
+                f'# {pattern.get("label", f"planar_phyllotaxis_{pattern_index}")}',
+                'AttributeBegin',
+                (
+                    '    Material "diffuse"  "rgb reflectance" '
+                    f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+                ),
+                f'    Translate {center[0]} {center[1]} {center[2]}',
+                f'    Scale {receptacle_radius} {receptacle_height} {receptacle_radius}',
+                '    Shape "sphere"  "float radius" [ 1 ]',
+                'AttributeEnd',
+                '',
+            ]
+
+        zones = pattern.get("zones")
+        if zones is None:
+            zones = [{"index_min": 0, "index_max": count - 1,
+                      "organ": pattern.get("organ", {})}]
+
+        object_names = []
+        for zone_index, zone in enumerate(zones):
+            object_name = f"phyllotaxis_{pattern_index}_organ_{zone_index}"
+            object_names.append(object_name)
+            write_phyllotaxis_organ(lines, object_name, zone.get("organ", {}))
+
+        for point in points:
+            matching_zone = None
+            matching_zone_index = None
+            for zone_index, zone in enumerate(zones):
+                index_min = int(zone.get("index_min", 0))
+                index_max = int(zone.get("index_max", count - 1))
+                if index_min <= point.index <= index_max:
+                    matching_zone = zone
+                    matching_zone_index = zone_index
+                    break
+            if matching_zone is None:
+                continue
+
+            organ = matching_zone.get("organ", {})
+            shape = organ.get("shape", "sphere")
+            radial_angle = point.angle_degrees % 360.0
+            tilt = 0.0
+            if surface_type == "dome" and point.radius < max_radius:
+                radial_fraction = point.radius / max_radius
+                denominator = max(1e-6, (1.0 - radial_fraction ** 2) ** 0.5)
+                slope = -dome_height_value * point.radius / (max_radius ** 2 * denominator)
+                tilt = min(80.0, math.degrees(math.atan(-slope)))
+            tangent_x = -math.sin(math.radians(radial_angle))
+            tangent_z = math.cos(math.radians(radial_angle))
+
+            lines += [
+                'AttributeBegin',
+                f'    Translate {point.x:.9f} {point.y:.9f} {point.z:.9f}',
+            ]
+            if shape == "petal":
+                lines += [
+                    f'    Rotate {tilt:.9f} {tangent_x:.9f} 0 {tangent_z:.9f}',
+                    f'    Rotate {-radial_angle:.9f} 0 1 0',
+                ]
+            elif tilt != 0.0:
+                lines.append(
+                    f'    Rotate {tilt:.9f} {tangent_x:.9f} 0 {tangent_z:.9f}'
+                )
+            lines += [
+                f'    ObjectInstance "{object_names[matching_zone_index]}"',
+                'AttributeEnd',
+            ]
+        lines.append("")
+
+
 # ==============================================================
 # SECTION 6 — WRITE SCENE FILE (scene_files/scene.pbrt)
 # ==============================================================
@@ -620,6 +826,7 @@ def write_scene(cfg, project_root, medium_rel_path):
         write_medium_include(lines, medium_rel_path)
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
+    write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
 
     grove_cfg = scene.get("grove", {})
     grove_tree_index = grove_cfg.get("tree_index", 0)

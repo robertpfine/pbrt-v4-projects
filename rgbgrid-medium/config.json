@@ -23,17 +23,17 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 60.0, 1700.0],
-        "look": [0, 180.0, -430.0],
+        "eye":  [0, 72.0, 82.0],
+        "look": [0, 1.0, 0],
         "up":   [0, 1, 0]
       },
-      "fov": 40.0
+      "fov": 44.0
     },
 
     "sampler": {
       "enabled": true,
       "type": "halton",
-      "pixel_samples": 256
+      "pixel_samples": 512
     },
 
     "integrator": {
@@ -42,10 +42,18 @@
       "max_depth": 80
     },
 
+    "fog": {
+      "enabled": false,
+      "sigma_a": 0.0,
+      "sigma_s": 0.0005,
+      "g": 0.60,
+      "camera_inside": true
+    },
+
     "film": {
       "enabled": true,
-      "x_resolution": 2400,
-      "y_resolution": 3000
+      "x_resolution": 1600,
+      "y_resolution": 1600
     },
 
     "lights": [
@@ -54,15 +62,15 @@
         "type": "infinite",
         "color_mode": "rgb",
         "color": [0.20, 0.40, 0.80],
-        "scale": 0.60
+        "scale": 0.35
       },
       {
         "enabled": false,
         "type": "point",
-        "position": [0, 3, -3],
+        "position": [0, 235, -1380],
         "color_mode": "blackbody",
-        "temperature": 1850,
-        "scale": 35.0
+        "temperature": 2600,
+        "scale": 80000.0
       },
       {
         "enabled": false,
@@ -78,11 +86,11 @@
       {
         "enabled": true,
         "type": "distant",
-        "from": [0, 0.35, 10],
+        "from": [-4, 8.0, 3],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
-        "temperature": 2700,
-        "scale": 6.0
+        "temperature": 5000,
+        "scale": 2.0
       }
     ],
 
@@ -91,17 +99,16 @@
         "enabled": true,
         "label": "ground_plane",
         "material": {
-          "type": "conductor",
-          "reflectance": [0.98, 0.98, 0.98],
-          "roughness": 0.012
+          "type": "diffuse",
+          "reflectance": [0.12, 0.08, 0.025]
         },
         "transform": {
-          "translate": [0, -1.0, 0],
+          "translate": [0, -9.0, 0],
           "rotate": [{ "angle": 90, "axis": [1, 0, 0] }]
         },
         "shape": {
           "type": "disk",
-          "radius": 10000.0
+          "radius": 80.0
         }
       },
       {
@@ -142,8 +149,10 @@
         "medium_exterior": "",
         "transform": { "translate": [0, 0, 0] },
         "shape": {
-          "type": "sphere",
-          "radius": 20.0
+          "type": "box",
+          "x_min": -750.0, "x_max": 750.0,
+          "y_min": -0.9,   "y_max": 250.0,
+          "z_min": -1550.0, "z_max": 130.0
         }
       }
     ],
@@ -181,12 +190,70 @@
       }
     },
 
-    "fog": {
-      "enabled": false,
-      "sigma_a": 0.0,
-      "sigma_s": 0.04,
-      "g": 0.0
-    },
+    "planar_phyllotaxis": [
+      {
+        "enabled": true,
+        "label": "sunflower_head_vogel_pattern",
+        "count": 900,
+        "divergence_angle": 137.5,
+        "spacing": 1.3,
+        "center": [0.0, 0.0, 0.0],
+        "surface": { "type": "dome", "height": 6.0 },
+        "receptacle": {
+          "enabled": true,
+          "height": 6.0,
+          "reflectance": [0.12, 0.055, 0.008]
+        },
+        "zones": [
+          {
+            "index_min": 0,
+            "index_max": 679,
+            "organ": {
+              "shape": "ellipsoid",
+              "radius": 0.76,
+              "height": 0.90,
+              "material": { "reflectance": [0.42, 0.16, 0.018] }
+            }
+          },
+          {
+            "index_min": 680,
+            "index_max": 799,
+            "organ": {
+              "shape": "ellipsoid",
+              "radius": 0.82,
+              "height": 1.10,
+              "material": { "reflectance": [0.90, 0.48, 0.025] }
+            }
+          },
+          {
+            "index_min": 800,
+            "index_max": 859,
+            "organ": {
+              "shape": "petal",
+              "length": 6.0,
+              "width": 2.5,
+              "camber": 0.65,
+              "droop": 0.30,
+              "segments": 10,
+              "material": { "reflectance": [1.0, 0.62, 0.025] }
+            }
+          },
+          {
+            "index_min": 860,
+            "index_max": 899,
+            "organ": {
+              "shape": "petal",
+              "length": 9.0,
+              "width": 3.4,
+              "camber": 1.0,
+              "droop": 0.85,
+              "segments": 12,
+              "material": { "reflectance": [1.0, 0.72, 0.035] }
+            }
+          }
+        ]
+      }
+    ],
 
     "zones": [
       { "enabled": true, "position": 0.2, "wavelength": 650, "width": 0.150, "strength": 12.0 },
@@ -196,22 +263,22 @@
     ],
 
     "grove": {
-      "enabled": true,
+      "enabled": false,
       "tree_index": 0,
       "instances": [
         { "position": [-150.0, 0.0, 0.0], "rotation_y": 18.0, "scale": 1.00 },
         { "position": [170.0, 0.0, -48.0], "rotation_y": -27.0, "scale": 0.96 },
         { "position": [-320.0, 0.0, -390.0], "rotation_y": 43.0, "scale": 0.92 },
-        { "position": [0.0, 0.0, -432.0], "rotation_y": -8.0, "scale": 1.05 },
+        { "position": [-240.0, 0.0, -432.0], "rotation_y": -8.0, "scale": 1.05 },
         { "position": [330.0, 0.0, -360.0], "rotation_y": 31.0, "scale": 0.94 },
-        { "position": [-170.0, 0.0, -810.0], "rotation_y": -38.0, "scale": 0.90 },
-        { "position": [190.0, 0.0, -852.0], "rotation_y": 12.0, "scale": 0.98 }
+        { "position": [-430.0, 0.0, -810.0], "rotation_y": -38.0, "scale": 0.90 },
+        { "position": [0.0, 0.0, -1280.0], "rotation_y": -14.0, "scale": 0.68 }
       ]
     },
 
     "trees": [
       {
-        "enabled": true,
+        "enabled": false,
         "num_leaves": 5000,
         "max_loops": 500,
         "max_stuck": 5,
