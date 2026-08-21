@@ -23,11 +23,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 72.0, 82.0],
-        "look": [0, 1.0, 0],
+        "eye":  [0, 118.0, 178.0],
+        "look": [0, 72.0, 0],
         "up":   [0, 1, 0]
       },
-      "fov": 44.0
+      "fov": 43.0
     },
 
     "sampler": {
@@ -62,7 +62,7 @@
         "type": "infinite",
         "color_mode": "rgb",
         "color": [0.20, 0.40, 0.80],
-        "scale": 0.35
+        "scale": 0.025
       },
       {
         "enabled": false,
@@ -86,24 +86,24 @@
       {
         "enabled": true,
         "type": "distant",
-        "from": [-4, 8.0, 3],
+        "from": [-16, 5.0, 9],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
-        "temperature": 5000,
-        "scale": 2.0
+        "temperature": 5400,
+        "scale": 4.0
       }
     ],
 
     "geometry": [
       {
-        "enabled": true,
+        "enabled": false,
         "label": "ground_plane",
         "material": {
           "type": "diffuse",
           "reflectance": [0.12, 0.08, 0.025]
         },
         "transform": {
-          "translate": [0, -9.0, 0],
+          "translate": [0, -1.0, 0],
           "rotate": [{ "angle": 90, "axis": [1, 0, 0] }]
         },
         "shape": {
@@ -194,61 +194,211 @@
       {
         "enabled": true,
         "label": "sunflower_head_vogel_pattern",
-        "count": 900,
+        "count": 630,
         "divergence_angle": 137.5,
         "spacing": 1.3,
-        "center": [0.0, 0.0, 0.0],
-        "surface": { "type": "dome", "height": 6.0 },
+        "center": [0.0, 72.0, 0.0],
+        "head_pitch": 85.0,
+        "surface": {
+          "type": "area_dome",
+          "radius": 32.6,
+          "height": 8.0
+        },
         "receptacle": {
           "enabled": true,
-          "height": 6.0,
-          "reflectance": [0.12, 0.055, 0.008]
+          "radius": 32.0,
+          "height": 8.0,
+          "reflectance": [0.006, 0.010, 0.001]
+        },
+        "support": {
+          "enabled": true,
+          "underside": {
+            "enabled": true,
+            "height": 4.2,
+            "offset_y": -5.0,
+            "reflectance": [0.07, 0.20, 0.022]
+          },
+          "bracts": {
+            "enabled": true,
+            "shape": "petal",
+            "count": 34,
+            "ring_radius": 33.5,
+            "offset_y": -3.0,
+            "tilt": -22.0,
+            "length": 8.0,
+            "width": 2.6,
+            "camber": 0.35,
+            "droop": 1.2,
+            "segments": 9,
+            "material": { "reflectance": [0.055, 0.18, 0.018] }
+          },
+          "stem": {
+            "enabled": false,
+            "top_offset_y": -1.7,
+            "top_offset_z": -4.7,
+            "length": 67.5,
+            "segments": 20,
+            "base_radius": 2.5,
+            "tip_radius": 1.45,
+            "sway": 1.5,
+            "rib_count": 12,
+            "rib_radius": 0.055,
+            "rib_reflectance": [0.12, 0.34, 0.035],
+            "reflectance": [0.08, 0.25, 0.025]
+          },
+          "leaves": {
+            "enabled": false,
+            "shape": "petal",
+            "count": 9,
+            "divergence_angle": 137.5,
+            "lower_fraction": 0.16,
+            "upper_fraction": 0.80,
+            "inclination": 18.0,
+            "length": 16.0,
+            "width": 7.5,
+            "camber": 1.2,
+            "droop": 1.7,
+            "segments": 14,
+            "material": { "reflectance": [0.055, 0.22, 0.025] }
+          }
         },
         "zones": [
           {
             "index_min": 0,
-            "index_max": 679,
+            "index_max": 440,
             "organ": {
-              "shape": "ellipsoid",
-              "radius": 0.76,
-              "height": 0.90,
-              "material": { "reflectance": [0.42, 0.16, 0.018] }
+              "shape": "seed",
+              "radius": 2.08,
+              "height": 2.35,
+              "segments": 11,
+              "radial_segments": 4,
+              "tilt": 0.0,
+              "tilt_by_radius": 0.0,
+              "tilt_jitter": 0.6,
+              "altitude": -0.10,
+              "altitude_jitter": 0.035,
+              "rotation_jitter": 3.0,
+              "scale_by_radius": 0.08,
+              "scale_jitter": 0.015,
+              "material": { "reflectance": [0.28, 0.32, 0.035] }
             }
           },
           {
-            "index_min": 680,
-            "index_max": 799,
+            "index_min": 441,
+            "index_max": 565,
             "organ": {
-              "shape": "ellipsoid",
-              "radius": 0.82,
-              "height": 1.10,
-              "material": { "reflectance": [0.90, 0.48, 0.025] }
+              "shape": "ray_floret",
+              "radius": 2.30,
+              "height": 3.10,
+              "segments": 8,
+              "radial_segments": 20,
+              "lobes": 5,
+              "lobe_depth": 0.52,
+              "tilt": 14.0,
+              "tilt_by_radius": 18.0,
+              "radial_offset": 1.8,
+              "altitude": 0.45,
+              "altitude_jitter": 0.10,
+              "rotation_jitter": 12.0,
+              "scale_by_radius": 0.12,
+              "scale_jitter": 0.08,
+              "material": { "reflectance": [0.28, 0.30, 0.018] }
             }
           },
           {
-            "index_min": 800,
-            "index_max": 859,
+            "index_min": 566,
+            "index_max": 580,
             "organ": {
               "shape": "petal",
-              "length": 6.0,
-              "width": 2.5,
-              "camber": 0.65,
-              "droop": 0.30,
+              "length": 15.5,
+              "width": 6.2,
+              "camber": 0.75,
+              "droop": 0.10,
+              "cup": 0.18,
+              "ripple": 0.12,
+              "twist": -2.0,
               "segments": 10,
-              "material": { "reflectance": [1.0, 0.62, 0.025] }
+              "vein_height": 0.12,
+              "vein_width": 0.10,
+              "vein_reflectance": [0.64, 0.52, 0.008],
+              "altitude": 0.25,
+              "tilt": -4.0,
+              "tilt_jitter": 3.0,
+              "rotation_jitter": 2.5,
+              "scale_jitter": 0.05,
+              "material": { "reflectance": [0.92, 0.82, 0.015] }
             }
           },
           {
-            "index_min": 860,
-            "index_max": 899,
+            "index_min": 581,
+            "index_max": 595,
             "organ": {
               "shape": "petal",
-              "length": 9.0,
-              "width": 3.4,
+              "length": 18.5,
+              "width": 7.2,
               "camber": 1.0,
-              "droop": 0.85,
+              "droop": 0.22,
+              "cup": 0.24,
+              "ripple": 0.16,
+              "twist": 2.5,
+              "segments": 11,
+              "vein_height": 0.14,
+              "vein_width": 0.11,
+              "vein_reflectance": [0.70, 0.58, 0.008],
+              "altitude": 0.10,
+              "tilt": -8.0,
+              "tilt_jitter": 4.0,
+              "rotation_jitter": 3.0,
+              "scale_jitter": 0.06,
+              "material": { "reflectance": [1.0, 0.90, 0.018] }
+            }
+          },
+          {
+            "index_min": 596,
+            "index_max": 610,
+            "organ": {
+              "shape": "petal",
+              "length": 21.5,
+              "width": 8.0,
+              "camber": 1.2,
+              "droop": 0.48,
+              "cup": 0.30,
+              "ripple": 0.20,
+              "twist": -3.5,
               "segments": 12,
-              "material": { "reflectance": [1.0, 0.72, 0.035] }
+              "vein_height": 0.16,
+              "vein_width": 0.12,
+              "vein_reflectance": [0.66, 0.54, 0.007],
+              "altitude": -0.08,
+              "tilt": -12.0,
+              "tilt_jitter": 5.0,
+              "rotation_jitter": 3.5,
+              "scale_jitter": 0.07,
+              "material": { "reflectance": [0.94, 0.82, 0.012] }
+            }
+          },
+          {
+            "index_min": 611,
+            "index_max": 629,
+            "organ": {
+              "shape": "petal",
+              "length": 24.5,
+              "width": 8.8,
+              "camber": 1.35,
+              "droop": 0.90,
+              "cup": 0.36,
+              "ripple": 0.24,
+              "twist": 4.0,
+              "segments": 13,
+              "vein_height": 0.18,
+              "vein_width": 0.13,
+              "vein_reflectance": [0.70, 0.57, 0.008],
+              "altitude": -0.25,
+              "tilt": -17.0,
+              "tilt_jitter": 6.0,
+              "rotation_jitter": 4.0,
+              "scale_jitter": 0.08,
+              "material": { "reflectance": [1.0, 0.88, 0.015] }
             }
           }
         ]

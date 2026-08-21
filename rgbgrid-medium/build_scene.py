@@ -29,7 +29,7 @@ REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if REPOSITORY_ROOT not in sys.path:
     sys.path.insert(0, REPOSITORY_ROOT)
 
-from phyllotaxis import dome_height, vogel_points
+from phyllotaxis import area_dome_points, dome_height, vogel_points
 
 
 # ==============================================================
@@ -618,6 +618,19 @@ def write_phyllotaxis_organ(lines, object_name, organ):
                 '    Rotate 90 1 0 0',
                 f'    Shape "disk"  "float radius" [ {radius} ]',
             ]
+    elif shape == "cone":
+        radius = float(organ.get("radius", 0.45))
+        height = float(organ.get("height", 0.9))
+        if radius <= 0 or height <= 0:
+            raise ValueError("cone radius and height must be positive")
+        lines += [
+            '    Rotate -90 1 0 0',
+            (
+                '    Shape "cone"'
+                f'  "float radius" [ {radius} ]'
+                f'  "float height" [ {height} ]'
+            ),
+        ]
     elif shape == "ellipsoid":
         radius = float(organ.get("radius", 0.45))
         height = float(organ.get("height", 0.8))
@@ -627,11 +640,109 @@ def write_phyllotaxis_organ(lines, object_name, organ):
             f'    Scale {radius} {height} {radius}',
             '    Shape "sphere"  "float radius" [ 1 ]',
         ]
+    elif shape == "seed":
+        radius = float(organ.get("radius", 0.55))
+        height = float(organ.get("height", 1.3))
+        length_segments = int(organ.get("segments", 10))
+        radial_segments = int(organ.get("radial_segments", 10))
+        if radius <= 0 or height <= 0:
+            raise ValueError("seed radius and height must be positive")
+        if length_segments < 4 or radial_segments < 4:
+            raise ValueError("seed mesh resolution is too low")
+
+        vertices = []
+        indices = []
+        for segment in range(length_segments + 1):
+            t = segment / length_segments
+            # Narrow attachment, full shoulder, then a pointed distal end.
+            profile = math.sin(math.pi * t) ** 0.88
+            profile *= 0.76 + 0.28 * t
+            profile *= 1.0 - 0.12 * t * t
+            ring_radius = radius * profile
+            y = height * t
+            for side in range(radial_segments):
+                angle = 2.0 * math.pi * side / radial_segments
+                vertices += [
+                    ring_radius * math.cos(angle),
+                    y,
+                    ring_radius * math.sin(angle),
+                ]
+        for segment in range(length_segments):
+            ring0 = segment * radial_segments
+            ring1 = (segment + 1) * radial_segments
+            for side in range(radial_segments):
+                next_side = (side + 1) % radial_segments
+                indices += [
+                    ring0 + side, ring0 + next_side, ring1 + side,
+                    ring0 + next_side, ring1 + next_side, ring1 + side,
+                ]
+        points = " ".join(f"{value:.8f}" for value in vertices)
+        index_values = " ".join(str(value) for value in indices)
+        lines += [
+            '    Shape "trianglemesh"',
+            f'        "integer indices" [ {index_values} ]',
+            f'        "point3 P" [ {points} ]',
+        ]
+    elif shape == "ray_floret":
+        radius = float(organ.get("radius", 0.68))
+        height = float(organ.get("height", 0.9))
+        length_segments = int(organ.get("segments", 7))
+        radial_segments = int(organ.get("radial_segments", 12))
+        lobes = int(organ.get("lobes", 5))
+        lobe_depth = float(organ.get("lobe_depth", 0.18))
+        if radius <= 0 or height <= 0 or lobes < 3:
+            raise ValueError("invalid ray floret dimensions")
+
+        vertices = []
+        indices = []
+        for segment in range(length_segments + 1):
+            t = segment / length_segments
+            # An open tubular corolla: narrow at its attachment, widening
+            # toward a strongly five-lobed rim instead of closing as a nub.
+            profile = 0.24 + 0.46 * t + 0.24 * math.sin(math.pi * t)
+            y = height * t
+            for side in range(radial_segments):
+                angle = 2.0 * math.pi * side / radial_segments
+                corrugation = 1.0 + lobe_depth * t * t * math.cos(lobes * angle)
+                ring_radius = radius * profile * corrugation
+                vertices += [
+                    ring_radius * math.cos(angle),
+                    y,
+                    ring_radius * math.sin(angle),
+                ]
+        for segment in range(length_segments):
+            ring0 = segment * radial_segments
+            ring1 = (segment + 1) * radial_segments
+            for side in range(radial_segments):
+                next_side = (side + 1) % radial_segments
+                indices += [
+                    ring0 + side, ring0 + next_side, ring1 + side,
+                    ring0 + next_side, ring1 + next_side, ring1 + side,
+                ]
+        points = " ".join(f"{value:.8f}" for value in vertices)
+        index_values = " ".join(str(value) for value in indices)
+        lines += [
+            '    Shape "trianglemesh"',
+            f'        "integer indices" [ {index_values} ]',
+            f'        "point3 P" [ {points} ]',
+            '    AttributeBegin',
+            f'        Translate 0 {height * 0.48:.8f} 0',
+            '        Rotate -90 1 0 0',
+            (
+                '        Shape "cone"'
+                f'  "float radius" [ {radius * 0.24:.8f} ]'
+                f'  "float height" [ {height * 0.82:.8f} ]'
+            ),
+            '    AttributeEnd',
+        ]
     elif shape == "petal":
         length = float(organ.get("length", 6.0))
         width = float(organ.get("width", 2.0))
         camber = float(organ.get("camber", 0.35))
         droop = float(organ.get("droop", 0.0))
+        cup = float(organ.get("cup", 0.0))
+        ripple = float(organ.get("ripple", 0.0))
+        twist = math.radians(float(organ.get("twist", 0.0)))
         segments = int(organ.get("segments", 10))
         if length <= 0 or width <= 0:
             raise ValueError("petal length and width must be positive")
@@ -657,8 +768,14 @@ def write_phyllotaxis_organ(lines, object_name, organ):
             nx, ny = -dydx, 1.0
             normal_length = math.hypot(nx, ny)
             nx, ny = nx / normal_length, ny / normal_length
-            vertices += [x, y, -half_width, x, y, half_width]
-            normals += [nx, ny, 0.0, nx, ny, 0.0]
+            transverse_camber = cup * math.sin(math.pi * t)
+            ripple_y = ripple * math.sin(3.0 * math.pi * t) * math.sin(math.pi * t)
+            twist_offset = math.sin(twist * t) * half_width
+            vertices += [
+                x, y + ripple_y - transverse_camber, -half_width + twist_offset,
+                x, y + ripple_y + transverse_camber, half_width + twist_offset,
+            ]
+            normals += [nx, ny, -0.12 * cup, nx, ny, 0.12 * cup]
 
         for segment in range(segments):
             left0 = 2 * segment
@@ -676,10 +793,274 @@ def write_phyllotaxis_organ(lines, object_name, organ):
             f'        "point3 P" [ {points} ]',
             f'        "normal N" [ {normal_values} ]',
         ]
+        vein_height = float(organ.get("vein_height", 0.0))
+        if vein_height > 0:
+            vein_width = float(organ.get("vein_width", width * 0.035))
+            vein_color = organ.get("vein_reflectance", [
+                reflectance[0] * 0.72,
+                reflectance[1] * 0.72,
+                reflectance[2] * 0.72,
+            ])
+            vein_vertices = []
+            vein_indices = []
+            for segment in range(segments + 1):
+                t = segment / segments
+                x = length * t
+                profile = math.sin(math.pi * t) ** 0.65
+                y = (
+                    camber * math.sin(math.pi * t)
+                    - droop * t * t
+                    + vein_height * profile
+                )
+                half_ridge = vein_width * max(0.08, profile)
+                vein_vertices += [x, y, -half_ridge, x, y, half_ridge]
+            for segment in range(segments):
+                left0 = 2 * segment
+                right0 = left0 + 1
+                left1 = left0 + 2
+                right1 = left0 + 3
+                vein_indices += [left0, right0, left1, right0, right1, left1]
+            vein_points = " ".join(f"{value:.8f}" for value in vein_vertices)
+            vein_index_values = " ".join(str(value) for value in vein_indices)
+            lines += [
+                '    AttributeBegin',
+                (
+                    '        Material "diffuse"  "rgb reflectance" '
+                    f'[ {vein_color[0]} {vein_color[1]} {vein_color[2]} ]'
+                ),
+                '        Shape "trianglemesh"',
+                f'            "integer indices" [ {vein_index_values} ]',
+                f'            "point3 P" [ {vein_points} ]',
+                '    AttributeEnd',
+            ]
     else:
         raise ValueError(f"Unsupported phyllotaxis organ shape: {shape}")
 
     lines += ['ObjectEnd', '']
+
+
+def write_oriented_cylinder(lines, start, end, radius, reflectance):
+    """Write one PBRT cylinder aligned between arbitrary world-space points."""
+
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    dz = end[2] - start[2]
+    length = math.sqrt(dx * dx + dy * dy + dz * dz)
+    if length <= 1e-8:
+        return
+
+    ux, uy, uz = dx / length, dy / length, dz / length
+    axis_x, axis_y = -uy, ux
+    axis_length = math.hypot(axis_x, axis_y)
+    lines += [
+        'AttributeBegin',
+        (
+            '    Material "diffuse"  "rgb reflectance" '
+            f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+        ),
+        f'    Translate {start[0]:.9f} {start[1]:.9f} {start[2]:.9f}',
+    ]
+    if axis_length <= 1e-8:
+        angle = 0.0 if uz >= 0 else 180.0
+        lines.append(f'    Rotate {angle:.9f} 1 0 0')
+    else:
+        angle = math.degrees(math.acos(max(-1.0, min(1.0, uz))))
+        lines.append(
+            f'    Rotate {angle:.9f} '
+            f'{axis_x / axis_length:.9f} {axis_y / axis_length:.9f} 0'
+        )
+    lines += [
+        (
+            f'    Shape "cylinder"  "float radius" [ {radius:.9f} ] '
+            f'"float zmin" [ 0 ]  "float zmax" [ {length:.9f} ]'
+        ),
+        'AttributeEnd',
+    ]
+
+
+def write_sunflower_support(lines, pattern_index, pattern, max_radius):
+    """Write the underside, bracts, stem, and stem leaves for a flower head."""
+
+    support = pattern.get("support", {})
+    if not support.get("enabled", False):
+        return
+
+    center = tuple(float(value) for value in pattern.get("center", [0, 0, 0]))
+    head_pitch = float(pattern.get("head_pitch", 0.0))
+    pitch_radians = math.radians(head_pitch)
+
+    def rotate_with_head(point):
+        """Rotate a head-local point about the flower center around X."""
+
+        dy = point[1] - center[1]
+        dz = point[2] - center[2]
+        return (
+            point[0],
+            center[1] + dy * math.cos(pitch_radians) - dz * math.sin(pitch_radians),
+            center[2] + dy * math.sin(pitch_radians) + dz * math.cos(pitch_radians),
+        )
+
+    underside = support.get("underside", {})
+    if underside.get("enabled", True):
+        radius = float(underside.get("radius", max_radius * 1.02))
+        height = float(underside.get("height", 4.0))
+        offset_y = float(underside.get("offset_y", -3.5))
+        color = underside.get("reflectance", [0.08, 0.20, 0.025])
+        underside_center = rotate_with_head(
+            (center[0], center[1] + offset_y, center[2])
+        )
+        lines += [
+            '# sunflower receptacle underside',
+            'AttributeBegin',
+            (
+                '    Material "diffuse"  "rgb reflectance" '
+                f'[ {color[0]} {color[1]} {color[2]} ]'
+            ),
+            (
+                f'    Translate {underside_center[0]:.9f} '
+                f'{underside_center[1]:.9f} {underside_center[2]:.9f}'
+            ),
+            f'    Rotate {head_pitch:.9f} 1 0 0',
+            f'    Scale {radius} {height} {radius}',
+            '    Shape "sphere"  "float radius" [ 1 ]',
+            'AttributeEnd',
+            '',
+        ]
+
+    bracts = support.get("bracts", {})
+    if bracts.get("enabled", True):
+        bract_object = f"phyllotaxis_{pattern_index}_bract"
+        write_phyllotaxis_organ(lines, bract_object, bracts)
+        count = int(bracts.get("count", 34))
+        ring_radius = float(bracts.get("ring_radius", max_radius * 0.92))
+        offset_y = float(bracts.get("offset_y", -2.5))
+        tilt = float(bracts.get("tilt", -18.0))
+        for index in range(count):
+            angle = index * 360.0 / count
+            angle_rad = math.radians(angle)
+            point = rotate_with_head((
+                center[0] + ring_radius * math.cos(angle_rad),
+                center[1] + offset_y,
+                center[2] + ring_radius * math.sin(angle_rad),
+            ))
+            tangent_x = -math.sin(angle_rad)
+            tangent_z = math.cos(angle_rad)
+            lines += [
+                'AttributeBegin',
+                f'    Translate {point[0]:.9f} {point[1]:.9f} {point[2]:.9f}',
+                f'    Rotate {head_pitch:.9f} 1 0 0',
+                f'    Rotate {tilt:.9f} {tangent_x:.9f} 0 {tangent_z:.9f}',
+                f'    Rotate {-angle:.9f} 0 1 0',
+                f'    ObjectInstance "{bract_object}"',
+                'AttributeEnd',
+            ]
+        lines.append('')
+
+    stem = support.get("stem", {})
+    if stem.get("enabled", True):
+        top_y = center[1] + float(stem.get("top_offset_y", -3.0))
+        top_z = center[2] + float(stem.get("top_offset_z", 0.0))
+        length = float(stem.get("length", 68.0))
+        segments = int(stem.get("segments", 18))
+        base_radius = float(stem.get("base_radius", 2.3))
+        tip_radius = float(stem.get("tip_radius", 1.35))
+        sway = float(stem.get("sway", 1.2))
+        color = stem.get("reflectance", [0.10, 0.28, 0.035])
+        if segments < 1 or length <= 0 or base_radius <= 0 or tip_radius <= 0:
+            raise ValueError("invalid sunflower stem dimensions")
+
+        stem_points = []
+        for index in range(segments + 1):
+            t = index / segments
+            y = top_y - length * (1.0 - t)
+            envelope = math.sin(math.pi * t)
+            x = center[0] + sway * envelope * math.sin(1.3 * math.pi * t)
+            z = (
+                center[2]
+                + (top_z - center[2]) * t
+                + 0.55 * sway * envelope * math.sin(1.7 * math.pi * t)
+            )
+            stem_points.append((x, y, z))
+
+        for index in range(segments):
+            t = index / segments
+            radius = base_radius + (tip_radius - base_radius) * t
+            write_oriented_cylinder(
+                lines, stem_points[index], stem_points[index + 1], radius, color
+            )
+        rib_count = int(stem.get("rib_count", 0))
+        rib_radius = float(stem.get("rib_radius", 0.045))
+        rib_color = stem.get("rib_reflectance", [
+            min(1.0, color[0] * 1.35),
+            min(1.0, color[1] * 1.35),
+            min(1.0, color[2] * 1.35),
+        ])
+        for rib in range(rib_count):
+            angle = 2.0 * math.pi * rib / rib_count
+            cosine = math.cos(angle)
+            sine = math.sin(angle)
+            for index in range(segments):
+                t0 = index / segments
+                t1 = (index + 1) / segments
+                radius0 = base_radius + (tip_radius - base_radius) * t0
+                radius1 = base_radius + (tip_radius - base_radius) * t1
+                start = (
+                    stem_points[index][0] + 0.98 * radius0 * cosine,
+                    stem_points[index][1],
+                    stem_points[index][2] + 0.98 * radius0 * sine,
+                )
+                end = (
+                    stem_points[index + 1][0] + 0.98 * radius1 * cosine,
+                    stem_points[index + 1][1],
+                    stem_points[index + 1][2] + 0.98 * radius1 * sine,
+                )
+                write_oriented_cylinder(lines, start, end, rib_radius, rib_color)
+        for index, point in enumerate(stem_points[1:-1], start=1):
+            t = index / segments
+            radius = base_radius + (tip_radius - base_radius) * t
+            lines += [
+                'AttributeBegin',
+                (
+                    '    Material "diffuse"  "rgb reflectance" '
+                    f'[ {color[0]} {color[1]} {color[2]} ]'
+                ),
+                f'    Translate {point[0]:.9f} {point[1]:.9f} {point[2]:.9f}',
+                f'    Shape "sphere"  "float radius" [ {radius:.9f} ]',
+                'AttributeEnd',
+            ]
+        lines.append('')
+
+        leaves = support.get("leaves", {})
+        if leaves.get("enabled", True):
+            leaf_object = f"phyllotaxis_{pattern_index}_stem_leaf"
+            write_phyllotaxis_organ(lines, leaf_object, leaves)
+            leaf_count = int(leaves.get("count", 9))
+            divergence = float(leaves.get("divergence_angle", 137.5))
+            lower_fraction = float(leaves.get("lower_fraction", 0.18))
+            upper_fraction = float(leaves.get("upper_fraction", 0.82))
+            inclination = float(leaves.get("inclination", 18.0))
+            for index in range(leaf_count):
+                fraction = (
+                    lower_fraction
+                    if leaf_count == 1
+                    else lower_fraction
+                    + (upper_fraction - lower_fraction) * index / (leaf_count - 1)
+                )
+                point_index = min(segments, max(0, round(fraction * segments)))
+                point = stem_points[point_index]
+                angle = index * divergence
+                angle_rad = math.radians(angle)
+                tangent_x = -math.sin(angle_rad)
+                tangent_z = math.cos(angle_rad)
+                lines += [
+                    'AttributeBegin',
+                    f'    Translate {point[0]:.9f} {point[1]:.9f} {point[2]:.9f}',
+                    f'    Rotate {-inclination:.9f} {tangent_x:.9f} 0 {tangent_z:.9f}',
+                    f'    Rotate {-angle:.9f} 0 1 0',
+                    f'    ObjectInstance "{leaf_object}"',
+                    'AttributeEnd',
+                ]
+            lines.append('')
 
 
 def write_planar_phyllotaxis(lines, patterns):
@@ -694,10 +1075,12 @@ def write_planar_phyllotaxis(lines, patterns):
         center = pattern.get("center", [0.0, 0.0, 0.0])
         surface = pattern.get("surface", {"type": "plane"})
         surface_type = surface.get("type", "plane")
+        head_pitch = float(pattern.get("head_pitch", 0.0))
+        pitch_radians = math.radians(head_pitch)
         dome_height_value = 0.0
         if surface_type == "plane":
             height_function = None
-        elif surface_type == "dome":
+        elif surface_type in ("dome", "area_dome"):
             dome_height_value = float(surface.get("height", 0.0))
             height_function = dome_height(dome_height_value)
         else:
@@ -705,14 +1088,36 @@ def write_planar_phyllotaxis(lines, patterns):
                 f"Unsupported planar phyllotaxis surface: {surface_type}"
             )
 
-        points = vogel_points(
-            count=count,
-            divergence_angle=float(pattern.get("divergence_angle", 137.5)),
-            spacing=spacing,
-            center=center,
-            height_function=height_function,
-        )
-        max_radius = spacing * (max(1, count - 1) ** 0.5)
+        max_radius = float(surface.get(
+            "radius", spacing * (max(1, count - 1) ** 0.5)
+        ))
+        if surface_type == "area_dome":
+            points = area_dome_points(
+                count=count,
+                divergence_angle=float(pattern.get("divergence_angle", 137.5)),
+                radius=max_radius,
+                height=dome_height_value,
+                center=center,
+            )
+        else:
+            points = vogel_points(
+                count=count,
+                divergence_angle=float(pattern.get("divergence_angle", 137.5)),
+                spacing=spacing,
+                center=center,
+                height_function=height_function,
+            )
+
+        def rotate_with_head(point):
+            dy = point[1] - center[1]
+            dz = point[2] - center[2]
+            return (
+                point[0],
+                center[1] + dy * math.cos(pitch_radians) - dz * math.sin(pitch_radians),
+                center[2] + dy * math.sin(pitch_radians) + dz * math.cos(pitch_radians),
+            )
+
+        write_sunflower_support(lines, pattern_index, pattern, max_radius)
 
         receptacle = pattern.get("receptacle", {})
         if receptacle.get("enabled", False):
@@ -727,6 +1132,7 @@ def write_planar_phyllotaxis(lines, patterns):
                     f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
                 ),
                 f'    Translate {center[0]} {center[1]} {center[2]}',
+                f'    Rotate {head_pitch:.9f} 1 0 0',
                 f'    Scale {receptacle_radius} {receptacle_height} {receptacle_radius}',
                 '    Shape "sphere"  "float radius" [ 1 ]',
                 'AttributeEnd',
@@ -760,19 +1166,74 @@ def write_planar_phyllotaxis(lines, patterns):
             organ = matching_zone.get("organ", {})
             shape = organ.get("shape", "sphere")
             radial_angle = point.angle_degrees % 360.0
+            radial_scale = float(organ.get("radial_scale", 1.0))
+            radial_offset = float(organ.get("radial_offset", 0.0))
+            effective_radius = max(0.0, point.radius * radial_scale + radial_offset)
+            radial_fraction = min(1.0, effective_radius / max_radius)
+            variation_phase = math.sin(
+                (point.index + 1) * 12.9898 + matching_zone_index * 78.233
+            )
+            variation = variation_phase - math.floor(variation_phase)
+            signed_variation = 2.0 * variation - 1.0
             tilt = 0.0
-            if surface_type == "dome" and point.radius < max_radius:
-                radial_fraction = point.radius / max_radius
+            if surface_type == "dome" and effective_radius < max_radius:
                 denominator = max(1e-6, (1.0 - radial_fraction ** 2) ** 0.5)
-                slope = -dome_height_value * point.radius / (max_radius ** 2 * denominator)
+                slope = -dome_height_value * effective_radius / (max_radius ** 2 * denominator)
                 tilt = min(80.0, math.degrees(math.atan(-slope)))
+            elif surface_type == "area_dome":
+                slope = -2.0 * dome_height_value * effective_radius / (max_radius ** 2)
+                tilt = min(80.0, math.degrees(math.atan(-slope)))
+            organ_tilt = (
+                float(organ.get("tilt", 0.0))
+                + float(organ.get("tilt_by_radius", 0.0)) * radial_fraction
+                + float(organ.get("tilt_jitter", 0.0)) * signed_variation
+            )
+            altitude = (
+                float(organ.get("altitude", 0.0))
+                + float(organ.get("altitude_by_radius", 0.0)) * radial_fraction
+                + float(organ.get("altitude_jitter", 0.0)) * signed_variation
+            )
+            rotation_jitter = float(organ.get("rotation_jitter", 0.0))
+            local_rotation = rotation_jitter * signed_variation
+            scale_jitter = float(organ.get("scale_jitter", 0.0))
+            organ_scale = max(0.05, 1.0 + scale_jitter * signed_variation)
+            organ_scale *= max(
+                0.05,
+                1.0 + float(organ.get("scale_by_radius", 0.0)) * radial_fraction,
+            )
             tangent_x = -math.sin(math.radians(radial_angle))
             tangent_z = math.cos(math.radians(radial_angle))
+            radial_angle_radians = math.radians(radial_angle)
+            local_y = point.y
+            if surface_type == "area_dome":
+                local_y = center[1] + dome_height_value * (
+                    1.0 - radial_fraction * radial_fraction
+                )
+            elif surface_type == "dome":
+                local_y = center[1] + dome_height_value * math.sqrt(
+                    max(0.0, 1.0 - radial_fraction * radial_fraction)
+                )
+            rotated_point = rotate_with_head((
+                center[0] + effective_radius * math.cos(radial_angle_radians),
+                local_y + altitude,
+                center[2] + effective_radius * math.sin(radial_angle_radians),
+            ))
 
             lines += [
                 'AttributeBegin',
-                f'    Translate {point.x:.9f} {point.y:.9f} {point.z:.9f}',
+                (
+                    f'    Translate {rotated_point[0]:.9f} '
+                    f'{rotated_point[1]:.9f} {rotated_point[2]:.9f}'
+                ),
+                f'    Rotate {head_pitch:.9f} 1 0 0',
             ]
+            if organ_tilt != 0.0:
+                lines.append(
+                    f'    Rotate {organ_tilt:.9f} '
+                    f'{tangent_x:.9f} 0 {tangent_z:.9f}'
+                )
+            if local_rotation != 0.0:
+                lines.append(f'    Rotate {local_rotation:.9f} 0 1 0')
             if shape == "petal":
                 lines += [
                     f'    Rotate {tilt:.9f} {tangent_x:.9f} 0 {tangent_z:.9f}',
@@ -781,6 +1242,10 @@ def write_planar_phyllotaxis(lines, patterns):
             elif tilt != 0.0:
                 lines.append(
                     f'    Rotate {tilt:.9f} {tangent_x:.9f} 0 {tangent_z:.9f}'
+                )
+            if organ_scale != 1.0:
+                lines.append(
+                    f'    Scale {organ_scale:.9f} {organ_scale:.9f} {organ_scale:.9f}'
                 )
             lines += [
                 f'    ObjectInstance "{object_names[matching_zone_index]}"',
