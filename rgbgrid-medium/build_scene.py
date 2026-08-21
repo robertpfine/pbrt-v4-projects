@@ -30,6 +30,7 @@ if REPOSITORY_ROOT not in sys.path:
     sys.path.insert(0, REPOSITORY_ROOT)
 
 from phyllotaxis import area_dome_points, dome_height, vogel_points
+from lsystem import christmas_tree, live_oak
 
 
 # ==============================================================
@@ -878,6 +879,69 @@ def write_oriented_cylinder(lines, start, end, radius, reflectance):
     ]
 
 
+def write_curve_segment(lines, start, end, width, reflectance):
+    """Write a straight segment as a cubic PBRT curve for topology studies."""
+
+    delta = tuple(end[axis] - start[axis] for axis in range(3))
+    if math.sqrt(sum(component * component for component in delta)) <= 1e-8:
+        return
+    control1 = tuple(start[axis] + delta[axis] / 3.0 for axis in range(3))
+    control2 = tuple(start[axis] + 2.0 * delta[axis] / 3.0 for axis in range(3))
+    points = " ".join(
+        f"{point[0]:.9f} {point[1]:.9f} {point[2]:.9f}"
+        for point in (start, control1, control2, end)
+    )
+    lines += [
+        'AttributeBegin',
+        (
+            '    Material "diffuse"  "rgb reflectance" '
+            f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+        ),
+        (
+            f'    Shape "curve"  "point3 P" [ {points} ] '
+            f'"float width" [ {width:.9f} ]  "string type" [ "cylinder" ]'
+        ),
+        'AttributeEnd',
+    ]
+
+
+def write_lsystem_trees(lines, trees):
+    """Write configuration-driven deterministic L-system conifers."""
+
+    for tree_index, tree in enumerate(trees):
+        if not tree.get("enabled", True):
+            continue
+        preset = tree.get("preset", "christmas_tree")
+        origin = tuple(float(v) for v in tree.get("origin", [0, 0, 0]))
+        wood = tree.get("wood_reflectance", [0.20, 0.09, 0.025])
+        green = tree.get("foliage_reflectance", [0.025, 0.16, 0.035])
+        if preset == "christmas_tree":
+            generated_segments = christmas_tree(tree)
+        elif preset == "live_oak":
+            generated_segments = live_oak(tree)
+        else:
+            raise ValueError("unsupported L-system tree preset")
+        debug_render = tree.get("debug_render", {})
+        curve_mode = debug_render.get("mode", "cylinders") == "curves"
+        curve_width = float(debug_render.get("width", 0.25))
+        curve_color = debug_render.get("reflectance", [0.82, 0.42, 0.06])
+        lines.append(f'# L-system {preset} {tree_index}')
+        for segment in generated_segments:
+            start = tuple(segment.start[i] + origin[i] for i in range(3))
+            end = tuple(segment.end[i] + origin[i] for i in range(3))
+            color = green if segment.kind == "foliage" else wood
+            if curve_mode:
+                write_curve_segment(
+                    lines, start, end, curve_width, curve_color
+                )
+            else:
+                write_oriented_cylinder(
+                    lines, start, end,
+                    0.5 * (segment.radius0 + segment.radius1), color,
+                )
+        lines.append('')
+
+
 def write_sunflower_support(lines, pattern_index, pattern, max_radius):
     """Write the underside, bracts, stem, and stem leaves for a flower head."""
 
@@ -1292,6 +1356,7 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
+    write_lsystem_trees(lines, scene.get("lsystem_trees", []))
 
     grove_cfg = scene.get("grove", {})
     grove_tree_index = grove_cfg.get("tree_index", 0)

@@ -23,11 +23,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [0, 118.0, 178.0],
-        "look": [0, 72.0, 0],
+        "eye":  [155, 54.0, 195.0],
+        "look": [2, 42.0, 4],
         "up":   [0, 1, 0]
       },
-      "fov": 43.0
+      "fov": 45.0
     },
 
     "sampler": {
@@ -62,7 +62,7 @@
         "type": "infinite",
         "color_mode": "rgb",
         "color": [0.20, 0.40, 0.80],
-        "scale": 0.025
+        "scale": 0.12
       },
       {
         "enabled": false,
@@ -90,7 +90,7 @@
         "to": [0, 0, 0],
         "color_mode": "blackbody",
         "temperature": 5400,
-        "scale": 4.0
+        "scale": 2.8
       }
     ],
 
@@ -108,7 +108,7 @@
         },
         "shape": {
           "type": "disk",
-          "radius": 80.0
+          "radius": 220.0
         }
       },
       {
@@ -192,7 +192,7 @@
 
     "planar_phyllotaxis": [
       {
-        "enabled": true,
+        "enabled": false,
         "label": "sunflower_head_vogel_pattern",
         "count": 630,
         "divergence_angle": 137.5,
@@ -402,6 +402,71 @@
             }
           }
         ]
+      }
+    ],
+
+    "lsystem_trees": [
+      {
+        "enabled": true,
+        "preset": "live_oak",
+        "origin": [0.0, 0.0, 0.0],
+        "debug_render": {
+          "mode": "curves",
+          "width": 0.35,
+          "reflectance": [0.90, 0.48, 0.06]
+        },
+        "trunk_height": 24.0,
+        "trunk_segments": 8,
+        "base_radius": 15.0,
+        "scaffold_count": 4,
+        "scaffold_length": 66.0,
+        "scaffold_radius": 7.0,
+        "scaffold_vigor": [1.28, 0.84, 1.10, 0.72],
+        "scaffold_sag": [0.0, 0.0, 0.0, 0.0],
+        "recursion_depth": 2,
+        "path_segments": 7,
+        "base_sag": 0.045,
+        "radius_sag": 0.014,
+        "tip_lift": 0.38,
+        "lateral_curve": 0.0,
+        "bolt_turn": 0.34,
+        "primary_sag": 0.01,
+        "primary_lift": 0.03,
+        "primary_wave_vertical": 0.095,
+        "primary_wave_lateral": 0.080,
+        "primary_wave_cycles": 1.15,
+        "ground_clearance": 0.6,
+        "attachment_start": 0.32,
+        "attachment_end": 0.94,
+        "scaffold_elevation": 0.04,
+        "scaffold_elevation_range": 0.10,
+        "balanced_scaffolds": {
+          "enabled": true,
+          "report_balance": true,
+          "segment_length": 5.0,
+          "growth_budget": 40,
+          "momentum": 0.88,
+          "outward_bias": 0.18,
+          "light_direction": [0.0, 1.0, 0.0],
+          "phototropism": 0.14,
+          "proprioception": 0.22,
+          "target_vertical": 0.34,
+          "turn_strength": 0.08,
+          "turn_cost": 0.035,
+          "completion_urgency": 0.08,
+          "coupled_pair": {
+            "enabled": true,
+            "growth_periods": 16,
+            "direction_coupling": 0.85
+          },
+          "buds": [
+            { "name": "driver_right", "attachment_fraction": 0.58, "azimuth": 151.0, "elevation": 0.12, "radius": 7.6, "tip_ratio": 0.40, "steps": 16, "wave_amplitude": 0.48, "wave_cycles": 0.5, "wave_phase": 90.0 },
+            { "name": "responder_left", "attachment_fraction": 0.58, "azimuth": 331.0, "elevation": 0.12, "radius": 7.6, "tip_ratio": 0.40, "steps": 16 }
+          ]
+        },
+        "seed": 11,
+        "wood_reflectance": [0.20, 0.085, 0.020],
+        "foliage_reflectance": [0.020, 0.18, 0.035]
       }
     ],
 
