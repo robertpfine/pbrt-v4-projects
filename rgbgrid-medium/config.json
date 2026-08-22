@@ -23,11 +23,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [308, 76.0, 386.0],
-        "look": [2, 32.0, 4],
+        "eye":  [215, 105.0, 230],
+        "look": [7, 78.0, -7],
         "up":   [0, 1, 0]
       },
-      "fov": 72.0
+      "fov": 48.0
     },
 
     "sampler": {
@@ -407,7 +407,7 @@
 
     "lsystem_trees": [
       {
-        "enabled": true,
+        "enabled": false,
         "preset": "live_oak",
         "origin": [0.0, 0.0, 0.0],
         "debug_render": {
@@ -463,15 +463,26 @@
             "horizontal_max_vertical": 0.05,
             "branchlets": {
               "enabled": true,
-              "depth": 2,
-              "segments_per_axis": 4,
-              "length": 16.0,
-              "length_ratio": 0.58,
-              "radius_ratio": 0.42,
-              "divergence": 48.0,
-              "upward_bias": 0.30,
-              "angle_jitter": 14.0,
-              "attachment_fractions": [0.55, 0.88]
+              "depth": 3,
+              "segments_per_axis": 3,
+              "length": 30.0,
+              "length_ratio": 0.62,
+              "lateral_length_ratio": 0.50,
+              "continuation_length_ratio": 0.64,
+              "radius_ratio": 0.40,
+              "divergence": 42.0,
+              "upward_bias": 0.16,
+              "angle_jitter": 18.0,
+              "crownlet_root_axes": 3,
+              "crownlet_spread": 125.0,
+              "crownlet_attachment_fractions": [0.50, 0.74, 0.96],
+              "lateral_attachment_fractions": [0.36, 0.72],
+              "crownlet_anchor_roles": ["continuation"],
+              "crownlet_anchor_names": ["driver_right_continuation"],
+              "leaves_enabled": true,
+              "leaves_per_terminal": 3,
+              "leaf_length": 4.2,
+              "leaf_width": 1.35
             },
             "structural_fork": {
               "enabled": true,
@@ -541,6 +552,41 @@
           ]
         },
         "seed": 11,
+        "wood_reflectance": [0.20, 0.085, 0.020],
+        "foliage_reflectance": [0.020, 0.18, 0.035]
+      },
+      {
+        "enabled": true,
+        "preset": "fractal_tree",
+        "origin": [0.0, 0.0, 0.0],
+        "debug_render": { "mode": "cylinders" },
+        "seed": 23,
+        "trunk_height": 42.0,
+        "trunk_segments": 7,
+        "base_radius": 6.0,
+        "crown_radius": 4.2,
+        "initial_length": 34.0,
+        "alpha": 2.2,
+        "min_radius": 0.60,
+        "max_depth": 12,
+        "dominant_length_ratio": 0.76,
+        "lateral_length_ratio": 0.62,
+        "dominant_angle": 24.0,
+        "lateral_angle": 48.0,
+        "upward_bias": 0.18,
+        "angle_jitter": 12.0,
+        "length_jitter": 0.10,
+        "asymmetry_min": 1.05,
+        "asymmetry_max": 1.55,
+        "leaves_enabled": true,
+        "leaf_length": 2.8,
+        "leaf_width": 0.72,
+        "crownlet_depth": 3,
+        "crownlet_length": 5.5,
+        "crownlet_length_ratio": 0.62,
+        "crownlet_angle": 38.0,
+        "crownlet_radius_ratio": 0.46,
+        "leaves_per_tip": 5,
         "wood_reflectance": [0.20, 0.085, 0.020],
         "foliage_reflectance": [0.020, 0.18, 0.035]
       }

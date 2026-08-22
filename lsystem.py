@@ -724,6 +724,14 @@ def live_oak(config):
                 branchlet_length_ratio = float(
                     branchlet_config.get("length_ratio", 0.58)
                 )
+                branchlet_lateral_length_ratio = float(
+                    branchlet_config.get("lateral_length_ratio", 0.48)
+                )
+                branchlet_continuation_ratio = float(
+                    branchlet_config.get(
+                        "continuation_length_ratio", branchlet_length_ratio
+                    )
+                )
                 branchlet_radius_ratio = float(
                     branchlet_config.get("radius_ratio", 0.42)
                 )
@@ -736,20 +744,56 @@ def live_oak(config):
                 branchlet_jitter = math.radians(float(
                     branchlet_config.get("angle_jitter", 14.0)
                 ))
-                attachment_fractions = tuple(float(value) for value in
-                    branchlet_config.get(
-                        "attachment_fractions", [0.55, 0.88]
+                crownlet_root_axes = max(2, int(
+                    branchlet_config.get("crownlet_root_axes", 3)
+                ))
+                crownlet_spread = math.radians(float(
+                    branchlet_config.get("crownlet_spread", 62.0)
+                ))
+                crownlet_attachment_fractions = tuple(
+                    float(value) for value in branchlet_config.get(
+                        "crownlet_attachment_fractions", [0.55, 0.75, 0.95]
                     )
                 )
+                branchlet_lateral_fractions = tuple(
+                    float(value) for value in branchlet_config.get(
+                        "lateral_attachment_fractions", [0.38, 0.72]
+                    )
+                )
+                crownlet_anchor_roles = set(
+                    str(role) for role in branchlet_config.get(
+                        "crownlet_anchor_roles", ["continuation"]
+                    )
+                )
+                crownlet_anchor_names = set(
+                    str(name) for name in branchlet_config.get(
+                        "crownlet_anchor_names", []
+                    )
+                )
+                leaves_enabled = bool(
+                    branchlet_config.get("leaves_enabled", False)
+                )
+                leaves_per_terminal = max(1, int(
+                    branchlet_config.get("leaves_per_terminal", 3)
+                ))
+                leaf_length = float(
+                    branchlet_config.get("leaf_length", 4.2)
+                )
+                leaf_width = float(
+                    branchlet_config.get("leaf_width", 1.35)
+                )
+                crownlet_count = 0
+                leaf_count = 0
 
                 def grow_branchlet_axis(
                     start, direction, length, radius, depth, key
                 ):
-                    nonlocal branchlet_axis_count
+                    nonlocal branchlet_axis_count, leaf_count
                     branchlet_axis_count += 1
                     current = start
                     local_direction = _normalize(direction)
                     step = length / branchlet_segments
+                    axis_points = []
                     for segment_index in range(branchlet_segments):
                         progress0 = segment_index / branchlet_segments
                         progress1 = (segment_index + 1) / branchlet_segments
@@ -775,63 +819,187 @@ def live_oak(config):
                             current, end, r0, r1, "wood"
                         ))
                         current = end
+                        axis_points.append((current, local_direction, r1))
 
                     if depth <= 1:
+                        if leaves_enabled:
+                            for leaf_index in range(leaves_per_terminal):
+                                point_index = min(
+                                    len(axis_points) - 1,
+                                    round(
+                                        leaf_index
+                                        * (len(axis_points) - 1)
+                                        / max(1, leaves_per_terminal - 1)
+                                    ),
+                                )
+                                leaf_base, leaf_tangent, _ = axis_points[
+                                    point_index
+                                ]
+                                leaf_side = _normalize(_cross(
+                                    (0.0, 1.0, 0.0), leaf_tangent
+                                ))
+                                if sum(
+                                    value * value for value in leaf_side
+                                ) < 1e-8:
+                                    leaf_side = (1.0, 0.0, 0.0)
+                                sign = -1.0 if leaf_index % 2 else 1.0
+                                leaf_direction = _normalize((
+                                    0.35 * leaf_tangent[0]
+                                    + sign * leaf_side[0],
+                                    0.35 * leaf_tangent[1] + 0.16,
+                                    0.35 * leaf_tangent[2]
+                                    + sign * leaf_side[2],
+                                ))
+                                leaf_tip = tuple(
+                                    leaf_base[axis]
+                                    + leaf_length * leaf_direction[axis]
+                                    for axis in range(3)
+                                )
+                                segments.append(Segment(
+                                    leaf_base, leaf_tip,
+                                    leaf_width, 0.0, "leaf",
+                                ))
+                                leaf_count += 1
                         return
-                    horizontal = _normalize((
-                        local_direction[0], 0.0, local_direction[2]
-                    ))
-                    if math.hypot(horizontal[0], horizontal[2]) < 1e-8:
-                        horizontal = (1.0, 0.0, 0.0)
-                    for child_index, sign in enumerate((-1.0, 1.0)):
-                        angle = sign * (
+                    for child_index, fraction in enumerate(
+                        branchlet_lateral_fractions
+                    ):
+                        point_index = min(
+                            len(axis_points) - 1,
+                            max(0, round(
+                                fraction * (len(axis_points) - 1)
+                            )),
+                        )
+                        child_start, child_tangent, child_parent_radius = (
+                            axis_points[point_index]
+                        )
+                        side = _normalize(_cross(
+                            (0.0, 1.0, 0.0), child_tangent
+                        ))
+                        if sum(value * value for value in side) < 1e-8:
+                            side = (1.0, 0.0, 0.0)
+                        local_up = _normalize(_cross(child_tangent, side))
+                        angle = (
                             branchlet_divergence
                             + branchlet_jitter * _noise(
                                 key + child_index * 2.17, seed
                             )
                         )
-                        cosine = math.cos(angle)
-                        sine = math.sin(angle)
+                        radial_angle = (
+                            key * 2.399963229728653
+                            + child_index * math.pi * 0.73
+                        )
+                        radial = _normalize(tuple(
+                            math.cos(radial_angle) * side[axis]
+                            + math.sin(radial_angle) * local_up[axis]
+                            for axis in range(3)
+                        ))
                         child_direction = _normalize((
-                            local_direction[0] * cosine
-                            + local_direction[2] * sine,
-                            local_direction[1] + branchlet_upward,
-                            -local_direction[0] * sine
-                            + local_direction[2] * cosine,
+                            child_tangent[0] * math.cos(angle)
+                            + radial[0] * math.sin(angle),
+                            child_tangent[1] * math.cos(angle)
+                            + radial[1] * math.sin(angle)
+                            + branchlet_upward,
+                            child_tangent[2] * math.cos(angle)
+                            + radial[2] * math.sin(angle),
                         ))
                         grow_branchlet_axis(
-                            current,
+                            child_start,
                             child_direction,
-                            length * branchlet_length_ratio,
-                            radius * branchlet_radius_ratio,
+                            length * branchlet_lateral_length_ratio * (
+                                0.88 + 0.20 * _noise(
+                                    key + child_index * 3.11, seed
+                                )
+                            ),
+                            child_parent_radius * branchlet_radius_ratio,
                             depth - 1,
                             key * 1.91 + child_index + 1.0,
                         )
 
+                    continuation_side = _normalize(_cross(
+                        (0.0, 1.0, 0.0), local_direction
+                    ))
+                    if sum(
+                        value * value for value in continuation_side
+                    ) < 1e-8:
+                        continuation_side = (1.0, 0.0, 0.0)
+                    continuation_turn = 0.35 * branchlet_jitter * _noise(
+                        key + 9.7, seed
+                    )
+                    continuation_direction = _normalize((
+                        local_direction[0]
+                        + math.sin(continuation_turn)
+                        * continuation_side[0],
+                        local_direction[1] + branchlet_upward * 0.35,
+                        local_direction[2]
+                        + math.sin(continuation_turn)
+                        * continuation_side[2],
+                    ))
+                    grow_branchlet_axis(
+                        current,
+                        continuation_direction,
+                        length * branchlet_continuation_ratio,
+                        axis_points[-1][2] * branchlet_radius_ratio,
+                        depth - 1,
+                        key * 2.13 + 7.0,
+                    )
+
                 for source_index, source in enumerate(fork_states):
-                    if not source["trajectory"]:
-                        continue
-                    for attachment_index, fraction in enumerate(
-                        attachment_fractions
+                    if (
+                        not source["trajectory"]
+                        or source["role"] not in crownlet_anchor_roles
+                        or (
+                            crownlet_anchor_names
+                            and source["name"] not in crownlet_anchor_names
+                        )
                     ):
+                        continue
+                    crownlet_count += 1
+                    for root_index in range(crownlet_root_axes):
+                        attachment_fraction = crownlet_attachment_fractions[
+                            root_index % len(crownlet_attachment_fractions)
+                        ]
                         trajectory_index = min(
                             len(source["trajectory"]) - 1,
                             max(0, round(
-                                fraction * (len(source["trajectory"]) - 1)
+                                attachment_fraction
+                                * (len(source["trajectory"]) - 1)
                             )),
                         )
                         attachment = source["trajectory"][trajectory_index]
                         tangent = attachment["direction"]
-                        sign = -1.0 if (
-                            source_index + attachment_index
-                        ) % 2 else 1.0
-                        angle = sign * branchlet_divergence
-                        cosine = math.cos(angle)
-                        sine = math.sin(angle)
+                        side = _normalize(_cross(
+                            (0.0, 1.0, 0.0), tangent
+                        ))
+                        if sum(value * value for value in side) < 1e-8:
+                            side = (1.0, 0.0, 0.0)
+                        local_up = _normalize(_cross(tangent, side))
+                        radial_angle = (
+                            2.0 * math.pi * root_index / crownlet_root_axes
+                            + 0.35 * _noise(source_index + 0.7, seed)
+                        )
+                        radial = _normalize(tuple(
+                            math.cos(radial_angle) * side[axis]
+                            + math.sin(radial_angle) * local_up[axis]
+                            for axis in range(3)
+                        ))
+                        spread_angle = 0.5 * crownlet_spread
+                        spread_angle += branchlet_jitter * _noise(
+                            source_index * 3.7 + root_index, seed
+                        )
+                        root_lift = branchlet_upward * (
+                            0.75 + 0.35 * _noise(
+                                source_index * 5.1 + root_index, seed
+                            )
+                        )
                         initial_direction = _normalize((
-                            tangent[0] * cosine + tangent[2] * sine,
-                            tangent[1] + branchlet_upward,
-                            -tangent[0] * sine + tangent[2] * cosine,
+                            tangent[0] * math.cos(spread_angle)
+                            + radial[0] * math.sin(spread_angle),
+                            tangent[1] * math.cos(spread_angle)
+                            + radial[1] * math.sin(spread_angle)
+                            + root_lift,
+                            tangent[2] * math.cos(spread_angle)
+                            + radial[2] * math.sin(spread_angle),
                         ))
                         grow_branchlet_axis(
                             attachment["position"],
@@ -839,7 +1007,7 @@ def live_oak(config):
                             branchlet_length,
                             attachment["radius"] * branchlet_radius_ratio,
                             branchlet_depth,
-                            source_index * 11.0 + attachment_index + 1.0,
+                            source_index * 11.0 + root_index + 1.0,
                         )
 
             if balanced.get("report_balance", False):
@@ -863,9 +1031,22 @@ def live_oak(config):
                     )
                 if branchlet_axis_count:
                     print(
-                        f"  leaf-bearing branchlet axes: "
-                        f"{branchlet_axis_count}"
+                        f"  composite canopy clumps: {crownlet_count}, "
+                        f"leaf-bearing axes: {branchlet_axis_count}"
                     )
+                    if leaf_count:
+                        print(f"  live-oak leaves: {leaf_count}")
+                    for source in fork_states:
+                        if (
+                            source["trajectory"]
+                            and source["role"] in crownlet_anchor_roles
+                        ):
+                            endpoint = source["trajectory"][-1]["position"]
+                            print(
+                                f"    {source['name']} clump endpoint: "
+                                f"({endpoint[0]:.1f}, {endpoint[1]:.1f}, "
+                                f"{endpoint[2]:.1f})"
+                            )
                 print(
                     f"  crown horizontal COM: ({center_x:.3f}, {center_z:.3f}), "
                     f"offset {math.hypot(center_x, center_z):.3f}"

@@ -30,6 +30,7 @@ if REPOSITORY_ROOT not in sys.path:
     sys.path.insert(0, REPOSITORY_ROOT)
 
 from phyllotaxis import area_dome_points, dome_height, vogel_points
+from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
 
 
@@ -905,6 +906,59 @@ def write_curve_segment(lines, start, end, width, reflectance):
     ]
 
 
+def write_lsystem_leaf(lines, start, end, width, reflectance):
+    """Write a simple lanceolate leaf mesh aligned to a generated shoot."""
+
+    direction = tuple(end[axis] - start[axis] for axis in range(3))
+    length = math.sqrt(sum(value * value for value in direction))
+    if length <= 1e-8:
+        return
+    tangent = tuple(value / length for value in direction)
+    side = (
+        tangent[2], 0.0, -tangent[0]
+    )
+    side_length = math.sqrt(sum(value * value for value in side))
+    if side_length <= 1e-8:
+        side = (1.0, 0.0, 0.0)
+    else:
+        side = tuple(value / side_length for value in side)
+    positions = []
+    for fraction, half_width in (
+        (0.0, 0.0), (0.32, width), (0.70, width * 0.72), (1.0, 0.0)
+    ):
+        center = tuple(
+            start[axis] + direction[axis] * fraction
+            for axis in range(3)
+        )
+        if half_width == 0.0:
+            positions.append(center)
+        else:
+            positions.append(tuple(
+                center[axis] + side[axis] * half_width
+                for axis in range(3)
+            ))
+            positions.append(tuple(
+                center[axis] - side[axis] * half_width
+                for axis in range(3)
+            ))
+    points = " ".join(
+        f"{point[0]:.9f} {point[1]:.9f} {point[2]:.9f}"
+        for point in positions
+    )
+    indices = "0 1 2 1 3 4 1 4 2 3 5 4"
+    lines += [
+        'AttributeBegin',
+        (
+            '    Material "diffuse"  "rgb reflectance" '
+            f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+        ),
+        '    Shape "trianglemesh"',
+        f'        "integer indices" [ {indices} ]',
+        f'        "point3 P" [ {points} ]',
+        'AttributeEnd',
+    ]
+
+
 def write_lsystem_trees(lines, trees):
     """Write configuration-driven deterministic L-system conifers."""
 
@@ -919,6 +973,8 @@ def write_lsystem_trees(lines, trees):
             generated_segments = christmas_tree(tree)
         elif preset == "live_oak":
             generated_segments = live_oak(tree)
+        elif preset == "fractal_tree":
+            generated_segments = fractal_tree(tree)
         else:
             raise ValueError("unsupported L-system tree preset")
         debug_render = tree.get("debug_render", {})
@@ -929,8 +985,12 @@ def write_lsystem_trees(lines, trees):
         for segment in generated_segments:
             start = tuple(segment.start[i] + origin[i] for i in range(3))
             end = tuple(segment.end[i] + origin[i] for i in range(3))
-            color = green if segment.kind == "foliage" else wood
-            if curve_mode:
+            color = green if segment.kind in ("foliage", "leaf") else wood
+            if segment.kind == "leaf":
+                write_lsystem_leaf(
+                    lines, start, end, segment.radius0, color
+                )
+            elif curve_mode:
                 write_curve_segment(
                     lines, start, end, curve_width, curve_color
                 )
