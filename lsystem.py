@@ -221,21 +221,74 @@ def live_oak(config):
                 "wave_amplitude": float(spec.get("wave_amplitude", 0.0)),
                 "wave_cycles": float(spec.get("wave_cycles", 1.0)),
                 "wave_phase": math.radians(float(spec.get("wave_phase", 0.0))),
+                "bend_period": int(spec.get("bend_period", -1)),
+                "bend_angle": math.radians(float(spec.get("bend_angle", 0.0))),
+                "bend_events": {
+                    int(event["period"]): {
+                        "yaw": math.radians(float(
+                            event.get("yaw", event.get("angle", 0.0))
+                        )),
+                        "pitch": math.radians(float(event.get("pitch", 0.0))),
+                        "hold": max(0, int(event.get("hold", 0))),
+                    }
+                    for event in spec.get("bend_events", [])
+                },
+                "held_direction": None,
+                "hold_remaining": 0,
+                "response_share_total": 0.0,
                 "mass": 0.0,
                 "grown": 0,
+                "trajectory": [],
+                "horizontal_periods": max(-1, int(spec.get(
+                    "horizontal_establishment_periods", -1
+                ))),
+                "rise_transition_periods": max(1, int(spec.get(
+                    "rise_transition_periods", 8
+                ))),
+                "lateral_attachment_period": max(1, int(spec.get(
+                    "lateral_attachment_period", 10
+                ))),
             })
 
         load_x = 0.0
         load_z = 0.0
         total_mass = 0.0
-        coupled_pair = balanced.get("coupled_pair", {})
-        if coupled_pair.get("enabled", False):
-            if len(states) != 2:
-                raise ValueError("coupled_pair mode requires exactly two buds")
-            coupling = float(coupled_pair.get("direction_coupling", 0.85))
-            pair_periods = min(
-                int(coupled_pair.get("growth_periods", 16)),
-                states[0]["steps"], states[1]["steps"],
+        coupled_group = balanced.get("coupled_group", {})
+        if coupled_group.get("enabled", False):
+            coupling = float(coupled_group.get("direction_coupling", 0.85))
+            response_delay = max(0, int(coupled_group.get("response_delay", 0)))
+            horizontal_periods = max(0, int(
+                coupled_group.get("horizontal_establishment_periods", 0)
+            ))
+            horizontal_max_vertical = max(0.0, float(
+                coupled_group.get("horizontal_max_vertical", 0.08)
+            ))
+
+            def apply_rise_schedule(direction, state, period):
+                """Hold an axis lateral, then release it upward gradually."""
+
+                establishment = state["horizontal_periods"]
+                if establishment < 0:
+                    establishment = horizontal_periods
+                transition = state["rise_transition_periods"]
+                if period < establishment:
+                    maximum_vertical = horizontal_max_vertical
+                elif period < establishment + transition:
+                    progress = (period - establishment + 1) / transition
+                    maximum_vertical = (
+                        horizontal_max_vertical
+                        + progress * (target_vertical - horizontal_max_vertical)
+                    )
+                else:
+                    return direction
+                return _normalize((
+                    direction[0],
+                    min(direction[1], maximum_vertical),
+                    direction[2],
+                ))
+            group_periods = min(
+                int(coupled_group.get("growth_periods", 16)),
+                *(state["steps"] for state in states),
             )
 
             def grow_pair_segment(state, direction):
@@ -266,10 +319,17 @@ def live_oak(config):
                 state["direction"] = direction
                 state["grown"] += 1
                 state["mass"] += mass
+                state["trajectory"].append({
+                    "position": end,
+                    "direction": direction,
+                    "radius": r1,
+                })
                 return mass, midpoint
 
-            for period in range(pair_periods):
-                driver, responder = states
+            driver_change_history = []
+            for period in range(group_periods):
+                driver = states[0]
+                responders = states[1:]
                 driver_previous = driver["direction"]
                 driver_progress = driver["grown"] / driver["steps"]
                 driver_side = _normalize(_cross(
@@ -296,6 +356,51 @@ def live_oak(config):
                     + phototropism * light_direction[2]
                     + driver_wave * driver_side[2],
                 ))
+                driver_direction = apply_rise_schedule(
+                    driver_direction, driver, period
+                )
+                if driver["hold_remaining"] > 0:
+                    driver_direction = driver["held_direction"]
+                    driver["hold_remaining"] -= 1
+                bend_event = driver["bend_events"].get(driver["grown"])
+                if bend_event is None and driver["grown"] == driver["bend_period"]:
+                    bend_event = {
+                        "yaw": driver["bend_angle"], "pitch": 0.0, "hold": 0,
+                    }
+                if bend_event is not None:
+                    # A discrete parametric-L-system turn command. Rotate the
+                    # driver's horizontal heading while retaining its current
+                    # vertical component; the responder is not told about the
+                    # bend except through the measured direction-vector change.
+                    cosine = math.cos(bend_event["yaw"])
+                    sine = math.sin(bend_event["yaw"])
+                    driver_direction = _normalize((
+                        driver_direction[0] * cosine
+                        + driver_direction[2] * sine,
+                        driver_direction[1],
+                        -driver_direction[0] * sine
+                        + driver_direction[2] * cosine,
+                    ))
+                    horizontal_length = math.hypot(
+                        driver_direction[0], driver_direction[2]
+                    )
+                    if horizontal_length > 1e-8 and bend_event["pitch"]:
+                        elevation = max(
+                            -0.48 * math.pi,
+                            min(
+                                0.48 * math.pi,
+                                math.asin(driver_direction[1])
+                                + bend_event["pitch"],
+                            ),
+                        )
+                        horizontal_scale = math.cos(elevation) / horizontal_length
+                        driver_direction = _normalize((
+                            driver_direction[0] * horizontal_scale,
+                            math.sin(elevation),
+                            driver_direction[2] * horizontal_scale,
+                        ))
+                    driver["held_direction"] = driver_direction
+                    driver["hold_remaining"] = bend_event["hold"]
                 driver_mass, driver_midpoint = grow_pair_segment(
                     driver, driver_direction
                 )
@@ -312,51 +417,454 @@ def live_oak(config):
                     0.0,
                     driver_direction[2] - driver_previous[2],
                 )
-                responder_previous = responder["direction"]
-                responder_progress = responder["grown"] / responder["steps"]
-                responder_tip = (
-                    responder["base_radius"] * responder["tip_ratio"]
-                )
-                responder_r0 = responder["base_radius"] + (
-                    responder_tip - responder["base_radius"]
-                ) * responder_progress ** 1.35
-                responder_mass_estimate = responder_r0 * responder_r0 * step_length
-                mass_ratio = driver_mass / max(1e-8, responder_mass_estimate)
-                responder_vertical_deficit = max(
-                    0.0, target_vertical - responder_previous[1]
-                )
-                responder_direction = _normalize((
-                    momentum * responder_previous[0]
-                    + outward_bias * responder["outward"][0]
-                    + phototropism * light_direction[0]
-                    - coupling * mass_ratio * direction_change[0],
-                    momentum * responder_previous[1]
-                    + outward_bias * responder["outward"][1]
-                    + phototropism * light_direction[1]
-                    + proprioception * responder_vertical_deficit,
-                    momentum * responder_previous[2]
-                    + outward_bias * responder["outward"][2]
-                    + phototropism * light_direction[2]
-                    - coupling * mass_ratio * direction_change[2],
+                driver_change_history.append((direction_change, driver_mass))
+                response_index = period - response_delay
+                if response_index >= 0:
+                    coupled_change, coupled_mass = driver_change_history[response_index]
+                else:
+                    coupled_change, coupled_mass = ((0.0, 0.0, 0.0), driver_mass)
+                counter_direction = _normalize((-load_x, 0.0, -load_z))
+                response_weights = []
+                for responder in responders:
+                    horizontal_direction = _normalize((
+                        responder["direction"][0], 0.0,
+                        responder["direction"][2],
+                    ))
+                    alignment = max(0.0, sum(
+                        horizontal_direction[axis] * counter_direction[axis]
+                        for axis in (0, 2)
+                    ))
+                    horizontal_lever = math.hypot(
+                        responder["position"][0], responder["position"][2]
+                    )
+                    # A responder is more effective when it already points
+                    # toward the counter-moment side and has developed useful
+                    # leverage. The floor keeps every sibling responsive.
+                    response_weights.append(
+                        0.12 + alignment * (1.0 + 0.02 * horizontal_lever)
+                    )
+                response_weight_sum = sum(response_weights)
+                for responder, response_weight in zip(
+                    responders, response_weights
+                ):
+                    response_share = response_weight / response_weight_sum
+                    responder["response_share_total"] += response_share
+                    responder_previous = responder["direction"]
+                    responder_progress = responder["grown"] / responder["steps"]
+                    responder_tip = (
+                        responder["base_radius"] * responder["tip_ratio"]
+                    )
+                    responder_r0 = responder["base_radius"] + (
+                        responder_tip - responder["base_radius"]
+                    ) * responder_progress ** 1.35
+                    responder_mass_estimate = (
+                        responder_r0 * responder_r0 * step_length
+                    )
+                    mass_ratio = coupled_mass / max(
+                        1e-8, responder_mass_estimate
+                    )
+                    responder_vertical_deficit = max(
+                        0.0, target_vertical - responder_previous[1]
+                    )
+                    responder_direction = _normalize((
+                        momentum * responder_previous[0]
+                        + outward_bias * responder["outward"][0]
+                        + phototropism * light_direction[0]
+                        - coupling * response_share * mass_ratio
+                        * coupled_change[0],
+                        momentum * responder_previous[1]
+                        + outward_bias * responder["outward"][1]
+                        + phototropism * light_direction[1]
+                        + proprioception * responder_vertical_deficit,
+                        momentum * responder_previous[2]
+                        + outward_bias * responder["outward"][2]
+                        + phototropism * light_direction[2]
+                        - coupling * response_share * mass_ratio
+                        * coupled_change[2],
+                    ))
+                    responder_direction = apply_rise_schedule(
+                        responder_direction, responder, period
+                    )
+                    responder_mass, responder_midpoint = grow_pair_segment(
+                        responder, responder_direction
+                    )
+                    load_x += responder_mass * responder_midpoint[0]
+                    load_z += responder_mass * responder_midpoint[2]
+                    total_mass += responder_mass
+
+            fork_config = coupled_group.get("structural_fork", {})
+            fork_states = []
+            minimum_parent_periods = int(
+                fork_config.get("minimum_parent_periods", group_periods)
+            )
+            if (
+                fork_config.get("enabled", False)
+                and group_periods >= minimum_parent_periods
+            ):
+                continuation_periods = max(1, int(
+                    fork_config.get(
+                        "continuation_periods",
+                        fork_config.get("daughter_periods", 8),
+                    )
                 ))
-                responder_mass, responder_midpoint = grow_pair_segment(
-                    responder, responder_direction
+                lateral_periods = max(1, int(
+                    fork_config.get("lateral_periods", continuation_periods)
+                ))
+                continuation_angle = math.radians(float(
+                    fork_config.get("continuation_angle", 10.0)
+                ))
+                lateral_angle = math.radians(float(
+                    fork_config.get(
+                        "lateral_angle", fork_config.get("angle", 36.0)
+                    )
+                ))
+                fork_upward = float(fork_config.get("upward_bias", 0.12))
+                continuation_radius_ratio = float(fork_config.get(
+                    "continuation_radius_ratio",
+                    fork_config.get("radius_ratio", 0.62),
+                ))
+                lateral_radius_ratio = float(fork_config.get(
+                    "lateral_radius_ratio", continuation_radius_ratio
+                ))
+                lateral_bend_period = max(0, int(
+                    fork_config.get("lateral_bend_period", 2)
+                ))
+                lateral_bend_yaw = math.radians(float(
+                    fork_config.get("lateral_bend_yaw", 0.0)
+                ))
+                lateral_bend_pitch = math.radians(float(
+                    fork_config.get("lateral_bend_pitch", 0.0)
+                ))
+                lateral_horizontal_periods = max(0, int(
+                    fork_config.get("lateral_horizontal_periods", 0)
+                ))
+                intermediate_config = fork_config.get(
+                    "intermediate_laterals", {}
                 )
-                load_x += responder_mass * responder_midpoint[0]
-                load_z += responder_mass * responder_midpoint[2]
-                total_mass += responder_mass
+                for parent_index, parent in enumerate(states):
+                    parent_tip_radius = (
+                        parent["base_radius"] * parent["tip_ratio"]
+                    )
+                    daughter_specs = (
+                        (
+                            "continuation", -continuation_angle,
+                            continuation_periods, continuation_radius_ratio,
+                        ),
+                        (
+                            "lateral", lateral_angle,
+                            lateral_periods, lateral_radius_ratio,
+                        ),
+                    )
+                    for role, angle, periods, daughter_radius_ratio in daughter_specs:
+                        cosine = math.cos(angle)
+                        sine = math.sin(angle)
+                        parent_direction = parent["direction"]
+                        daughter_direction = _normalize((
+                            parent_direction[0] * cosine
+                            + parent_direction[2] * sine,
+                            parent_direction[1] + fork_upward,
+                            -parent_direction[0] * sine
+                            + parent_direction[2] * cosine,
+                        ))
+                        fork_states.append({
+                            "name": (
+                                f"{parent['name']}_{role}"
+                            ),
+                            "position": parent["position"],
+                            "direction": daughter_direction,
+                            "outward": daughter_direction,
+                            "base_radius": (
+                                parent_tip_radius * daughter_radius_ratio
+                            ),
+                            "tip_ratio": 0.48,
+                            "steps": periods,
+                            "role": role,
+                            "bend_sign": -1.0 if parent_index % 2 else 1.0,
+                            "grown": 0,
+                            "mass": 0.0,
+                            "trajectory": [],
+                        })
+
+                    if intermediate_config.get("enabled", False):
+                        attachment_index = min(
+                            len(parent["trajectory"]) - 1,
+                            parent["lateral_attachment_period"] - 1,
+                        )
+                        attachment = parent["trajectory"][attachment_index]
+                        intermediate_angle = math.radians(float(
+                            intermediate_config.get("angle", 72.0)
+                        ))
+                        intermediate_sign = (
+                            -1.0 if parent_index % 2 else 1.0
+                        )
+                        cosine = math.cos(
+                            intermediate_sign * intermediate_angle
+                        )
+                        sine = math.sin(
+                            intermediate_sign * intermediate_angle
+                        )
+                        attachment_direction = attachment["direction"]
+                        intermediate_direction = _normalize((
+                            attachment_direction[0] * cosine
+                            + attachment_direction[2] * sine,
+                            attachment_direction[1],
+                            -attachment_direction[0] * sine
+                            + attachment_direction[2] * cosine,
+                        ))
+                        fork_states.append({
+                            "name": f"{parent['name']}_intermediate_lateral",
+                            "position": attachment["position"],
+                            "direction": intermediate_direction,
+                            "outward": intermediate_direction,
+                            "base_radius": (
+                                attachment["radius"] * float(
+                                    intermediate_config.get(
+                                        "radius_ratio", 0.58
+                                    )
+                                )
+                            ),
+                            "tip_ratio": 0.45,
+                            "steps": max(1, int(
+                                intermediate_config.get("periods", 12)
+                            )),
+                            "role": "lateral",
+                            "bend_sign": -intermediate_sign,
+                            "grown": 0,
+                            "mass": 0.0,
+                            "trajectory": [],
+                        })
+
+                daughter_growth_periods = max(
+                    daughter["steps"] for daughter in fork_states
+                )
+                for _ in range(daughter_growth_periods):
+                    for daughter in fork_states:
+                        if daughter["grown"] >= daughter["steps"]:
+                            continue
+                        previous = daughter["direction"]
+                        vertical_deficit = max(
+                            0.0, target_vertical - previous[1]
+                        )
+                        direction = _normalize((
+                            momentum * previous[0]
+                            + outward_bias * daughter["outward"][0]
+                            + phototropism * light_direction[0],
+                            momentum * previous[1]
+                            + outward_bias * daughter["outward"][1]
+                            + phototropism * light_direction[1]
+                            + proprioception * vertical_deficit,
+                            momentum * previous[2]
+                            + outward_bias * daughter["outward"][2]
+                            + phototropism * light_direction[2],
+                        ))
+                        if (
+                            daughter["role"] == "lateral"
+                            and daughter["grown"] < lateral_horizontal_periods
+                        ):
+                            direction = _normalize((
+                                direction[0],
+                                min(direction[1], horizontal_max_vertical),
+                                direction[2],
+                            ))
+                        if (
+                            daughter["role"] == "lateral"
+                            and daughter["grown"] == lateral_bend_period
+                        ):
+                            bend_yaw = (
+                                daughter["bend_sign"] * lateral_bend_yaw
+                            )
+                            cosine = math.cos(bend_yaw)
+                            sine = math.sin(bend_yaw)
+                            direction = _normalize((
+                                direction[0] * cosine
+                                + direction[2] * sine,
+                                direction[1],
+                                -direction[0] * sine
+                                + direction[2] * cosine,
+                            ))
+                            horizontal_length = math.hypot(
+                                direction[0], direction[2]
+                            )
+                            if horizontal_length > 1e-8 and lateral_bend_pitch:
+                                elevation = max(
+                                    -0.48 * math.pi,
+                                    min(
+                                        0.48 * math.pi,
+                                        math.asin(direction[1])
+                                        + lateral_bend_pitch,
+                                    ),
+                                )
+                                horizontal_scale = (
+                                    math.cos(elevation) / horizontal_length
+                                )
+                                direction = _normalize((
+                                    direction[0] * horizontal_scale,
+                                    math.sin(elevation),
+                                    direction[2] * horizontal_scale,
+                                ))
+                        daughter_mass, daughter_midpoint = grow_pair_segment(
+                            daughter, direction
+                        )
+                        load_x += daughter_mass * daughter_midpoint[0]
+                        load_z += daughter_mass * daughter_midpoint[2]
+                        total_mass += daughter_mass
+
+            branchlet_config = coupled_group.get("branchlets", {})
+            branchlet_axis_count = 0
+            if branchlet_config.get("enabled", False) and fork_states:
+                branchlet_depth = max(1, int(
+                    branchlet_config.get("depth", 2)
+                ))
+                branchlet_segments = max(2, int(
+                    branchlet_config.get("segments_per_axis", 4)
+                ))
+                branchlet_length = float(
+                    branchlet_config.get("length", 16.0)
+                )
+                branchlet_length_ratio = float(
+                    branchlet_config.get("length_ratio", 0.58)
+                )
+                branchlet_radius_ratio = float(
+                    branchlet_config.get("radius_ratio", 0.42)
+                )
+                branchlet_divergence = math.radians(float(
+                    branchlet_config.get("divergence", 48.0)
+                ))
+                branchlet_upward = float(
+                    branchlet_config.get("upward_bias", 0.30)
+                )
+                branchlet_jitter = math.radians(float(
+                    branchlet_config.get("angle_jitter", 14.0)
+                ))
+                attachment_fractions = tuple(float(value) for value in
+                    branchlet_config.get(
+                        "attachment_fractions", [0.55, 0.88]
+                    )
+                )
+
+                def grow_branchlet_axis(
+                    start, direction, length, radius, depth, key
+                ):
+                    nonlocal branchlet_axis_count
+                    branchlet_axis_count += 1
+                    current = start
+                    local_direction = _normalize(direction)
+                    step = length / branchlet_segments
+                    for segment_index in range(branchlet_segments):
+                        progress0 = segment_index / branchlet_segments
+                        progress1 = (segment_index + 1) / branchlet_segments
+                        side = _normalize(_cross(
+                            (0.0, 1.0, 0.0), local_direction
+                        ))
+                        wander = 0.10 * _noise(
+                            key + segment_index * 0.73, seed
+                        )
+                        local_direction = _normalize((
+                            local_direction[0] + wander * side[0],
+                            local_direction[1]
+                            + branchlet_upward * 0.16,
+                            local_direction[2] + wander * side[2],
+                        ))
+                        end = tuple(
+                            current[axis] + local_direction[axis] * step
+                            for axis in range(3)
+                        )
+                        r0 = radius * (1.0 - 0.62 * progress0)
+                        r1 = radius * (1.0 - 0.62 * progress1)
+                        segments.append(Segment(
+                            current, end, r0, r1, "wood"
+                        ))
+                        current = end
+
+                    if depth <= 1:
+                        return
+                    horizontal = _normalize((
+                        local_direction[0], 0.0, local_direction[2]
+                    ))
+                    if math.hypot(horizontal[0], horizontal[2]) < 1e-8:
+                        horizontal = (1.0, 0.0, 0.0)
+                    for child_index, sign in enumerate((-1.0, 1.0)):
+                        angle = sign * (
+                            branchlet_divergence
+                            + branchlet_jitter * _noise(
+                                key + child_index * 2.17, seed
+                            )
+                        )
+                        cosine = math.cos(angle)
+                        sine = math.sin(angle)
+                        child_direction = _normalize((
+                            local_direction[0] * cosine
+                            + local_direction[2] * sine,
+                            local_direction[1] + branchlet_upward,
+                            -local_direction[0] * sine
+                            + local_direction[2] * cosine,
+                        ))
+                        grow_branchlet_axis(
+                            current,
+                            child_direction,
+                            length * branchlet_length_ratio,
+                            radius * branchlet_radius_ratio,
+                            depth - 1,
+                            key * 1.91 + child_index + 1.0,
+                        )
+
+                for source_index, source in enumerate(fork_states):
+                    if not source["trajectory"]:
+                        continue
+                    for attachment_index, fraction in enumerate(
+                        attachment_fractions
+                    ):
+                        trajectory_index = min(
+                            len(source["trajectory"]) - 1,
+                            max(0, round(
+                                fraction * (len(source["trajectory"]) - 1)
+                            )),
+                        )
+                        attachment = source["trajectory"][trajectory_index]
+                        tangent = attachment["direction"]
+                        sign = -1.0 if (
+                            source_index + attachment_index
+                        ) % 2 else 1.0
+                        angle = sign * branchlet_divergence
+                        cosine = math.cos(angle)
+                        sine = math.sin(angle)
+                        initial_direction = _normalize((
+                            tangent[0] * cosine + tangent[2] * sine,
+                            tangent[1] + branchlet_upward,
+                            -tangent[0] * sine + tangent[2] * cosine,
+                        ))
+                        grow_branchlet_axis(
+                            attachment["position"],
+                            initial_direction,
+                            branchlet_length,
+                            attachment["radius"] * branchlet_radius_ratio,
+                            branchlet_depth,
+                            source_index * 11.0 + attachment_index + 1.0,
+                        )
 
             if balanced.get("report_balance", False):
                 center_x = load_x / total_mass if total_mass else 0.0
                 center_z = load_z / total_mass if total_mass else 0.0
-                print("Coupled two-branch growth:")
+                print("Coupled scaffold-group growth:")
                 for state in states:
                     print(
                         f"  {state['name']}: {state['grown']} periods, "
                         f"mass {state['mass']:.1f}, direction "
                         f"({state['direction'][0]:.3f}, "
                         f"{state['direction'][1]:.3f}, "
-                        f"{state['direction'][2]:.3f})"
+                        f"{state['direction'][2]:.3f}), response share "
+                        f"{state['response_share_total'] / group_periods:.3f}"
+                    )
+                if fork_states:
+                    print(
+                        f"  structural daughters: {len(fork_states)} axes, "
+                        f"{continuation_periods} continuation / "
+                        f"{lateral_periods} lateral periods"
+                    )
+                if branchlet_axis_count:
+                    print(
+                        f"  leaf-bearing branchlet axes: "
+                        f"{branchlet_axis_count}"
                     )
                 print(
                     f"  crown horizontal COM: ({center_x:.3f}, {center_z:.3f}), "
