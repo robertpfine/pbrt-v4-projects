@@ -62,7 +62,7 @@
         "type": "infinite",
         "color_mode": "rgb",
         "color": [0.20, 0.40, 0.80],
-        "scale": 0.12
+        "scale": 0.06
       },
       {
         "enabled": false,
@@ -90,7 +90,7 @@
         "to": [0, 0, 0],
         "color_mode": "blackbody",
         "temperature": 5400,
-        "scale": 2.8
+        "scale": 9.0
       }
     ],
 
@@ -581,12 +581,17 @@
         "leaves_enabled": true,
         "leaf_length": 2.8,
         "leaf_width": 0.72,
-        "crownlet_depth": 3,
-        "crownlet_length": 5.5,
-        "crownlet_length_ratio": 0.62,
-        "crownlet_angle": 38.0,
-        "crownlet_radius_ratio": 0.46,
-        "leaves_per_tip": 5,
+        "crownlet": {
+          "style": "open",
+          "depth": 5,
+          "length": 7.8,
+          "length_ratio": 0.75,
+          "angle": 52.0,
+          "radius_ratio": 0.46,
+          "clustered_spread_ratio": 0.30,
+          "clustered_length_ratio": 0.62,
+          "leaves_per_tip": 8
+        },
         "wood_reflectance": [0.20, 0.085, 0.020],
         "foliage_reflectance": [0.020, 0.18, 0.035]
       }

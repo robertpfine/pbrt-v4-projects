@@ -57,12 +57,28 @@ def fractal_tree(config):
     leaves_enabled = bool(config.get("leaves_enabled", True))
     leaf_length = float(config.get("leaf_length", 2.8))
     leaf_width = float(config.get("leaf_width", 0.72))
-    crownlet_depth = int(config.get("crownlet_depth", 3))
-    crownlet_length = float(config.get("crownlet_length", 5.5))
-    crownlet_length_ratio = float(config.get("crownlet_length_ratio", 0.62))
-    crownlet_angle = math.radians(float(config.get("crownlet_angle", 38.0)))
-    crownlet_radius_ratio = float(config.get("crownlet_radius_ratio", 0.46))
-    leaves_per_tip = int(config.get("leaves_per_tip", 5))
+    crownlet = config.get("crownlet", {})
+    crownlet_style = crownlet.get("style", "open")
+    if crownlet_style not in ("open", "clustered", "fan"):
+        raise ValueError(
+            "crownlet.style must be 'open', 'clustered', or 'fan'"
+        )
+    crownlet_depth = int(crownlet.get("depth", config.get("crownlet_depth", 3)))
+    crownlet_length = float(crownlet.get("length", config.get("crownlet_length", 5.5)))
+    crownlet_length_ratio = float(crownlet.get(
+        "length_ratio", config.get("crownlet_length_ratio", 0.62)
+    ))
+    crownlet_angle = math.radians(float(crownlet.get(
+        "angle", config.get("crownlet_angle", 38.0)
+    )))
+    crownlet_radius_ratio = float(crownlet.get(
+        "radius_ratio", config.get("crownlet_radius_ratio", 0.46)
+    ))
+    clustered_spread_ratio = float(crownlet.get("clustered_spread_ratio", 0.30))
+    clustered_length_ratio = float(crownlet.get("clustered_length_ratio", 0.62))
+    leaves_per_tip = int(crownlet.get(
+        "leaves_per_tip", config.get("leaves_per_tip", 5)
+    ))
     segments = []
 
     previous = (0.0, 0.0, 0.0)
@@ -129,15 +145,23 @@ def fractal_tree(config):
             return
 
         spread = crownlet_angle * (1.0 - 0.10 * depth)
-        jitter = rng.uniform(-0.18, 0.18)
         child_length = length * crownlet_length_ratio
+        child_phase_a = phase + math.radians(137.5)
+        child_phase_b = phase - math.radians(99.5)
+        if crownlet_style == "clustered":
+            spread *= clustered_spread_ratio
+            child_length *= clustered_length_ratio
+        elif crownlet_style == "fan":
+            child_phase_a = phase
+            child_phase_b = phase
+        jitter = rng.uniform(-0.18, 0.18)
         add_crownlet(
             end,
             tilted(direction, phase + jitter, spread),
             child_length * rng.uniform(0.90, 1.08),
             tip_radius,
             depth + 1,
-            phase + math.radians(137.5),
+            child_phase_a,
         )
         add_crownlet(
             end,
@@ -145,7 +169,7 @@ def fractal_tree(config):
             child_length * rng.uniform(0.82, 1.02),
             tip_radius * 0.88,
             depth + 1,
-            phase - math.radians(99.5),
+            child_phase_b,
         )
 
     def grow(start, direction, length, radius, depth, phase):
