@@ -32,6 +32,7 @@ if REPOSITORY_ROOT not in sys.path:
 from phyllotaxis import area_dome_points, dome_height, vogel_points
 from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
+from terrain import create_terrain
 
 
 # ==============================================================
@@ -228,14 +229,80 @@ def write_fog_medium(cfg, lines):
 
     camera_medium = "fog" if fog.get("camera_inside", True) else ""
 
+    noise = fog.get("noise", {})
+    lines.append('MakeNamedMedium "fog"')
+    if noise.get("enabled", False):
+        resolution = noise.get("resolution", [48, 36, 48])
+        nx, ny, nz = (int(resolution[0]), int(resolution[1]), int(resolution[2]))
+        bounds_min = noise.get("bounds_min", [-700.0, -500.0, -700.0])
+        bounds_max = noise.get("bounds_max", [700.0, 700.0, 700.0])
+        frequency = float(noise.get("frequency", 0.006))
+        octaves = int(noise.get("octaves", 3))
+        persistence = float(noise.get("persistence", 0.5))
+        lacunarity = float(noise.get("lacunarity", 2.0))
+        seed = int(noise.get("seed", 19))
+        base_density = float(noise.get("base_density", 0.65))
+        contrast = float(noise.get("contrast", 0.90))
+        if nx < 2 or ny < 2 or nz < 2:
+            raise ValueError("fog noise resolution values must be at least 2")
+        density = []
+        for z_index in range(nz):
+            z = bounds_min[2] + (bounds_max[2] - bounds_min[2]) * z_index / (nz - 1)
+            for y_index in range(ny):
+                y = bounds_min[1] + (bounds_max[1] - bounds_min[1]) * y_index / (ny - 1)
+                for x_index in range(nx):
+                    x = bounds_min[0] + (bounds_max[0] - bounds_min[0]) * x_index / (nx - 1)
+                    value = pnoise3(
+                        x * frequency, y * frequency, z * frequency,
+                        octaves=octaves,
+                        persistence=persistence,
+                        lacunarity=lacunarity,
+                        repeatx=1024, repeaty=1024, repeatz=1024,
+                        base=seed,
+                    )
+                    density.append(max(0.0, base_density + contrast * value))
+        lines += [
+            '    "string type" [ "uniformgrid" ]',
+            f'    "integer nx" [ {nx} ] "integer ny" [ {ny} ] "integer nz" [ {nz} ]',
+            (
+                '    "point3 p0" [ '
+                f'{bounds_min[0]} {bounds_min[1]} {bounds_min[2]} ]'
+            ),
+            (
+                '    "point3 p1" [ '
+                f'{bounds_max[0]} {bounds_max[1]} {bounds_max[2]} ]'
+            ),
+            '    "float density" [',
+            fmt_floats(density, per_line=12),
+            '    ]',
+        ]
+    else:
+        lines.append('    "string type"  [ "homogeneous" ]')
     lines += [
-        'MakeNamedMedium "fog"',
-        '    "string type"  [ "homogeneous" ]',
         f'    "rgb sigma_a" [ {fog["sigma_a"]} {fog["sigma_a"]} {fog["sigma_a"]} ]',
         f'    "rgb sigma_s" [ {fog["sigma_s"]} {fog["sigma_s"]} {fog["sigma_s"]} ]',
         f'    "float g"     [ {fog["g"]} ]',
         '',
         f'MediumInterface "" "{camera_medium}"',
+        '',
+    ]
+
+
+def write_fog_boundary(lines, fog):
+    """Write an invisible spherical boundary for a finite fog medium."""
+
+    if not fog or not fog.get("enabled", False):
+        return
+    radius = float(fog.get("boundary_radius", 700.0))
+    center = fog.get("boundary_center", [0.0, 100.0, 0.0])
+    lines += [
+        '# Finite atmospheric boundary',
+        'AttributeBegin',
+        f'    Translate {center[0]} {center[1]} {center[2]}',
+        '    Material "interface"',
+        '    MediumInterface "fog" ""',
+        f'    Shape "sphere"  "float radius" [ {radius} ]',
+        'AttributeEnd',
         '',
     ]
 
@@ -959,7 +1026,38 @@ def write_lsystem_leaf(lines, start, end, width, reflectance):
     ]
 
 
-def write_lsystem_trees(lines, trees):
+def write_terrain(lines, terrain, config):
+    """Write a procedural terrain as one PBRT triangle mesh."""
+
+    if terrain is None:
+        return
+    points, normals, indices = terrain.mesh()
+    material = config.get("material", {})
+    reflectance = material.get("reflectance", [0.12, 0.18, 0.055])
+    point_values = " ".join(
+        f"{x:.9f} {y:.9f} {z:.9f}" for x, y, z in points
+    )
+    normal_values = " ".join(
+        f"{x:.9f} {y:.9f} {z:.9f}" for x, y, z in normals
+    )
+    index_values = " ".join(str(index) for index in indices)
+    lines += [
+        '# Procedural terrain',
+        'AttributeBegin',
+        (
+            '    Material "diffuse"  "rgb reflectance" '
+            f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+        ),
+        '    Shape "trianglemesh"',
+        f'        "integer indices" [ {index_values} ]',
+        f'        "point3 P" [ {point_values} ]',
+        f'        "normal N" [ {normal_values} ]',
+        'AttributeEnd',
+        '',
+    ]
+
+
+def write_lsystem_trees(lines, trees, terrain=None):
     """Write configuration-driven deterministic L-system conifers."""
 
     for tree_index, tree in enumerate(trees):
@@ -967,6 +1065,14 @@ def write_lsystem_trees(lines, trees):
             continue
         preset = tree.get("preset", "christmas_tree")
         origin = tuple(float(v) for v in tree.get("origin", [0, 0, 0]))
+        placement = tree.get("terrain_placement", {})
+        if terrain is not None and placement.get("enabled", False):
+            sample = terrain.sample(origin[0], origin[2])
+            origin = (
+                origin[0],
+                sample.height + float(placement.get("height_offset", 0.0)),
+                origin[2],
+            )
         wood = tree.get("wood_reflectance", [0.20, 0.09, 0.025])
         green = tree.get("foliage_reflectance", [0.025, 0.16, 0.035])
         if preset == "christmas_tree":
@@ -1410,13 +1516,17 @@ def write_scene(cfg, project_root, medium_rel_path):
 
     # --- World section ---
     lines += ["WorldBegin", ""]
+    write_fog_boundary(lines, scene.get("fog"))
     
     if medium_rel_path is not None:
         write_medium_include(lines, medium_rel_path)
+    terrain_config = scene.get("terrain", {})
+    terrain = create_terrain(terrain_config)
     write_lights(lines, scene.get("lights", []))
     write_geometry(lines, scene.get("geometry", []))
+    write_terrain(lines, terrain, terrain_config)
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
-    write_lsystem_trees(lines, scene.get("lsystem_trees", []))
+    write_lsystem_trees(lines, scene.get("lsystem_trees", []), terrain)
 
     grove_cfg = scene.get("grove", {})
     grove_tree_index = grove_cfg.get("tree_index", 0)

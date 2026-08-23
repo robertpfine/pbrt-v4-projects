@@ -23,11 +23,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [215, 105.0, 230],
-        "look": [7, 78.0, -7],
+        "eye":  [310, 165.0, 390],
+        "look": [5, 100.0, -5],
         "up":   [0, 1, 0]
       },
-      "fov": 48.0
+      "fov": 55.0
     },
 
     "sampler": {
@@ -43,11 +43,27 @@
     },
 
     "fog": {
-      "enabled": false,
-      "sigma_a": 0.0,
-      "sigma_s": 0.0005,
-      "g": 0.60,
-      "camera_inside": true
+      "enabled": true,
+      "sigma_a": 0.00002,
+      "sigma_s": 0.00075,
+      "g": 0.65,
+      "camera_inside": true,
+      "boundary_center": [0.0, 100.0, 0.0],
+      "boundary_radius": 700.0,
+      "noise": {
+        "enabled": true,
+        "type": "perlin",
+        "seed": 19,
+        "resolution": [48, 36, 48],
+        "bounds_min": [-700.0, -500.0, -700.0],
+        "bounds_max": [700.0, 700.0, 700.0],
+        "frequency": 0.006,
+        "octaves": 3,
+        "persistence": 0.50,
+        "lacunarity": 2.0,
+        "base_density": 0.55,
+        "contrast": 1.20
+      }
     },
 
     "film": {
@@ -89,10 +105,33 @@
         "from": [-16, 5.0, 9],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
-        "temperature": 5400,
+        "temperature": 4600,
         "scale": 9.0
       }
     ],
+
+    "terrain": {
+      "enabled": true,
+      "type": "rolling_hillside",
+      "size": [500.0, 500.0],
+      "resolution": [129, 129],
+      "base_height": 0.0,
+      "slope": {
+        "direction_degrees": 25.0,
+        "grade": 0.18
+      },
+      "noise": {
+        "seed": 7,
+        "amplitude": 14.0,
+        "frequency": 0.008,
+        "octaves": 3,
+        "persistence": 0.45,
+        "lacunarity": 2.0
+      },
+      "material": {
+        "reflectance": [0.10, 0.17, 0.045]
+      }
+    },
 
     "geometry": [
       {
@@ -559,12 +598,16 @@
         "enabled": true,
         "preset": "fractal_tree",
         "origin": [0.0, 0.0, 0.0],
+        "terrain_placement": {
+          "enabled": true,
+          "height_offset": 0.0
+        },
         "debug_render": { "mode": "cylinders" },
         "seed": 23,
-        "trunk_height": 42.0,
-        "trunk_segments": 7,
-        "base_radius": 6.0,
-        "crown_radius": 4.2,
+        "trunk_height": 85.0,
+        "trunk_segments": 20,
+        "base_radius": 8.0,
+        "crown_radius": 6.2,
         "initial_length": 34.0,
         "alpha": 2.2,
         "min_radius": 0.60,
@@ -583,10 +626,10 @@
         "leaf_width": 0.72,
         "crownlet": {
           "style": "open",
-          "depth": 5,
-          "length": 7.8,
+          "depth": 4,
+          "length": 10.8,
           "length_ratio": 0.75,
-          "angle": 52.0,
+          "angle": 40.0,
           "radius_ratio": 0.46,
           "clustered_spread_ratio": 0.30,
           "clustered_length_ratio": 0.62,

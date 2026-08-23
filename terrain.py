@@ -1,0 +1,112 @@
+"""Deterministic procedural terrain surfaces and PBRT mesh data."""
+
+from dataclasses import dataclass
+import math
+
+
+@dataclass(frozen=True)
+class TerrainSample:
+    height: float
+    normal: tuple[float, float, float]
+    slope_degrees: float
+
+
+class RollingHillside:
+    """An inclined plane enriched with smooth multi-octave value noise."""
+
+    def __init__(self, config):
+        size = config.get("size", [300.0, 300.0])
+        resolution = config.get("resolution", [129, 129])
+        if isinstance(resolution, int):
+            resolution = [resolution, resolution]
+        self.width, self.depth = (float(size[0]), float(size[1]))
+        self.nx, self.nz = (int(resolution[0]), int(resolution[1]))
+        self.base_height = float(config.get("base_height", 0.0))
+        slope = config.get("slope", {})
+        self.slope_angle = math.radians(float(slope.get("direction_degrees", 0.0)))
+        self.grade = float(slope.get("grade", 0.0))
+        noise = config.get("noise", {})
+        self.seed = int(noise.get("seed", 1))
+        self.amplitude = float(noise.get("amplitude", 0.0))
+        self.frequency = float(noise.get("frequency", 0.01))
+        self.octaves = int(noise.get("octaves", 3))
+        self.persistence = float(noise.get("persistence", 0.5))
+        self.lacunarity = float(noise.get("lacunarity", 2.0))
+        if self.width <= 0 or self.depth <= 0:
+            raise ValueError("terrain size values must be positive")
+        if self.nx < 2 or self.nz < 2:
+            raise ValueError("terrain resolution values must be at least 2")
+        if self.octaves < 1:
+            raise ValueError("terrain noise octaves must be at least 1")
+
+    @staticmethod
+    def _fade(value):
+        return value * value * value * (value * (value * 6.0 - 15.0) + 10.0)
+
+    def _lattice(self, ix, iz):
+        value = math.sin(
+            ix * 127.1 + iz * 311.7 + self.seed * 74.7
+        ) * 43758.5453123
+        return 2.0 * (value - math.floor(value)) - 1.0
+
+    def _value_noise(self, x, z):
+        ix, iz = math.floor(x), math.floor(z)
+        tx, tz = x - ix, z - iz
+        sx, sz = self._fade(tx), self._fade(tz)
+        n00 = self._lattice(ix, iz)
+        n10 = self._lattice(ix + 1, iz)
+        n01 = self._lattice(ix, iz + 1)
+        n11 = self._lattice(ix + 1, iz + 1)
+        nx0 = n00 + (n10 - n00) * sx
+        nx1 = n01 + (n11 - n01) * sx
+        return nx0 + (nx1 - nx0) * sz
+
+    def height(self, x, z):
+        along_slope = x * math.cos(self.slope_angle) + z * math.sin(self.slope_angle)
+        result = self.base_height + self.grade * along_slope
+        amplitude = self.amplitude
+        frequency = self.frequency
+        for _ in range(self.octaves):
+            result += amplitude * self._value_noise(x * frequency, z * frequency)
+            amplitude *= self.persistence
+            frequency *= self.lacunarity
+        return result
+
+    def sample(self, x, z):
+        epsilon = min(self.width / (self.nx - 1), self.depth / (self.nz - 1)) * 0.25
+        dhdx = (self.height(x + epsilon, z) - self.height(x - epsilon, z)) / (2.0 * epsilon)
+        dhdz = (self.height(x, z + epsilon) - self.height(x, z - epsilon)) / (2.0 * epsilon)
+        normal = (-dhdx, 1.0, -dhdz)
+        magnitude = math.sqrt(sum(component * component for component in normal))
+        normal = tuple(component / magnitude for component in normal)
+        slope = math.degrees(math.atan(math.sqrt(dhdx * dhdx + dhdz * dhdz)))
+        return TerrainSample(self.height(x, z), normal, slope)
+
+    def mesh(self):
+        points = []
+        normals = []
+        for iz in range(self.nz):
+            z = -0.5 * self.depth + self.depth * iz / (self.nz - 1)
+            for ix in range(self.nx):
+                x = -0.5 * self.width + self.width * ix / (self.nx - 1)
+                sample = self.sample(x, z)
+                points.append((x, sample.height, z))
+                normals.append(sample.normal)
+        indices = []
+        for iz in range(self.nz - 1):
+            for ix in range(self.nx - 1):
+                lower = iz * self.nx + ix
+                upper = lower + self.nx
+                indices.extend((lower, upper, lower + 1, lower + 1, upper, upper + 1))
+        return points, normals, indices
+
+
+def create_terrain(config):
+    """Create an enabled terrain implementation from configuration."""
+
+    if not config.get("enabled", False):
+        return None
+    terrain_type = config.get("type", "rolling_hillside")
+    if terrain_type != "rolling_hillside":
+        raise ValueError(f"unsupported terrain type: {terrain_type}")
+    return RollingHillside(config)
