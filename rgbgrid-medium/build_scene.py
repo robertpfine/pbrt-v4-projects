@@ -23,7 +23,7 @@ import os
 import sys
 import json
 import math
-from noise import pnoise3
+from noise import pnoise2, pnoise3
 
 REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if REPOSITORY_ROOT not in sys.path:
@@ -543,6 +543,132 @@ def write_lights(lines, lights):
             )
     
     lines.append("")
+
+
+def write_sun_aperture(lines, aperture, lights):
+    """Occlude a distant light except for a finite, parallel-ray aperture."""
+    if not aperture or not aperture.get("enabled", False):
+        return
+
+    light_label = aperture["light"]
+    light = next(
+        (item for item in lights
+         if item.get("enabled", True) and item.get("label") == light_label),
+        None,
+    )
+    if light is None:
+        raise ValueError(f"sun_aperture light {light_label!r} is not enabled")
+    if light.get("type") != "distant":
+        raise ValueError("sun_aperture must reference a distant light")
+
+    source = light["from"]
+    target = light["to"]
+    direction = [target[i] - source[i] for i in range(3)]
+    magnitude = math.sqrt(sum(value * value for value in direction))
+    if magnitude == 0:
+        raise ValueError("distant light from and to points must differ")
+    direction = [value / magnitude for value in direction]
+
+    reference = [0.0, 1.0, 0.0]
+    if abs(sum(direction[i] * reference[i] for i in range(3))) > 0.95:
+        reference = [1.0, 0.0, 0.0]
+    u = [
+        direction[1] * reference[2] - direction[2] * reference[1],
+        direction[2] * reference[0] - direction[0] * reference[2],
+        direction[0] * reference[1] - direction[1] * reference[0],
+    ]
+    u_length = math.sqrt(sum(value * value for value in u))
+    u = [value / u_length for value in u]
+    v = [
+        direction[1] * u[2] - direction[2] * u[1],
+        direction[2] * u[0] - direction[0] * u[2],
+        direction[0] * u[1] - direction[1] * u[0],
+    ]
+
+    beam_target = aperture["beam_target"]
+    distance = float(aperture["mask_distance"])
+    center = [beam_target[i] - direction[i] * distance for i in range(3)]
+    outer_radius = float(aperture["outer_radius"])
+    points = []
+    indices = []
+    mode = aperture.get("mode", "single")
+    if mode == "cloud_breakup":
+        resolution = int(aperture.get("grid_resolution", 96))
+        frequency = float(aperture.get("cloud_frequency", 0.01))
+        octaves = int(aperture.get("cloud_octaves", 2))
+        threshold = float(aperture.get("open_threshold", 0.15))
+        seed = int(aperture.get("seed", 0))
+        if resolution < 2:
+            raise ValueError("sun_aperture grid_resolution must be at least 2")
+
+        for row in range(resolution + 1):
+            local_v = -outer_radius + 2.0 * outer_radius * row / resolution
+            for col in range(resolution + 1):
+                local_u = -outer_radius + 2.0 * outer_radius * col / resolution
+                points.extend(
+                    center[j] + local_u * u[j] + local_v * v[j]
+                    for j in range(3)
+                )
+
+        for row in range(resolution):
+            local_v = -outer_radius + 2.0 * outer_radius * (row + 0.5) / resolution
+            for col in range(resolution):
+                local_u = -outer_radius + 2.0 * outer_radius * (col + 0.5) / resolution
+                cloud_value = pnoise2(
+                    local_u * frequency,
+                    local_v * frequency,
+                    octaves=octaves,
+                    persistence=0.55,
+                    lacunarity=2.0,
+                    repeatx=4096,
+                    repeaty=4096,
+                    base=seed,
+                )
+                if cloud_value > threshold:
+                    continue
+                lower_left = row * (resolution + 1) + col
+                lower_right = lower_left + 1
+                upper_left = lower_left + resolution + 1
+                upper_right = upper_left + 1
+                indices.extend([
+                    lower_left, lower_right, upper_right,
+                    lower_left, upper_right, upper_left,
+                ])
+    elif mode == "single":
+        inner_radius = float(aperture["aperture_radius"])
+        segments = int(aperture.get("segments", 96))
+        irregularity = float(aperture.get("edge_irregularity", 0.0))
+        lobes = int(aperture.get("edge_lobes", 5))
+        phase = math.radians(float(aperture.get("edge_phase_degrees", 0.0)))
+        if segments < 3 or inner_radius <= 0 or outer_radius <= inner_radius:
+            raise ValueError("sun_aperture requires segments >= 3 and 0 < aperture_radius < outer_radius")
+        for i in range(segments):
+            angle = 2.0 * math.pi * i / segments
+            ripple = 1.0 + irregularity * math.sin(lobes * angle + phase)
+            for radius in (inner_radius * ripple, outer_radius):
+                points.extend(
+                    center[j] + radius * (math.cos(angle) * u[j] + math.sin(angle) * v[j])
+                    for j in range(3)
+                )
+        for i in range(segments):
+            next_i = (i + 1) % segments
+            inner_i, outer_i = 2 * i, 2 * i + 1
+            inner_next, outer_next = 2 * next_i, 2 * next_i + 1
+            indices.extend([inner_i, outer_i, outer_next, inner_i, outer_next, inner_next])
+    else:
+        raise ValueError(f"unsupported sun_aperture mode {mode!r}")
+
+    reflectance = aperture.get("reflectance", [0.001, 0.001, 0.001])
+    lines += [
+        "# Parallel sunlight aperture mask",
+        "AttributeBegin",
+        f'    Material "diffuse" "rgb reflectance" [ {" ".join(map(str, reflectance))} ]',
+        '    Shape "trianglemesh"',
+        f'        "point3 P" [ {" ".join(f"{value:.6g}" for value in points)} ]',
+        f'        "integer indices" [ {" ".join(map(str, indices))} ]',
+        "AttributeEnd",
+        "",
+    ]
 
 
 def write_geometry(lines, geometry):
@@ -1522,7 +1648,9 @@ def write_scene(cfg, project_root, medium_rel_path):
         write_medium_include(lines, medium_rel_path)
     terrain_config = scene.get("terrain", {})
     terrain = create_terrain(terrain_config)
-    write_lights(lines, scene.get("lights", []))
+    lights = scene.get("lights", [])
+    write_lights(lines, lights)
+    write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []))
     write_terrain(lines, terrain, terrain_config)
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))

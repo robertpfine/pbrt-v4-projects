@@ -33,7 +33,7 @@
     "sampler": {
       "enabled": true,
       "type": "halton",
-      "pixel_samples": 512
+      "pixel_samples": 128
     },
 
     "integrator": {
@@ -68,8 +68,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 1600,
-      "y_resolution": 1600
+      "x_resolution": 1000,
+      "y_resolution": 1000
     },
 
     "lights": [
@@ -78,7 +78,7 @@
         "type": "infinite",
         "color_mode": "rgb",
         "color": [0.20, 0.40, 0.80],
-        "scale": 0.06
+        "scale": 0.060
       },
       {
         "enabled": false,
@@ -91,24 +91,50 @@
       {
         "enabled": false,
         "type": "spot",
-        "position": [0, 8, 0],
-        "look_at": [0, 0, 0],
-        "cone_angle": 20,
+        "position": [180, 340, -260],
+        "look_at": [135, 20, 190],
+        "cone_angle": 12,
         "cone_delta_angle": 5,
         "color_mode": "blackbody",
-        "temperature": 5500,
-        "scale": 500.0
+        "temperature": 4400,
+        "scale": 220000.0
       },
       {
         "enabled": true,
+        "label": "morning_sun",
         "type": "distant",
         "from": [-16, 5.0, 9],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
         "temperature": 4600,
         "scale": 9.0
+      },
+      {
+        "enabled": true,
+        "label": "shaft_sun",
+        "type": "distant",
+        "from": [-5, 16.0, -25],
+        "to": [0, 0, 0],
+        "color_mode": "blackbody",
+        "temperature": 4600,
+        "scale": 12.0
       }
     ],
+
+    "sun_aperture": {
+      "enabled": true,
+      "light": "shaft_sun",
+      "mode": "cloud_breakup",
+      "beam_target": [70.0, 180.0, 20.0],
+      "mask_distance": 5000.0,
+      "outer_radius": 1100.0,
+      "grid_resolution": 128,
+      "cloud_frequency": 0.010,
+      "cloud_octaves": 2,
+      "open_threshold": 0.16,
+      "seed": 31,
+      "reflectance": [0.001, 0.001, 0.001]
+    },
 
     "terrain": {
       "enabled": true,
