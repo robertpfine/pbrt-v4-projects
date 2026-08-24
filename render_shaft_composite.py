@@ -97,6 +97,8 @@ def archive_supporting_files(prefix, repository_root, project_root):
     sources = {
         os.path.join(project_root, "config.json"): prefix + "_config.json",
         os.path.join(project_root, "build_scene.py"): prefix + "_build_scene.py",
+        os.path.join(repository_root, "render_pipeline.sh"):
+            prefix + "_render_pipeline.sh",
         os.path.join(repository_root, "render_shaft_composite.py"):
             prefix + "_render_shaft_composite.py",
         os.path.join(project_root, "scene_files", "scene_base.pbrt"):

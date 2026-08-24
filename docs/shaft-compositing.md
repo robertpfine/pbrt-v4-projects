@@ -45,5 +45,8 @@ python3 render_shaft_composite.py rgbgrid-medium
 
 The base and shaft PNGs are retained as internal diagnostic passes, while the
 composite PNG is the final image presented for evaluation. `Archive/` also
-receives the config, scene builder, composite script, both PBRT scene files,
-and this documentation so every composite is reproducible.
+receives the config, scene builder, standard render pipeline, composite script,
+both PBRT scene files, and this documentation so every composite is
+reproducible. Composite renders therefore retain the traditional five archive
+file types—PNG, PBRT, JSON, Python, and shell script—plus the extra files needed
+for the two-pass composite.
