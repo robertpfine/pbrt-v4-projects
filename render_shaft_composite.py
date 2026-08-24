@@ -24,10 +24,17 @@ def load_scene_builder(project_root):
 
 def scale_reflectances(value, scale):
     """Recursively scale configured surface reflectances."""
+    def scale_components(components):
+        if isinstance(components, list):
+            return [scale_components(component) for component in components]
+        if isinstance(components, (int, float)):
+            return scale * components
+        return components
+
     if isinstance(value, dict):
         for key, child in value.items():
             if "reflectance" in key and isinstance(child, list):
-                value[key] = [scale * component for component in child]
+                value[key] = scale_components(child)
             else:
                 scale_reflectances(child, scale)
     elif isinstance(value, list):

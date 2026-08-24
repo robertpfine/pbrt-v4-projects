@@ -33,6 +33,7 @@ from phyllotaxis import area_dome_points, dome_height, vogel_points
 from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
 from terrain import create_terrain
+from terrain_details import alignment_rotation, scatter_points
 
 
 # ==============================================================
@@ -1160,6 +1161,7 @@ def write_terrain(lines, terrain, config):
     points, normals, indices = terrain.mesh()
     material = config.get("material", {})
     reflectance = material.get("reflectance", [0.12, 0.18, 0.055])
+    surface = config.get("details", {}).get("surface", {})
     point_values = " ".join(
         f"{x:.9f} {y:.9f} {z:.9f}" for x, y, z in points
     )
@@ -1170,10 +1172,46 @@ def write_terrain(lines, terrain, config):
     lines += [
         '# Procedural terrain',
         'AttributeBegin',
-        (
+    ]
+    if surface.get("enabled", False):
+        dark = surface.get("dark_reflectance", [v * 0.72 for v in reflectance])
+        light = surface.get("light_reflectance", [min(1.0, v * 1.22) for v in reflectance])
+        scale = 1.0 / max(1e-6, float(surface.get("color_frequency", 0.025)))
+        micro_scale = 1.0 / max(1e-6, float(surface.get("micro_frequency", 0.35)))
+        lines += [
+            '    TransformBegin',
+            f'        Scale {scale:.9f} {scale:.9f} {scale:.9f}',
+            '        Texture "terrain_color_amount" "float" "fbm"',
+            f'            "integer octaves" [ {int(surface.get("color_octaves", 4))} ]',
+            f'            "float roughness" [ {float(surface.get("color_roughness", 0.55))} ]',
+            '    TransformEnd',
+            '    Texture "terrain_dark" "spectrum" "constant"',
+            f'        "rgb value" [ {dark[0]} {dark[1]} {dark[2]} ]',
+            '    Texture "terrain_light" "spectrum" "constant"',
+            f'        "rgb value" [ {light[0]} {light[1]} {light[2]} ]',
+            '    Texture "terrain_color" "spectrum" "mix"',
+            '        "texture tex1" [ "terrain_dark" ]',
+            '        "texture tex2" [ "terrain_light" ]',
+            '        "texture amount" [ "terrain_color_amount" ]',
+            '    TransformBegin',
+            f'        Scale {micro_scale:.9f} {micro_scale:.9f} {micro_scale:.9f}',
+            '        Texture "terrain_micro_raw" "float" "fbm"',
+            f'            "integer octaves" [ {int(surface.get("micro_octaves", 3))} ]',
+            f'            "float roughness" [ {float(surface.get("micro_roughness", 0.55))} ]',
+            '    TransformEnd',
+            '    Texture "terrain_micro" "float" "scale"',
+            '        "texture tex" [ "terrain_micro_raw" ]',
+            f'        "float scale" [ {float(surface.get("micro_amplitude", 0.08))} ]',
+            '    Material "diffuse"',
+            '        "texture reflectance" [ "terrain_color" ]',
+            '        "texture displacement" [ "terrain_micro" ]',
+        ]
+    else:
+        lines.append(
             '    Material "diffuse"  "rgb reflectance" '
             f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
-        ),
+        )
+    lines += [
         '    Shape "trianglemesh"',
         f'        "integer indices" [ {index_values} ]',
         f'        "point3 P" [ {point_values} ]',
@@ -1181,6 +1219,117 @@ def write_terrain(lines, terrain, config):
         'AttributeEnd',
         '',
     ]
+
+
+def _write_detail_mesh(lines, points, indices):
+    point_values = " ".join(f"{x:.6f} {y:.6f} {z:.6f}" for x, y, z in points)
+    index_values = " ".join(str(value) for value in indices)
+    lines += [
+        '    Shape "trianglemesh"',
+        f'        "integer indices" [ {index_values} ]',
+        f'        "point3 P" [ {point_values} ]',
+    ]
+
+
+def _grass_mesh():
+    points, indices = [], []
+    for blade in range(7):
+        angle = math.radians(blade * 137.5)
+        cx = 0.12 * math.cos(angle * 1.7)
+        cz = 0.12 * math.sin(angle * 1.7)
+        side = (-math.sin(angle) * 0.045, math.cos(angle) * 0.045)
+        lean = (0.18 * math.cos(angle), 0.18 * math.sin(angle))
+        base = len(points)
+        points += [
+            (cx - side[0], 0.0, cz - side[1]),
+            (cx + side[0], 0.0, cz + side[1]),
+            (cx + lean[0], 1.0 + 0.08 * (blade % 3), cz + lean[1]),
+        ]
+        indices += [base, base + 1, base + 2, base + 1, base, base + 2]
+    return points, indices
+
+
+def _fern_mesh():
+    points, indices = [], []
+    for frond in range(5):
+        angle = math.radians(frond * 72.0 + 12.0)
+        dx, dz = math.cos(angle), math.sin(angle)
+        sx, sz = -dz, dx
+        for step in range(1, 6):
+            t = step / 6.0
+            cx, cz = dx * 0.85 * t, dz * 0.85 * t
+            cy = 0.62 * math.sin(t * math.pi * 0.72)
+            width = 0.19 * (1.0 - 0.65 * t)
+            length = 0.18 * (1.0 - 0.45 * t)
+            for sign in (-1.0, 1.0):
+                base = len(points)
+                points += [
+                    (cx, cy, cz),
+                    (cx + sign * sx * width, cy + 0.02, cz + sign * sz * width),
+                    (cx + sign * sx * (width + length), cy + 0.05,
+                     cz + sign * sz * (width + length)),
+                ]
+                indices += [base, base + 1, base + 2, base + 1, base, base + 2]
+    return points, indices
+
+
+def write_terrain_details(lines, terrain, config):
+    """Write reusable ground-detail objects and terrain-aware instances."""
+
+    if terrain is None:
+        return
+    details = config.get("details", {})
+    layers = [
+        ("grass", details.get("grass", {}), _grass_mesh),
+        ("litter", details.get("litter", {}), None),
+        ("rocks", details.get("rocks", {}), None),
+        ("undergrowth", details.get("undergrowth", {}), _fern_mesh),
+    ]
+    enabled_layers = [(name, cfg, mesh) for name, cfg, mesh in layers
+                      if cfg.get("enabled", False)]
+    if not enabled_layers:
+        return
+    lines += ['# Terrain detail object definitions']
+    for layer_index, (name, layer, mesh_factory) in enumerate(enabled_layers):
+        colors = layer.get("reflectance_variants", [[0.08, 0.22, 0.035]])
+        variants = max(1, int(layer.get("variants", len(colors))))
+        for variant in range(variants):
+            color = colors[variant % len(colors)]
+            lines += [
+                f'ObjectBegin "terrain_{name}_{variant}"',
+                f'    Material "diffuse" "rgb reflectance" [ {color[0]} {color[1]} {color[2]} ]',
+            ]
+            if name == "rocks":
+                lines.append('    Shape "sphere" "float radius" [ 1 ]')
+            elif name == "litter":
+                _write_detail_mesh(
+                    lines,
+                    [(-0.18, 0.0, -0.5), (0.0, 0.035, 0.0),
+                     (0.18, 0.0, -0.5), (0.0, 0.015, 0.5)],
+                    [0, 1, 3, 1, 2, 3, 3, 1, 0, 3, 2, 1],
+                )
+            else:
+                points, indices = mesh_factory()
+                _write_detail_mesh(lines, points, indices)
+            lines += ['ObjectEnd', '']
+
+        points = scatter_points(terrain, layer, 1000 * (layer_index + 1))
+        lines.append(f'# Terrain {name}: {len(points)} instances')
+        for point in points:
+            angle, axis = alignment_rotation(point.normal)
+            sx = point.scale * point.aspect[0]
+            sy = point.scale * point.aspect[1]
+            sz = point.scale * point.aspect[2]
+            lines += [
+                'AttributeBegin',
+                f'    Translate {point.position[0]:.7f} {point.position[1]:.7f} {point.position[2]:.7f}',
+                f'    Rotate {angle:.7f} {axis[0]:.7f} {axis[1]:.7f} {axis[2]:.7f}',
+                f'    Rotate {point.rotation:.7f} 0 1 0',
+                f'    Scale {sx:.7f} {sy:.7f} {sz:.7f}',
+                f'    ObjectInstance "terrain_{name}_{point.variant}"',
+                'AttributeEnd',
+            ]
+        lines.append('')
 
 
 def write_lsystem_trees(lines, trees, terrain=None):
@@ -1653,6 +1802,7 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []))
     write_terrain(lines, terrain, terrain_config)
+    write_terrain_details(lines, terrain, terrain_config)
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
     write_lsystem_trees(lines, scene.get("lsystem_trees", []), terrain)
 

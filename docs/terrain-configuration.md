@@ -46,6 +46,13 @@ y(x,z) = base_height
   },
   "material": {
     "reflectance": [0.10, 0.17, 0.045]
+  },
+  "details": {
+    "surface": { "enabled": true },
+    "grass": { "enabled": true, "count": 2400 },
+    "litter": { "enabled": true, "count": 950 },
+    "rocks": { "enabled": true, "count": 48 },
+    "undergrowth": { "enabled": true, "count": 140 }
   }
 }
 ```
@@ -223,6 +230,93 @@ not height, normals, or placement.
 The initial `[0.10, 0.17, 0.045]` is a subdued green suitable for testing tree
 contact and landform lighting without adding grass geometry.
 
+## Surface and ecosystem details
+
+The optional `terrain.details` system adds five independently switchable layers.
+All placement is deterministic for a given seed and samples the actual terrain
+height, normal, and local slope.
+
+### `details.surface`
+
+This layer enriches the terrain mesh itself rather than adding objects.
+
+- `enabled` selects procedural color and micro-displacement.
+- `dark_reflectance` and `light_reflectance` are the endpoints mixed by a
+  broad three-dimensional fBm field.
+- `color_frequency` controls the size of soil/vegetation color regions. Lower
+  values make broader regions.
+- `color_octaves` and `color_roughness` control the complexity and persistence
+  of the color field.
+- `micro_frequency` controls the scale of fine surface relief.
+- `micro_octaves` and `micro_roughness` control its fractal character.
+- `micro_amplitude` is the displacement height in world units. Keep it small
+  relative to terrain grid spacing; it is surface texture, not a new landform.
+
+### Shared scatter controls
+
+The `grass`, `litter`, `rocks`, and `undergrowth` blocks share these controls:
+
+- `enabled` activates the layer.
+- `count` is the requested number of object instances, not the number of blades
+  or leaves inside a reusable cluster.
+- `seed` makes placement, rotation, scale, and shape variation repeatable.
+- `region.center` is `[x,z]`; `region.size` is its rectangular coverage.
+- `scale` is a randomized `[minimum,maximum]` uniform size range.
+- `max_slope_degrees` rejects sites steeper than the limit.
+- `patchiness.strength` blends between uniform acceptance (`0`) and strong
+  noise-controlled colonies (`1`).
+- `patchiness.frequency` controls colony size.
+- `exclusion.center` and `exclusion.radius` reserve a circular clear area,
+  useful at the trunk base.
+- `attraction.center`, `attraction.radius`, and `attraction.strength` bias a
+  layer toward a circular ecological zone. The current litter layer uses this
+  to concentrate debris beneath the crown.
+- `y_offset` raises or embeds instances relative to the sampled surface.
+- `variants` selects how many reusable material variants are defined.
+- `reflectance_variants` supplies their linear RGB diffuse colors.
+
+### Grass
+
+Each grass instance is a small crossed cluster of seven differently leaning
+blades. Thousands of clusters can therefore describe a field without emitting
+each blade as an independent scene object. The current exclusion radius keeps
+the immediate trunk contact readable, while high patchiness creates bare soil
+between colonies.
+
+### Ground litter
+
+Litter instances are shallow folded leaf shapes. They are concentrated in a
+smaller region beneath the tree and use several brown reflectances. Increase
+`count` for continuity, `scale` for more graphic individual leaves, or the
+attraction strength for a more sharply defined accumulation below the crown.
+
+### Rocks
+
+Rocks are non-uniformly scaled and randomly rotated sphere instances. Their
+independent axis variation makes ellipsoidal forms, and a negative `y_offset`
+partly buries them. The system intentionally uses few rocks so they become
+accents rather than a uniformly pebbled surface.
+
+### Undergrowth
+
+The first undergrowth organ is a reusable stylized fern composed of five curved
+fronds and paired leaflets. High patchiness forms separate colonies. This block
+can later become a general species list without changing the scatter interface.
+
+### Ecological layering
+
+The layers deliberately use different fields and spatial rules:
+
+```text
+open slope      -> patchy grasses
+beneath crown   -> concentrated leaf litter
+exposed regions -> occasional partly buried rocks
+moist-looking patches -> fern colonies
+```
+
+This avoids the synthetic appearance of distributing every object uniformly
+over the full terrain rectangle.
+
 ## Sampling and normals
 
 `RollingHillside.sample(x,z)` returns:
@@ -271,8 +365,10 @@ lifts the root; a negative value embeds it.
 - Value noise is deterministic but is not gradient Perlin or simplex noise.
 - Terrain-aware placement currently applies to configured L-system/fractal-tree
   entries, not yet to groves or space-colonization tree instances.
-- Terrain material is diffuse and has no grass, texture map, displacement, or
-  soil/rock blending.
+- Surface variation and ground-cover layers are procedural but do not yet model
+  drainage, moisture transport, plant competition, or true soil/rock blending.
+- Grass and fern organs are stylized low-complexity meshes rather than botanical
+  species models.
 - Sampling outside the displayed mesh remains mathematically defined, but an
   object placed there would have no visible ground underneath it.
 
