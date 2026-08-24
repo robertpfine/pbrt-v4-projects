@@ -15,7 +15,7 @@ mask, producing multiple delicate bundles of parallel rays.
   "enabled": true,
   "light": "shaft_sun",
   "mode": "cloud_breakup",
-  "beam_target": [70.0, 180.0, 20.0],
+  "beam_target": [-70.0, 60.0, 130.0],
   "mask_distance": 5000.0,
   "outer_radius": 1100.0,
   "grid_resolution": 128,
@@ -43,17 +43,15 @@ The mask is deliberately almost black and positioned far outside the camera
 view. The long mask distance does not make the light diverge: the distant-light
 rays remain parallel at every distance.
 
-The current scene deliberately uses two distant lights. `morning_sun` retains
-the original `from: [-16, 5, 9]` direction, approximately 15 degrees above the
-horizon, and illuminates the complete Perlin atmosphere. `shaft_sun` uses
-`from: [-5, 16, -25]`, approximately 32 degrees above the horizon, and is the
-only light targeted by the aperture configuration. This direction sends the
-descending beam generally toward the camera, making the fog's forward
-scattering visible. Both lights have parallel rays; the separation preserves
-the original ambient scene while adding an independently controllable
-higher-angle shafts. The current shaft scale is `12`, only modestly stronger
-than the base sun's scale of `9`, so the shafts remain delicate rather than
-bright white.
+The current scene deliberately uses two distant-light passes, but both use
+`from: [-5, 16, -25]` and `to: [0, 0, 0]`, approximately 32 degrees above the
+horizon. `morning_sun` provides unmasked directional illumination in the base
+pass. `shaft_sun` is the only light targeted by the aperture in the shaft pass.
+Using one direction keeps tree shadows synchronized with the visible parallel
+shafts while retaining independent compositing control. The shaft scale is
+`12`, preserving strong volumetric contrast. Its aperture target is displaced
+toward and beyond the upper-left frame so the brightest cloud opening is less
+likely to wash out an in-frame corner.
 The spotlight remains in the configuration as a disabled comparison.
 
 ## Rejected spotlight experiment

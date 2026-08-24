@@ -21,12 +21,20 @@ y(x,z) = base_height
 "terrain": {
   "enabled": true,
   "type": "rolling_hillside",
-  "size": [500.0, 500.0],
-  "resolution": [129, 129],
+  "size": [1200.0, 1200.0],
+  "resolution": [257, 257],
   "base_height": 0.0,
   "slope": {
-    "direction_degrees": 25.0,
-    "grade": 0.18
+    "direction_degrees": 320.0,
+    "grade": 0.40,
+    "foreground_leveling": {
+      "enabled": true,
+      "direction_degrees": 51.5,
+      "start": 0.0,
+      "end": 180.0,
+      "minimum_grade_ratio": 0.0,
+      "target_height": 0.0
+    }
   },
   "noise": {
     "seed": 7,
@@ -114,6 +122,29 @@ atan(0.18) = approximately 10.2 degrees
 
 Negative grades reverse the incline. A value of `0.0` removes the overall
 hillside but preserves rolling noise.
+
+### `slope.foreground_leveling`
+
+Optionally turns the constant hillside into a graded landform that levels out
+toward a chosen horizontal direction. The transition affects the planar slope;
+the rolling noise remains present across the foreground.
+
+- `enabled` activates the transition.
+- `direction_degrees` points toward the foreground, using the same world-axis
+  convention as `slope.direction_degrees`. For the current camera, `51.5`
+  points approximately from the tree toward the camera.
+- `start` is the projected distance at which flattening begins. Negative and
+  smaller coordinates retain the original hillside grade.
+- `end` is the distance at which the transition reaches its minimum grade.
+- `minimum_grade_ratio` is the fraction of the original grade retained beyond
+  `end`. The current `0.0` produces a level foreground in the chosen direction.
+- `target_height`, when present, is the planar elevation toward which the
+  foreground converges. The current `0.0` removes the hillside's cross-frame
+  incline as well as its camera-facing incline. When omitted, leveling only
+  removes grade along `direction_degrees` and preserves perpendicular slope.
+
+The blend uses a smoothstep curve, so neither end of the transition introduces
+a hard crease. The configured noise field remains visible at full strength.
 
 ## Noise controls
 
@@ -235,7 +266,8 @@ lifts the root; a negative value embeds it.
 - Only `rolling_hillside` is implemented.
 - Terrain is centered at the world origin and has no independent transform.
 - The mesh is a regular rectangular grid without adaptive subdivision.
-- There is no erosion, drainage, ridge, terrace, or boundary-falloff model.
+- There is no erosion, drainage, ridge, terrace, or general boundary-falloff
+  model. Directional foreground leveling is supported for the planar slope.
 - Value noise is deterministic but is not gradient Perlin or simplex noise.
 - Terrain-aware placement currently applies to configured L-system/fractal-tree
   entries, not yet to groves or space-colonization tree instances.

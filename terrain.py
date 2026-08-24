@@ -25,6 +25,18 @@ class RollingHillside:
         slope = config.get("slope", {})
         self.slope_angle = math.radians(float(slope.get("direction_degrees", 0.0)))
         self.grade = float(slope.get("grade", 0.0))
+        leveling = slope.get("foreground_leveling", {})
+        self.foreground_leveling = bool(leveling.get("enabled", False))
+        self.leveling_angle = math.radians(
+            float(leveling.get("direction_degrees", 0.0))
+        )
+        self.leveling_start = float(leveling.get("start", 0.0))
+        self.leveling_end = float(leveling.get("end", 1.0))
+        self.minimum_grade_ratio = float(leveling.get("minimum_grade_ratio", 0.0))
+        target_height = leveling.get("target_height")
+        self.leveling_target_height = (
+            None if target_height is None else float(target_height)
+        )
         noise = config.get("noise", {})
         self.seed = int(noise.get("seed", 1))
         self.amplitude = float(noise.get("amplitude", 0.0))
@@ -38,6 +50,10 @@ class RollingHillside:
             raise ValueError("terrain resolution values must be at least 2")
         if self.octaves < 1:
             raise ValueError("terrain noise octaves must be at least 1")
+        if self.foreground_leveling and self.leveling_end <= self.leveling_start:
+            raise ValueError("terrain foreground leveling end must exceed start")
+        if not 0.0 <= self.minimum_grade_ratio <= 1.0:
+            raise ValueError("terrain minimum grade ratio must be between 0 and 1")
 
     @staticmethod
     def _fade(value):
@@ -63,7 +79,34 @@ class RollingHillside:
 
     def height(self, x, z):
         along_slope = x * math.cos(self.slope_angle) + z * math.sin(self.slope_angle)
-        result = self.base_height + self.grade * along_slope
+        planar_height = self.grade * along_slope
+        if self.foreground_leveling:
+            direction_x = math.cos(self.leveling_angle)
+            direction_z = math.sin(self.leveling_angle)
+            foreground_distance = x * direction_x + z * direction_z
+            transition = (
+                (foreground_distance - self.leveling_start)
+                / (self.leveling_end - self.leveling_start)
+            )
+            transition = max(0.0, min(1.0, transition))
+            transition = transition * transition * (3.0 - 2.0 * transition)
+
+            anchor_distance = max(0.0, foreground_distance - self.leveling_start)
+            anchor_x = x - anchor_distance * direction_x
+            anchor_z = z - anchor_distance * direction_z
+            anchor_along_slope = (
+                anchor_x * math.cos(self.slope_angle)
+                + anchor_z * math.sin(self.slope_angle)
+            )
+            level_height = self.grade * anchor_along_slope
+            if self.leveling_target_height is not None:
+                level_height = self.leveling_target_height
+            residual_height = level_height + self.minimum_grade_ratio * (
+                planar_height - level_height
+            )
+            planar_height += transition * (residual_height - planar_height)
+
+        result = self.base_height + planar_height
         amplitude = self.amplitude
         frequency = self.frequency
         for _ in range(self.octaves):
