@@ -119,6 +119,21 @@ def archive_supporting_files(prefix, repository_root, project_root):
         shutil.copy2(source, destination)
 
 
+def sync_archive_bundle(prefix, archive, remote_path):
+    """Copy one completed composite bundle to its configured remote archive."""
+    stem = os.path.basename(prefix)
+    command = [
+        "rclone", "copy", archive, remote_path,
+        "--filter", f"+ {stem}*",
+        "--filter", "- **",
+        "--drive-chunk-size=64M",
+        "--low-level-retries=10",
+    ]
+    print("Syncing composite bundle to Google Drive...", flush=True)
+    subprocess.run(command, check=True)
+    print("Google Drive composite sync complete.", flush=True)
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit("Usage: render_shaft_composite.py <project-name>")
@@ -160,6 +175,13 @@ def main():
               float(options.get("shaft_opacity", 0.65)),
               float(options.get("blur_radius", 1.0)))
     archive_supporting_files(prefix, repository_root, project_root)
+    sync_options = cfg.get("pipeline", {}).get("rclone_sync", {})
+    if sync_options.get("enabled", False):
+        sync_archive_bundle(
+            prefix,
+            archive,
+            cfg["project"]["remote_archive_path"],
+        )
     print("Composite complete:", composite_path, flush=True)
 
 
