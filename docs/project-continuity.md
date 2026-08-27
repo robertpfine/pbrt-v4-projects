@@ -195,18 +195,28 @@ Research PDFs are local reference material and should not be pushed to GitHub.
 
 ## Immediate follow-up work
 
-1. Resume from `050947_composite`. Preserve its terrain, camera, 2.5 tree scale,
-   tall grass, spatial tropism, intentional render noise, and artifact-free
-   two-pass composition. Reduce the broad/base atmospheric brightness while
-   increasing the local contrast and visibility of several gully-directed
-   shafts. Do not simply raise all shaft illumination, and do not return to the
-   direct gobo render.
-2. Continue broadening the modular scene system: procedural terrain types,
+1. The next session changes artistic focus away from fog. The user judged the
+   grass beautiful and its JSON infrastructure highly useful, but the cost of
+   3.4 million tall tufts is not justified when fog hides their detail. Preserve
+   the grass implementation and presets, but restore the earlier, less expensive
+   short-pasture ground treatment for the active scene. This means changing the
+   ground-cover treatment, not reverting the accepted current terrain shape,
+   gully, camera, or 2.5 tree scale.
+2. Systematically kick the tires on the four remaining entries under
+   `scene.terrain.details`, using decisive rather than incremental tests:
+   `surface`, `litter`, `rocks`, and `undergrowth`. `surface` is the texture and
+   bump treatment attached directly to the terrain mesh; `litter`, `rocks`, and
+   `undergrowth` are terrain-aware scattered geometry. Explore one control at a
+   time with deliberately pronounced values, as was done for grass.
+3. Fog/shaft work is paused at `050947_composite`: broad atmospheric brightness
+   remains too high while localized shafts remain too dim. Intentional render
+   noise should be preserved if this exploration resumes.
+4. Continue broadening the modular scene system: procedural terrain types,
    skies/clouds, atmosphere, lighting controls, and reusable plant/tree
    components.
-3. Eventually reorganize the organically grown `config.json`, but only after
+5. Eventually reorganize the organically grown `config.json`, but only after
    the current functional modules stabilize.
-4. Preserve readable and raw conversation archives in the gitignored
+6. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
 ## Conversation preservation
