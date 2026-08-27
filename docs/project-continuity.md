@@ -1,6 +1,6 @@
 # Project Continuity
 
-Last updated: 2026-08-24
+Last updated: 2026-08-27
 
 ## Purpose
 
@@ -19,8 +19,9 @@ and PBRT progress.
 - Repository root: `/home/rpf4/my-pbrt-projects`
 - Active branch: `space-colonization`
 - Remote: `https://github.com/robertpfine/pbrt-v4-projects.git`
-- Last pushed visual-system checkpoint before this document: `317c891`
-  (`Add composited light shafts and foreground terrain leveling`)
+- Current visual-system checkpoints:
+  - `573f8b8` (`Add configurable pasture terrain and grass tropism`)
+  - `4fa4e9c` (`Add spatial grass tropism and cloud shaft controls`)
 - Primary working scene: `rgbgrid-medium/config.json`
 - Renderer: PBRT-v4 with CUDA/GPU rendering
 - Normal pipeline entry point: `./render_pipeline.sh rgbgrid-medium`
@@ -38,9 +39,13 @@ and PBRT progress.
   modular alternative to L-systems and space colonization.
 - `phyllotaxis.py`: planar phyllotaxis and sunflower construction based on the
   Figure 4.1 study from *The Algorithmic Beauty of Plants*.
-- `terrain.py`: deterministic rolling-hillside terrain with fBm-style value
-  noise, slope, terrain-aware root placement, and a smooth camera-facing
-  transition toward a level foreground.
+- `terrain.py`: deterministic rolling-hillside terrain with explicit bounds,
+  fBm-style value noise, partial foreground grading, terrain-aware placement,
+  and a broad right-side dip/rise landform that forms the current gully.
+- `pasture_texture.py`: deterministic seamless spectral sward maps used below
+  the instanced blade geometry.
+- `terrain_details.py`: deterministic terrain scatter plus the spatial direction
+  field used by grass tropism.
 
 The long-term architecture should permit these systems to be used separately
 or together. In particular, structural scaffolds may come from fractal or
@@ -49,39 +54,73 @@ colonization.
 
 ## Current scene state
 
-The active scene contains a fractal tree on a large rolling hillside with
-Perlin-like heterogeneous morning fog and parallel sunlight shafts. The terrain
-has been expanded to fill the frame and now transitions from a strong hillside
-around the tree toward a genuinely horizontal foreground while retaining its
-rolling noise.
+The active scene contains one recursive fractal tree at the bottom of a gully on
+a large, naturally undulating hillside. Do not revert to an earlier terrain.
+The terrain is deliberately asymmetrical: it preserves the left fold while a
+broad right-side dip falls and then rises again. Foreground grading retains a
+partial slope instead of flattening the land into a rotated rectangle.
 
-The base and shaft sunlight directions are synchronized so the visible shafts
-agree with the tree shadow. A distant light passes through a procedural
-cloud-breakup aperture. The shaft pattern is currently strong and attractive,
-although exact aperture placement remains an artistic tuning point.
+The tree is uniformly scaled by the new tree-level `scale` control. Its current
+value is `2.5`; this finally gives the tree convincing physical proportion to the
+nearby gully. The camera has been pulled as far back as practical inside the
+existing foreground bounds and intentionally crops part of the crown.
 
-Important recent local render:
+The grass is one continuous placement layer with 3.4 million seven-blade tufts
+(23.8 million blades). Blade height is currently `[8, 14]` before instance scale,
+making an intentionally tall sward. Grass geometry now exposes height, width,
+segments, lean, bend, taper, droop, tuft construction, tropism, and a smooth
+spatial tropism field in JSON. Preserve the named `030125` droop and `030551`
+tropism looks in `rgbgrid-medium/grass_presets.json`.
 
-- `Archive/rgbgrid-medium_20260824_000304_composite.png`
+Important recent local renders:
 
-The user described this scene as very beautiful and judged that its terrain,
-fog, tree, parallel shafts, and light were working in concert. The brightest
-aperture pattern moved in the desired leftward direction, but its exact shape is
-slightly unusual. Preserve this state before further tuning.
+- `030125`: tall grass with `[2, 6]` tip droop. Varied specular highlights read
+  as direct morning light on the grass.
+- `030551`: strong global tropism. Broader dark masses suggested late-afternoon
+  light, but the foreground remained too uniformly directed.
+- `031839`: extreme spatial tropism. Broad directional currents broke up the
+  uniformly combed foreground.
+- `041530`: tree at uniform scale `2.5`, before camera pullback.
+- `042211`: pulled-back camera; tree proportions and visible crown improved.
+- `043521`: direct fog/shaft diagnostic. Light and fog were overwhelmingly
+  bright and noisy.
+- `044355`: direct render with redesigned porous mask and reduced light. The
+  physical gobo appeared as a black pixel-grid artifact in the upper-left sky;
+  direct rendering is not suitable for this mask.
+- `045140_composite`: artifact-free two-pass composite with softer mask. It read
+  more like morning mist, but the openings merged into broad haze.
+- `050947_composite`: open mask fraction reduced to 20.5% and redirected toward
+  the gully. The user judged that there is still too much overall light while
+  the actual shafts are too dim.
+
+The grain/noise in the atmospheric renders is currently desirable. The user
+explicitly said it supports an artistic formalism; do not raise sample count or
+denoise it merely for technical cleanliness.
 
 Current relevant configuration values include:
 
-- `shaft_sun.scale`: `12.0`
-- `sun_aperture.beam_target`: `[-70.0, 60.0, 130.0]`
-- terrain size: `[1200.0, 1200.0]`
-- terrain resolution: `[257, 257]`
+- camera eye: `[545, 194, 695]`
+- camera target: `[5, 230, -5]`
+- camera FOV: `55`
+- tree uniform scale: `2.5`
+- `morning_sun.scale`: `5.0`
+- `shaft_sun.scale`: `2.5`
+- fog `sigma_s`: `0.00030`
+- fog boundary radius: `1400`
+- `sun_aperture.beam_target`: `[-250, 180, -130]`
+- aperture outer radius: `700`
+- aperture grid resolution: `224`
+- aperture open fraction: approximately `20.5%`
+- terrain size: `[1900.0, 1600.0]`
+- terrain center: `[150.0, -100.0]`
+- terrain resolution: `[401, 337]`
 - hillside grade: `0.40`
-- foreground leveling: start `0`, end `180`, minimum grade ratio `0`, target
-  height `0`
-- composite base opacity: `0.30`
-- composite shaft opacity: `0.85`
-- shaft-pass tree reflectance scale: `0.20`
-- shaft-pass terrain reflectance scale: `0.05`
+- foreground leveling: start `0`, end `360`, minimum grade ratio `0.35`, target
+  height `null`
+- composite base opacity: `1.0`
+- composite shaft opacity: `0.40`
+- shaft-pass surface reflectance scale: `0.08`
+- shaft-pass terrain reflectance scale: `0.015`
 
 ## Shaft compositing
 
@@ -120,7 +159,9 @@ For a shaft-composite render, additionally retain:
 - shaft-compositing documentation
 
 The intermediate images are technically required to explain and diagnose the
-composite even though the user normally evaluates only `_composite.png`.
+composite even though the user normally evaluates only `_composite.png`. The
+physical cloud mask is visible to camera rays in a direct render, so present the
+two-pass composite—not a direct fog/shaft render—as the intended result.
 
 ## Documentation policy
 
@@ -138,6 +179,9 @@ Research PDFs are local reference material and should not be pushed to GitHub.
 ## Working preferences and safeguards
 
 - Show render progress in a visible terminal.
+- Keep the terminal open after completion; assume the user will close it.
+- Use one approval only for the desktop terminal launch. Monitor logs and files
+  with sandboxed read-only commands so the user is not asked repeatedly.
 - Use the CUDA device; render duration is not presently onerous.
 - Prefer strong comparison tests when a visual parameter is uncertain.
 - Do not produce undocumented collections of near-identical renders.
@@ -151,9 +195,12 @@ Research PDFs are local reference material and should not be pushed to GitHub.
 
 ## Immediate follow-up work
 
-1. Decide whether to retain `000304` exactly or revisit the cloud-aperture
-   placement later. Do not resume tiny positional tweaks without a clear visual
-   comparison strategy.
+1. Resume from `050947_composite`. Preserve its terrain, camera, 2.5 tree scale,
+   tall grass, spatial tropism, intentional render noise, and artifact-free
+   two-pass composition. Reduce the broad/base atmospheric brightness while
+   increasing the local contrast and visibility of several gully-directed
+   shafts. Do not simply raise all shaft illumination, and do not return to the
+   direct gobo render.
 2. Continue broadening the modular scene system: procedural terrain types,
    skies/clouds, atmosphere, lighting controls, and reusable plant/tree
    components.
