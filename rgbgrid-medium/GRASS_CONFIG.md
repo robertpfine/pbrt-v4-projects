@@ -31,6 +31,14 @@ object in `config.json` to reproduce it.
   the prevailing direction.
 - `tropism.curvature_exponent`: Larger values preserve a straighter base and
   concentrate the directional response toward the blade tip.
+- `tropism.field.frequency`: Spatial frequency of broad directional currents
+  across the terrain. Smaller values make larger swaths.
+- `tropism.field.direction_variation_degrees`: Maximum swing of those currents
+  around the prevailing tropism direction.
+- `tropism.field.octaves` and `persistence`: Complexity of the smooth direction
+  field. One octave is broad and simple; additional octaves add nested movement.
+- `tropism.field.random_jitter_degrees`: Small uncorrelated rotation added to
+  individual tufts after the smooth field is evaluated.
 - `taper_exponent`: Controls how quickly the blade narrows toward its tip.
 
 ## Tuft controls

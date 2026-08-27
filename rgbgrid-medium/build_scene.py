@@ -35,7 +35,7 @@ from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
 from pasture_texture import generate_pasture_maps
 from terrain import create_terrain
-from terrain_details import alignment_rotation, scatter_points
+from terrain_details import alignment_rotation, scatter_points, spatial_direction_offset
 
 
 # ==============================================================
@@ -599,7 +599,12 @@ def write_sun_aperture(lines, aperture, lights):
         resolution = int(aperture.get("grid_resolution", 96))
         frequency = float(aperture.get("cloud_frequency", 0.01))
         octaves = int(aperture.get("cloud_octaves", 2))
+        detail_frequency = float(
+            aperture.get("cloud_detail_frequency", 3.5 * frequency)
+        )
+        detail_strength = float(aperture.get("cloud_detail_strength", 0.35))
         threshold = float(aperture.get("open_threshold", 0.15))
+        edge_softness = max(0.0, float(aperture.get("edge_softness", 0.0)))
         seed = int(aperture.get("seed", 0))
         if resolution < 2:
             raise ValueError("sun_aperture grid_resolution must be at least 2")
@@ -617,7 +622,7 @@ def write_sun_aperture(lines, aperture, lights):
             local_v = -outer_radius + 2.0 * outer_radius * (row + 0.5) / resolution
             for col in range(resolution):
                 local_u = -outer_radius + 2.0 * outer_radius * (col + 0.5) / resolution
-                cloud_value = pnoise2(
+                cloud_body = pnoise2(
                     local_u * frequency,
                     local_v * frequency,
                     octaves=octaves,
@@ -627,7 +632,33 @@ def write_sun_aperture(lines, aperture, lights):
                     repeaty=4096,
                     base=seed,
                 )
-                if cloud_value > threshold:
+                cloud_detail = pnoise2(
+                    local_u * detail_frequency,
+                    local_v * detail_frequency,
+                    octaves=2,
+                    persistence=0.50,
+                    lacunarity=2.0,
+                    repeatx=4096,
+                    repeaty=4096,
+                    base=seed + 97,
+                )
+                cloud_value = cloud_body + detail_strength * cloud_detail
+                if edge_softness > 0.0:
+                    transition = max(
+                        0.0,
+                        min(1.0, (
+                            cloud_value - (threshold - edge_softness)
+                        ) / (2.0 * edge_softness)),
+                    )
+                    transmission = transition * transition * (3.0 - 2.0 * transition)
+                    cell_hash = math.sin(
+                        (col + 1) * 127.1 + (row + 1) * 311.7 + seed * 74.7
+                    ) * 43758.5453123
+                    cell_random = cell_hash - math.floor(cell_hash)
+                    is_open = cell_random < transmission
+                else:
+                    is_open = cloud_value > threshold
+                if is_open:
                     continue
                 lower_left = row * (resolution + 1) + col
                 lower_right = lower_left + 1
@@ -1494,17 +1525,27 @@ def write_terrain_details(lines, terrain, config):
         tropism = layer.get("blade", {}).get("tropism", {})
         tropism_enabled = bool(tropism.get("enabled", False))
         tropism_direction = float(tropism.get("direction_degrees", 0.0))
+        tropism_field = tropism.get("field", {})
+        field_seed = int(tropism_field.get("seed", layer.get("seed", 1)))
+        random_jitter = float(tropism_field.get("random_jitter_degrees", 0.0))
         lines.append(f'# Terrain {name}: {len(points)} instances')
         for point in points:
             angle, axis = alignment_rotation(point.normal)
             sx = point.scale * point.aspect[0]
             sy = point.scale * point.aspect[1]
             sz = point.scale * point.aspect[2]
+            instance_direction = point.rotation
+            if tropism_enabled:
+                field_offset = spatial_direction_offset(
+                    point.position[0], point.position[2], tropism_field, field_seed
+                )
+                jitter = random_jitter * (point.rotation / 180.0 - 1.0)
+                instance_direction = tropism_direction + field_offset + jitter
             lines += [
                 'AttributeBegin',
                 f'    Translate {point.position[0]:.7f} {point.position[1]:.7f} {point.position[2]:.7f}',
                 f'    Rotate {angle:.7f} {axis[0]:.7f} {axis[1]:.7f} {axis[2]:.7f}',
-                f'    Rotate {(tropism_direction if tropism_enabled else point.rotation):.7f} 0 1 0',
+                f'    Rotate {instance_direction:.7f} 0 1 0',
                 f'    Scale {sx:.7f} {sy:.7f} {sz:.7f}',
                 f'    ObjectInstance "terrain_{name}_{point.variant}"',
                 'AttributeEnd',
@@ -1539,17 +1580,24 @@ def write_lsystem_trees(lines, trees, terrain=None):
         else:
             raise ValueError("unsupported L-system tree preset")
         debug_render = tree.get("debug_render", {})
+        tree_scale = float(tree.get("scale", 1.0))
+        if tree_scale <= 0.0:
+            raise ValueError("L-system tree scale must be positive")
         curve_mode = debug_render.get("mode", "cylinders") == "curves"
-        curve_width = float(debug_render.get("width", 0.25))
+        curve_width = tree_scale * float(debug_render.get("width", 0.25))
         curve_color = debug_render.get("reflectance", [0.82, 0.42, 0.06])
         lines.append(f'# L-system {preset} {tree_index}')
         for segment in generated_segments:
-            start = tuple(segment.start[i] + origin[i] for i in range(3))
-            end = tuple(segment.end[i] + origin[i] for i in range(3))
+            start = tuple(
+                tree_scale * segment.start[i] + origin[i] for i in range(3)
+            )
+            end = tuple(
+                tree_scale * segment.end[i] + origin[i] for i in range(3)
+            )
             color = green if segment.kind in ("foliage", "leaf") else wood
             if segment.kind == "leaf":
                 write_lsystem_leaf(
-                    lines, start, end, segment.radius0, color
+                    lines, start, end, tree_scale * segment.radius0, color
                 )
             elif curve_mode:
                 write_curve_segment(
@@ -1558,7 +1606,7 @@ def write_lsystem_trees(lines, trees, terrain=None):
             else:
                 write_oriented_cylinder(
                     lines, start, end,
-                    0.5 * (segment.radius0 + segment.radius1), color,
+                    0.5 * tree_scale * (segment.radius0 + segment.radius1), color,
                 )
         lines.append('')
 

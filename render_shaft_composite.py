@@ -64,6 +64,7 @@ def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
 
 
 def render(builder, cfg, project_root, pbrt, flags, output_path):
+    print("Generating scene:", cfg["scene"]["master_file"], flush=True)
     medium_rel = builder.write_medium(cfg, project_root)
     builder.write_scene(cfg, project_root, medium_rel)
     scene_path = os.path.join(project_root, cfg["scene"]["master_file"])

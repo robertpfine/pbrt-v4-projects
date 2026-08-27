@@ -34,6 +34,31 @@ def _noise(x, z, seed):
     return nx0 + (nx1 - nx0) * tz
 
 
+def spatial_direction_offset(x, z, config, seed=1):
+    """Return a smooth signed angular offset for a terrain direction field."""
+
+    if not config.get("enabled", False):
+        return 0.0
+    frequency = float(config.get("frequency", 0.006))
+    variation = float(config.get("direction_variation_degrees", 90.0))
+    octaves = max(1, int(config.get("octaves", 2)))
+    persistence = float(config.get("persistence", 0.45))
+    amplitude = 1.0
+    total = 0.0
+    weight = 0.0
+    for octave in range(octaves):
+        sample = 2.0 * _noise(
+            x * frequency * (2.0 ** octave),
+            z * frequency * (2.0 ** octave),
+            seed + 193 * octave,
+        ) - 1.0
+        total += amplitude * sample
+        weight += amplitude
+        amplitude *= persistence
+    normalized = total / max(weight, 1e-9)
+    return variation * max(-1.0, min(1.0, normalized))
+
+
 def scatter_points(terrain, config, seed_offset=0):
     """Return deterministic placements accepted by region, slope, and patch masks."""
 
