@@ -251,6 +251,37 @@ This layer enriches the terrain mesh itself rather than adding objects.
 - `micro_octaves` and `micro_roughness` control its fractal character.
 - `micro_amplitude` is the displacement height in world units. Keep it small
   relative to terrain grid spacing; it is surface texture, not a new landform.
+- `flow_direction_degrees` rotates directional surface structure around world
+  Y. It is useful for grass laid by wind, drainage, mowing, or slope flow.
+- `color_anisotropy` stretches broad color variation along the flow direction;
+  `micro_anisotropy` independently stretches fine displacement detail.
+- `fiber_reflectance` and `fiber_strength` add a restrained fine-scale color
+  component over the broad surface color. `fiber_frequency`,
+  `fiber_anisotropy`, `fiber_octaves`, and `fiber_roughness` control its scale,
+  directionality, and complexity. Together these controls can make distant and
+  middle-ground pasture register as continuous fibrous texture without blade
+  geometry.
+
+Set `mode` to `pasture_texture` to use deterministically generated seamless
+image maps instead of the generic fBm surface. The terrain mesh receives UV
+coordinates, and PBRT uses separate albedo and bump maps. This is intended for
+fields viewed at a distance, where grass should register as texture rather than
+as thousands of individual blades.
+
+The nested `pasture_texture` controls are:
+
+- `resolution`: width and height of both square texture maps.
+- `seed`: repeatable pasture pattern.
+- `flow_direction_degrees`: dominant lay of the elongated fibers.
+- `dark_color` and `light_color`: sRGB endpoints for broad pasture variation.
+- `fiber_contrast`: visibility of the fine interwoven directional pattern.
+- The seamless sward is synthesized from broad growth variation and several
+  anisotropic frequency bands: long blades, short blades, and a weaker crossing
+  layer. Their built-in scale separation prevents the texture from reading as
+  drawn hairs or a single combed noise field.
+- `bump_contrast`: contrast encoded in the grayscale bump map.
+- `bump_scale`: PBRT displacement strength; keep this small so the map affects
+  surface response without changing the hillside silhouette.
 
 ### Shared scatter controls
 
@@ -282,6 +313,13 @@ blades. Thousands of clusters can therefore describe a field without emitting
 each blade as an independent scene object. The current exclusion radius keeps
 the immediate trunk contact readable, while high patchiness creates bare soil
 between colonies.
+
+An optional `layers` array creates multiple grass strata from the same reusable
+blade cluster. Values in each layer override the shared grass controls. This is
+useful for pasture treatments: a high-count, weakly patchy, short base stratum
+provides nearly continuous coverage, while a lower-count, taller stratum adds
+irregular tufts and seed-stalk-like accents. If `layers` is absent, the original
+single-layer grass configuration remains valid.
 
 ### Ground litter
 

@@ -71,7 +71,8 @@ def scatter_points(terrain, config, seed_offset=0):
         attempts += 1
         x = float(center[0]) + rng.uniform(-0.5 * width, 0.5 * width)
         z = float(center[1]) + rng.uniform(-0.5 * depth, 0.5 * depth)
-        if abs(x) > 0.5 * terrain.width or abs(z) > 0.5 * terrain.depth:
+        if not (terrain.x_min <= x <= terrain.x_max
+                and terrain.z_min <= z <= terrain.z_max):
             continue
         if exclusion_radius > 0.0:
             distance = math.hypot(x - exclusion_center[0], z - exclusion_center[1])

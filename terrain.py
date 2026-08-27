@@ -20,6 +20,12 @@ class RollingHillside:
         if isinstance(resolution, int):
             resolution = [resolution, resolution]
         self.width, self.depth = (float(size[0]), float(size[1]))
+        center = config.get("center", [0.0, 0.0])
+        self.center_x, self.center_z = (float(center[0]), float(center[1]))
+        self.x_min = self.center_x - 0.5 * self.width
+        self.x_max = self.center_x + 0.5 * self.width
+        self.z_min = self.center_z - 0.5 * self.depth
+        self.z_max = self.center_z + 0.5 * self.depth
         self.nx, self.nz = (int(resolution[0]), int(resolution[1]))
         self.base_height = float(config.get("base_height", 0.0))
         slope = config.get("slope", {})
@@ -44,6 +50,18 @@ class RollingHillside:
         self.octaves = int(noise.get("octaves", 3))
         self.persistence = float(noise.get("persistence", 0.5))
         self.lacunarity = float(noise.get("lacunarity", 2.0))
+        landforms = config.get("landforms", {})
+        right_profile = landforms.get("right_dip_rise", {})
+        self.right_profile_enabled = bool(right_profile.get("enabled", False))
+        self.right_profile_angle = math.radians(
+            float(right_profile.get("direction_degrees", 322.0))
+        )
+        self.right_dip_center = float(right_profile.get("dip_center", 220.0))
+        self.right_dip_width = float(right_profile.get("dip_width", 150.0))
+        self.right_dip_depth = float(right_profile.get("dip_depth", 70.0))
+        self.right_rise_center = float(right_profile.get("rise_center", 600.0))
+        self.right_rise_width = float(right_profile.get("rise_width", 250.0))
+        self.right_rise_height = float(right_profile.get("rise_height", 55.0))
         if self.width <= 0 or self.depth <= 0:
             raise ValueError("terrain size values must be positive")
         if self.nx < 2 or self.nz < 2:
@@ -54,6 +72,17 @@ class RollingHillside:
             raise ValueError("terrain foreground leveling end must exceed start")
         if not 0.0 <= self.minimum_grade_ratio <= 1.0:
             raise ValueError("terrain minimum grade ratio must be between 0 and 1")
+        if self.right_dip_width <= 0.0 or self.right_rise_width <= 0.0:
+            raise ValueError("right dip/rise widths must be positive")
+
+    def _right_profile(self, distance):
+        dip = -self.right_dip_depth * math.exp(
+            -0.5 * ((distance - self.right_dip_center) / self.right_dip_width) ** 2
+        )
+        rise = self.right_rise_height * math.exp(
+            -0.5 * ((distance - self.right_rise_center) / self.right_rise_width) ** 2
+        )
+        return dip + rise
 
     @staticmethod
     def _fade(value):
@@ -113,6 +142,13 @@ class RollingHillside:
             result += amplitude * self._value_noise(x * frequency, z * frequency)
             amplitude *= self.persistence
             frequency *= self.lacunarity
+        if self.right_profile_enabled:
+            distance = (
+                x * math.cos(self.right_profile_angle)
+                + z * math.sin(self.right_profile_angle)
+            )
+            # Preserve the established tree elevation at the profile origin.
+            result += self._right_profile(distance) - self._right_profile(0.0)
         return result
 
     def sample(self, x, z):
@@ -129,9 +165,9 @@ class RollingHillside:
         points = []
         normals = []
         for iz in range(self.nz):
-            z = -0.5 * self.depth + self.depth * iz / (self.nz - 1)
+            z = self.z_min + self.depth * iz / (self.nz - 1)
             for ix in range(self.nx):
-                x = -0.5 * self.width + self.width * ix / (self.nx - 1)
+                x = self.x_min + self.width * ix / (self.nx - 1)
                 sample = self.sample(x, z)
                 points.append((x, sample.height, z))
                 normals.append(sample.normal)

@@ -14,7 +14,7 @@
     "build_scene": { "enabled": true },
     "rclone_sync": { "enabled": true },
     "shaft_composite": {
-      "enabled": true,
+      "enabled": false,
       "shaft_light": "shaft_sun",
       "base_opacity": 0.30,
       "shaft_opacity": 0.85,
@@ -52,7 +52,7 @@
     },
 
     "fog": {
-      "enabled": true,
+      "enabled": false,
       "sigma_a": 0.00002,
       "sigma_s": 0.00075,
       "g": 0.65,
@@ -77,8 +77,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 1000,
-      "y_resolution": 1000
+      "x_resolution": 2000,
+      "y_resolution": 2000
     },
 
     "lights": [
@@ -86,8 +86,8 @@
         "enabled": true,
         "type": "infinite",
         "color_mode": "rgb",
-        "color": [0.20, 0.40, 0.80],
-        "scale": 0.060
+        "color": [0.32, 0.40, 0.52],
+        "scale": 0.12
       },
       {
         "enabled": false,
@@ -119,7 +119,7 @@
         "scale": 9.0
       },
       {
-        "enabled": true,
+        "enabled": false,
         "label": "shaft_sun",
         "type": "distant",
         "from": [-5, 16.0, -25],
@@ -131,7 +131,7 @@
     ],
 
     "sun_aperture": {
-      "enabled": true,
+      "enabled": false,
       "light": "shaft_sun",
       "mode": "cloud_breakup",
       "beam_target": [210.0, 300.0, -90.0],
@@ -148,8 +148,9 @@
     "terrain": {
       "enabled": true,
       "type": "rolling_hillside",
-      "size": [1200.0, 1200.0],
-      "resolution": [257, 257],
+      "size": [1900.0, 1600.0],
+      "center": [150.0, -100.0],
+      "resolution": [401, 337],
       "base_height": 0.0,
       "slope": {
         "direction_degrees": 320.0,
@@ -158,18 +159,30 @@
           "enabled": true,
           "direction_degrees": 51.5,
           "start": 0.0,
-          "end": 180.0,
-          "minimum_grade_ratio": 0.0,
-          "target_height": 0.0
+          "end": 360.0,
+          "minimum_grade_ratio": 0.35,
+          "target_height": null
         }
       },
-      "noise": {
-        "seed": 7,
-        "amplitude": 14.0,
-        "frequency": 0.008,
-        "octaves": 3,
-        "persistence": 0.45,
+        "noise": {
+          "seed": 7,
+          "amplitude": 14.0,
+          "frequency": 0.008,
+          "octaves": 3,
+          "persistence": 0.45,
         "lacunarity": 2.0
+      },
+      "landforms": {
+        "right_dip_rise": {
+          "enabled": true,
+          "direction_degrees": 142.0,
+          "dip_center": 140.0,
+          "dip_width": 140.0,
+          "dip_depth": 100.0,
+          "rise_center": 480.0,
+          "rise_width": 150.0,
+          "rise_height": 260.0
+        }
       },
       "material": {
         "reflectance": [0.10, 0.17, 0.045]
@@ -177,35 +190,65 @@
       "details": {
         "surface": {
           "enabled": true,
-          "dark_reflectance": [0.055, 0.085, 0.022],
-          "light_reflectance": [0.13, 0.20, 0.060],
-          "color_frequency": 0.022,
-          "color_octaves": 4,
-          "color_roughness": 0.52,
-          "micro_frequency": 0.32,
-          "micro_octaves": 3,
-          "micro_roughness": 0.55,
-          "micro_amplitude": 0.06
+          "mode": "pasture_texture",
+          "pasture_texture": {
+            "resolution": 2048,
+            "seed": 97,
+            "flow_direction_degrees": 18.0,
+            "dark_color": [58, 104, 31],
+            "light_color": [105, 151, 55],
+            "fiber_contrast": 0.055,
+            "bump_contrast": 0.10,
+            "bump_scale": 0.008
+          }
         },
         "grass": {
           "enabled": true,
-          "count": 2400,
           "seed": 41,
-          "region": { "center": [0.0, 0.0], "size": [760.0, 760.0] },
-          "scale": [1.3, 3.4],
-          "max_slope_degrees": 34.0,
-          "patchiness": { "strength": 0.82, "frequency": 0.018 },
-          "exclusion": { "center": [0.0, 0.0], "radius": 20.0 },
+          "region": { "center": [150.0, -100.0], "size": [1900.0, 1600.0] },
+          "max_slope_degrees": 70.0,
+          "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
           "y_offset": 0.03,
           "variants": 3,
+          "blade": {
+            "height": [8.0, 14.0],
+            "width": [0.025, 0.050],
+            "segments": 3,
+            "lean": [0.10, 0.28],
+            "lean_spread_degrees": 31.51267873219528,
+            "bend": [-0.055, 0.055],
+            "bend_exponent": 1.45,
+            "tip_droop": [0.0, 0.0],
+            "tropism": {
+              "enabled": true,
+              "direction_degrees": 45.0,
+              "strength": [3.0, 7.0],
+              "direction_variation_degrees": 70.0,
+              "curvature_exponent": 2.0
+            },
+            "taper_exponent": 1.35
+          },
+          "tuft": {
+            "blades": 7,
+            "radius": [0.025, 0.14],
+            "angle_jitter_degrees": 18.0
+          },
           "reflectance_variants": [
             [0.045, 0.16, 0.020],
             [0.075, 0.22, 0.030],
             [0.12, 0.20, 0.035]
+          ],
+          "layers": [
+            {
+              "count": 3400000,
+              "seed": 41,
+              "scale": [1.0, 1.7],
+              "patchiness": { "strength": 0.12, "frequency": 0.012 }
+            }
           ]
         },
         "litter": {
-          "enabled": true,
+          "enabled": false,
           "count": 950,
           "seed": 53,
           "region": { "center": [0.0, 0.0], "size": [300.0, 300.0] },
@@ -222,7 +265,7 @@
           ]
         },
         "rocks": {
-          "enabled": true,
+          "enabled": false,
           "count": 48,
           "seed": 67,
           "region": { "center": [0.0, 0.0], "size": [620.0, 620.0] },
@@ -239,7 +282,7 @@
           ]
         },
         "undergrowth": {
-          "enabled": true,
+          "enabled": false,
           "count": 140,
           "seed": 79,
           "region": { "center": [0.0, 0.0], "size": [440.0, 440.0] },
@@ -721,20 +764,20 @@
       {
         "enabled": true,
         "preset": "fractal_tree",
-        "origin": [0.0, 0.0, 0.0],
+        "origin": [-315.5, 0.0, -134.2],
         "terrain_placement": {
           "enabled": true,
           "height_offset": 0.0
         },
         "debug_render": { "mode": "cylinders" },
         "seed": 23,
-        "trunk_height": 85.0,
-        "trunk_segments": 20,
-        "base_radius": 8.0,
-        "crown_radius": 6.2,
-        "initial_length": 34.0,
+        "trunk_height": 170.0,
+        "trunk_segments": 32,
+        "base_radius": 10.5,
+        "crown_radius": 7.8,
+        "initial_length": 52.0,
         "alpha": 2.2,
-        "min_radius": 0.60,
+        "min_radius": 0.65,
         "max_depth": 12,
         "dominant_length_ratio": 0.76,
         "lateral_length_ratio": 0.62,
@@ -746,12 +789,12 @@
         "asymmetry_min": 1.05,
         "asymmetry_max": 1.55,
         "leaves_enabled": true,
-        "leaf_length": 2.8,
-        "leaf_width": 0.72,
+        "leaf_length": 3.2,
+        "leaf_width": 0.82,
         "crownlet": {
           "style": "open",
           "depth": 4,
-          "length": 10.8,
+          "length": 15.5,
           "length_ratio": 0.75,
           "angle": 40.0,
           "radius_ratio": 0.46,

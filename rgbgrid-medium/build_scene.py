@@ -23,6 +23,7 @@ import os
 import sys
 import json
 import math
+import random
 from noise import pnoise2, pnoise3
 
 REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,6 +33,7 @@ if REPOSITORY_ROOT not in sys.path:
 from phyllotaxis import area_dome_points, dome_height, vogel_points
 from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
+from pasture_texture import generate_pasture_maps
 from terrain import create_terrain
 from terrain_details import alignment_rotation, scatter_points
 
@@ -1153,7 +1155,7 @@ def write_lsystem_leaf(lines, start, end, width, reflectance):
     ]
 
 
-def write_terrain(lines, terrain, config):
+def write_terrain(lines, terrain, config, project_root):
     """Write a procedural terrain as one PBRT triangle mesh."""
 
     if terrain is None:
@@ -1168,19 +1170,61 @@ def write_terrain(lines, terrain, config):
     normal_values = " ".join(
         f"{x:.9f} {y:.9f} {z:.9f}" for x, y, z in normals
     )
+    uv_values = " ".join(
+        f"{ix / (terrain.nx - 1):.9f} {iz / (terrain.nz - 1):.9f}"
+        for iz in range(terrain.nz)
+        for ix in range(terrain.nx)
+    )
     index_values = " ".join(str(index) for index in indices)
     lines += [
         '# Procedural terrain',
         'AttributeBegin',
     ]
-    if surface.get("enabled", False):
+    if surface.get("enabled", False) and surface.get("mode") == "pasture_texture":
+        pasture = surface.get("pasture_texture", {})
+        texture_directory = os.path.join(project_root, "scene_files", "textures")
+        albedo_path, bump_path = generate_pasture_maps(pasture, texture_directory)
+        albedo_relative = os.path.relpath(albedo_path, project_root)
+        bump_relative = os.path.relpath(bump_path, project_root)
+        bump_scale = float(pasture.get("bump_scale", 0.012))
+        lines += [
+            '    Texture "terrain_pasture_albedo" "spectrum" "imagemap"',
+            f'        "string filename" [ "{albedo_relative}" ]',
+            '        "string encoding" [ "sRGB" ]',
+            '        "string wrap" [ "repeat" ]',
+            '        "string filter" [ "ewa" ]',
+        ]
+        if bump_scale > 0.0:
+            lines += [
+                '    Texture "terrain_pasture_bump_raw" "float" "imagemap"',
+                f'        "string filename" [ "{bump_relative}" ]',
+                '        "string encoding" [ "linear" ]',
+                '        "string wrap" [ "repeat" ]',
+                '        "string filter" [ "ewa" ]',
+                '    Texture "terrain_pasture_bump" "float" "scale"',
+                '        "texture tex" [ "terrain_pasture_bump_raw" ]',
+                f'        "float scale" [ {bump_scale} ]',
+                '    Material "diffuse"',
+                '        "texture reflectance" [ "terrain_pasture_albedo" ]',
+                '        "texture displacement" [ "terrain_pasture_bump" ]',
+            ]
+        else:
+            lines += [
+                '    Material "diffuse"',
+                '        "texture reflectance" [ "terrain_pasture_albedo" ]',
+            ]
+    elif surface.get("enabled", False):
         dark = surface.get("dark_reflectance", [v * 0.72 for v in reflectance])
         light = surface.get("light_reflectance", [min(1.0, v * 1.22) for v in reflectance])
         scale = 1.0 / max(1e-6, float(surface.get("color_frequency", 0.025)))
         micro_scale = 1.0 / max(1e-6, float(surface.get("micro_frequency", 0.35)))
+        flow_angle = float(surface.get("flow_direction_degrees", 0.0))
+        color_anisotropy = max(1.0, float(surface.get("color_anisotropy", 1.0)))
+        micro_anisotropy = max(1.0, float(surface.get("micro_anisotropy", 1.0)))
         lines += [
             '    TransformBegin',
-            f'        Scale {scale:.9f} {scale:.9f} {scale:.9f}',
+            f'        Rotate {flow_angle:.9f} 0 1 0',
+            f'        Scale {scale / color_anisotropy:.9f} {scale:.9f} {scale:.9f}',
             '        Texture "terrain_color_amount" "float" "fbm"',
             f'            "integer octaves" [ {int(surface.get("color_octaves", 4))} ]',
             f'            "float roughness" [ {float(surface.get("color_roughness", 0.55))} ]',
@@ -1194,7 +1238,8 @@ def write_terrain(lines, terrain, config):
             '        "texture tex2" [ "terrain_light" ]',
             '        "texture amount" [ "terrain_color_amount" ]',
             '    TransformBegin',
-            f'        Scale {micro_scale:.9f} {micro_scale:.9f} {micro_scale:.9f}',
+            f'        Rotate {flow_angle:.9f} 0 1 0',
+            f'        Scale {micro_scale / micro_anisotropy:.9f} {micro_scale:.9f} {micro_scale:.9f}',
             '        Texture "terrain_micro_raw" "float" "fbm"',
             f'            "integer octaves" [ {int(surface.get("micro_octaves", 3))} ]',
             f'            "float roughness" [ {float(surface.get("micro_roughness", 0.55))} ]',
@@ -1202,8 +1247,40 @@ def write_terrain(lines, terrain, config):
             '    Texture "terrain_micro" "float" "scale"',
             '        "texture tex" [ "terrain_micro_raw" ]',
             f'        "float scale" [ {float(surface.get("micro_amplitude", 0.08))} ]',
+        ]
+        fiber_strength = float(surface.get("fiber_strength", 0.0))
+        if fiber_strength > 0.0:
+            fiber = surface.get("fiber_reflectance", light)
+            fiber_scale = 1.0 / max(
+                1e-6, float(surface.get("fiber_frequency", 1.0))
+            )
+            fiber_anisotropy = max(
+                1.0, float(surface.get("fiber_anisotropy", 8.0))
+            )
+            lines += [
+                '    TransformBegin',
+                f'        Rotate {flow_angle:.9f} 0 1 0',
+                f'        Scale {fiber_scale / fiber_anisotropy:.9f} {fiber_scale:.9f} {fiber_scale:.9f}',
+                '        Texture "terrain_fiber_raw" "float" "fbm"',
+                f'            "integer octaves" [ {int(surface.get("fiber_octaves", 2))} ]',
+                f'            "float roughness" [ {float(surface.get("fiber_roughness", 0.45))} ]',
+                '    TransformEnd',
+                '    Texture "terrain_fiber_amount" "float" "scale"',
+                '        "texture tex" [ "terrain_fiber_raw" ]',
+                f'        "float scale" [ {fiber_strength} ]',
+                '    Texture "terrain_fiber" "spectrum" "constant"',
+                f'        "rgb value" [ {fiber[0]} {fiber[1]} {fiber[2]} ]',
+                '    Texture "terrain_pasture_color" "spectrum" "mix"',
+                '        "texture tex1" [ "terrain_color" ]',
+                '        "texture tex2" [ "terrain_fiber" ]',
+                '        "texture amount" [ "terrain_fiber_amount" ]',
+            ]
+            terrain_color = "terrain_pasture_color"
+        else:
+            terrain_color = "terrain_color"
+        lines += [
             '    Material "diffuse"',
-            '        "texture reflectance" [ "terrain_color" ]',
+            f'        "texture reflectance" [ "{terrain_color}" ]',
             '        "texture displacement" [ "terrain_micro" ]',
         ]
     else:
@@ -1216,6 +1293,7 @@ def write_terrain(lines, terrain, config):
         f'        "integer indices" [ {index_values} ]',
         f'        "point3 P" [ {point_values} ]',
         f'        "normal N" [ {normal_values} ]',
+        f'        "point2 uv" [ {uv_values} ]',
         'AttributeEnd',
         '',
     ]
@@ -1231,21 +1309,108 @@ def _write_detail_mesh(lines, points, indices):
     ]
 
 
-def _grass_mesh():
+def _grass_range(config, name, default):
+    """Return a validated two-number range from a grass config block."""
+
+    value = config.get(name, default)
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        raise ValueError(f"grass {name} must be a two-number array")
+    low, high = float(value[0]), float(value[1])
+    if low > high:
+        raise ValueError(f"grass {name} minimum must not exceed its maximum")
+    return low, high
+
+
+def _grass_mesh(variant=0, config=None):
+    """Return a configurable tuft of tapered, segmented grass-blade ribbons."""
+
+    config = config or {}
+    blade_config = config.get("blade", {})
+    tuft_config = config.get("tuft", {})
+    blade_count = int(tuft_config.get("blades", 7))
+    segments = int(blade_config.get("segments", 3))
+    if blade_count < 1:
+        raise ValueError("grass tuft blades must be at least one")
+    if segments < 1:
+        raise ValueError("grass blade segments must be at least one")
+
+    height_range = _grass_range(blade_config, "height", [0.82, 1.18])
+    width_range = _grass_range(blade_config, "width", [0.025, 0.050])
+    lean_range = _grass_range(blade_config, "lean", [0.10, 0.28])
+    bend_range = _grass_range(blade_config, "bend", [-0.055, 0.055])
+    droop_range = _grass_range(blade_config, "tip_droop", [0.0, 0.0])
+    radius_range = _grass_range(tuft_config, "radius", [0.025, 0.14])
+    tropism_config = blade_config.get("tropism", {})
+    tropism_enabled = bool(tropism_config.get("enabled", False))
+    tropism_range = _grass_range(tropism_config, "strength", [0.0, 0.0])
+    tropism_variation = math.radians(
+        float(tropism_config.get("direction_variation_degrees", 0.0))
+    )
+    tropism_exponent = float(tropism_config.get("curvature_exponent", 2.0))
+    bend_exponent = float(blade_config.get("bend_exponent", 1.45))
+    taper_exponent = float(blade_config.get("taper_exponent", 1.35))
+    angle_jitter = float(tuft_config.get("angle_jitter_degrees", 18.0))
+    lean_spread = math.radians(float(blade_config.get("lean_spread_degrees", 31.5127)))
+    if min(height_range) <= 0.0 or min(width_range) <= 0.0:
+        raise ValueError("grass blade height and width must be positive")
+    if (min(radius_range) < 0.0 or bend_exponent <= 0.0
+            or taper_exponent <= 0.0 or tropism_exponent <= 0.0):
+        raise ValueError("grass radius must be nonnegative and exponents must be positive")
+
+    rng = random.Random(8101 + 977 * variant)
     points, indices = [], []
-    for blade in range(7):
-        angle = math.radians(blade * 137.5)
-        cx = 0.12 * math.cos(angle * 1.7)
-        cz = 0.12 * math.sin(angle * 1.7)
-        side = (-math.sin(angle) * 0.045, math.cos(angle) * 0.045)
-        lean = (0.18 * math.cos(angle), 0.18 * math.sin(angle))
+    for blade in range(blade_count):
+        angle = math.radians(blade * 137.5 + rng.uniform(-angle_jitter, angle_jitter))
+        radial_offset = rng.uniform(*radius_range)
+        cx = radial_offset * math.cos(angle * 1.7)
+        cz = radial_offset * math.sin(angle * 1.7)
+        side_x, side_z = -math.sin(angle), math.cos(angle)
+        lean_angle = angle + rng.uniform(-lean_spread, lean_spread)
+        lean = rng.uniform(*lean_range)
+        bend = rng.uniform(*bend_range)
+        tropism_strength = (rng.uniform(*tropism_range)
+                            if tropism_enabled else 0.0)
+        tropism_angle = (rng.uniform(-tropism_variation, tropism_variation)
+                         if tropism_enabled else 0.0)
+        # Avoid consuming a random number when droop is disabled so the
+        # original grass defaults remain byte-for-byte deterministic.
+        droop = (droop_range[0] if droop_range[0] == droop_range[1]
+                 else rng.uniform(*droop_range))
+        height = rng.uniform(*height_range)
+        width = rng.uniform(*width_range)
         base = len(points)
-        points += [
-            (cx - side[0], 0.0, cz - side[1]),
-            (cx + side[0], 0.0, cz + side[1]),
-            (cx + lean[0], 1.0 + 0.08 * (blade % 3), cz + lean[1]),
-        ]
-        indices += [base, base + 1, base + 2, base + 1, base, base + 2]
+        # Retain the original three-segment profile exactly; taller blades can
+        # use more segments for a visibly smoother arc.
+        levels = ((0.0, 0.34, 0.69, 1.0) if segments == 3 else
+                  tuple(segment / segments for segment in range(segments + 1)))
+        for level in levels:
+            taper = max(0.06, 1.0 - level ** taper_exponent)
+            center_x = (
+                cx
+                + lean * math.cos(lean_angle) * level ** bend_exponent
+                + bend * side_x * math.sin(math.pi * level)
+                + tropism_strength * math.cos(tropism_angle)
+                * level ** tropism_exponent
+            )
+            center_z = (
+                cz
+                + lean * math.sin(lean_angle) * level ** bend_exponent
+                + bend * side_z * math.sin(math.pi * level)
+                + tropism_strength * math.sin(tropism_angle)
+                * level ** tropism_exponent
+            )
+            half_width = width * taper
+            center_y = height * level - droop * level ** 3
+            points += [
+                (center_x - side_x * half_width, center_y,
+                 center_z - side_z * half_width),
+                (center_x + side_x * half_width, center_y,
+                 center_z + side_z * half_width),
+            ]
+        for segment in range(len(levels) - 1):
+            lower = base + 2 * segment
+            upper = lower + 2
+            indices += [lower, lower + 1, upper, lower + 1, upper + 1, upper]
     return points, indices
 
 
@@ -1279,8 +1444,17 @@ def write_terrain_details(lines, terrain, config):
     if terrain is None:
         return
     details = config.get("details", {})
-    layers = [
-        ("grass", details.get("grass", {}), _grass_mesh),
+    grass = details.get("grass", {})
+    grass_layers = grass.get("layers", [])
+    if grass_layers:
+        grass_defaults = {key: value for key, value in grass.items() if key != "layers"}
+        grasses = [
+            (f"grass_{index}", {**grass_defaults, **layer}, _grass_mesh)
+            for index, layer in enumerate(grass_layers)
+        ]
+    else:
+        grasses = [("grass", grass, _grass_mesh)]
+    layers = grasses + [
         ("litter", details.get("litter", {}), None),
         ("rocks", details.get("rocks", {}), None),
         ("undergrowth", details.get("undergrowth", {}), _fern_mesh),
@@ -1309,11 +1483,17 @@ def write_terrain_details(lines, terrain, config):
                     [0, 1, 3, 1, 2, 3, 3, 1, 0, 3, 2, 1],
                 )
             else:
-                points, indices = mesh_factory()
+                if mesh_factory is _grass_mesh:
+                    points, indices = mesh_factory(variant, layer)
+                else:
+                    points, indices = mesh_factory()
                 _write_detail_mesh(lines, points, indices)
             lines += ['ObjectEnd', '']
 
         points = scatter_points(terrain, layer, 1000 * (layer_index + 1))
+        tropism = layer.get("blade", {}).get("tropism", {})
+        tropism_enabled = bool(tropism.get("enabled", False))
+        tropism_direction = float(tropism.get("direction_degrees", 0.0))
         lines.append(f'# Terrain {name}: {len(points)} instances')
         for point in points:
             angle, axis = alignment_rotation(point.normal)
@@ -1324,7 +1504,7 @@ def write_terrain_details(lines, terrain, config):
                 'AttributeBegin',
                 f'    Translate {point.position[0]:.7f} {point.position[1]:.7f} {point.position[2]:.7f}',
                 f'    Rotate {angle:.7f} {axis[0]:.7f} {axis[1]:.7f} {axis[2]:.7f}',
-                f'    Rotate {point.rotation:.7f} 0 1 0',
+                f'    Rotate {(tropism_direction if tropism_enabled else point.rotation):.7f} 0 1 0',
                 f'    Scale {sx:.7f} {sy:.7f} {sz:.7f}',
                 f'    ObjectInstance "terrain_{name}_{point.variant}"',
                 'AttributeEnd',
@@ -1801,7 +1981,7 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_lights(lines, lights)
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []))
-    write_terrain(lines, terrain, terrain_config)
+    write_terrain(lines, terrain, terrain_config, project_root)
     write_terrain_details(lines, terrain, terrain_config)
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
     write_lsystem_trees(lines, scene.get("lsystem_trees", []), terrain)

@@ -1,0 +1,41 @@
+{
+  "presets": {
+    "morning_droop_030125": {
+      "reference_render": "Archive/rgbgrid-medium_20260827_030125.png",
+      "description": "Tall grass with weight-driven droop and varied specular highlights.",
+      "blade": {
+        "height": [8.0, 14.0],
+        "width": [0.025, 0.050],
+        "segments": 3,
+        "lean": [0.10, 0.28],
+        "lean_spread_degrees": 31.51267873219528,
+        "bend": [-0.055, 0.055],
+        "bend_exponent": 1.45,
+        "tip_droop": [2.0, 6.0],
+        "taper_exponent": 1.35
+      }
+    },
+    "late_afternoon_tropism_030551": {
+      "reference_render": "Archive/rgbgrid-medium_20260827_030551.png",
+      "description": "Tall grass under strong shared tropism, producing broad subdued tonal masses.",
+      "blade": {
+        "height": [8.0, 14.0],
+        "width": [0.025, 0.050],
+        "segments": 3,
+        "lean": [0.10, 0.28],
+        "lean_spread_degrees": 31.51267873219528,
+        "bend": [-0.055, 0.055],
+        "bend_exponent": 1.45,
+        "tip_droop": [0.0, 0.0],
+        "tropism": {
+          "enabled": true,
+          "direction_degrees": 45.0,
+          "strength": [3.0, 7.0],
+          "direction_variation_degrees": 70.0,
+          "curvature_exponent": 2.0
+        },
+        "taper_exponent": 1.35
+      }
+    }
+  }
+}
