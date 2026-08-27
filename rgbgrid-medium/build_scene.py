@@ -1330,7 +1330,7 @@ def write_terrain(lines, terrain, config, project_root):
     ]
 
 
-def _write_detail_mesh(lines, points, indices):
+def _write_detail_mesh(lines, points, indices, normals=None):
     point_values = " ".join(f"{x:.6f} {y:.6f} {z:.6f}" for x, y, z in points)
     index_values = " ".join(str(value) for value in indices)
     lines += [
@@ -1338,6 +1338,11 @@ def _write_detail_mesh(lines, points, indices):
         f'        "integer indices" [ {index_values} ]',
         f'        "point3 P" [ {point_values} ]',
     ]
+    if normals is not None:
+        normal_values = " ".join(
+            f"{x:.6f} {y:.6f} {z:.6f}" for x, y, z in normals
+        )
+        lines.append(f'        "normal N" [ {normal_values} ]')
 
 
 def _grass_range(config, name, default):
@@ -1469,6 +1474,207 @@ def _fern_mesh():
     return points, indices
 
 
+def _poppy_mesh(variant=0):
+    """Build a field poppy as an overlapping bowl with a detailed center."""
+
+    rng = random.Random(27103 + 613 * variant)
+    stem_points, stem_indices = [], []
+    petal_points, petal_indices, petal_rim_indices, petal_normals = [], [], [], []
+    stamen_points, stamen_indices = [], []
+    capsule_points, capsule_indices = [], []
+    stem_top = 0.89
+    lean_x = rng.uniform(-0.024, 0.024)
+    lean_z = rng.uniform(-0.024, 0.024)
+
+    # A segmented, gently bowed stem with small outward hairs.
+    stem_segments = 10
+    half_width = 0.0035
+    for facing in range(2):
+        base = len(stem_points)
+        for segment in range(stem_segments + 1):
+            t = segment / stem_segments
+            cx = lean_x * t * t
+            cz = lean_z * t * t
+            width = half_width * (1.0 - 0.25 * t)
+            if facing == 0:
+                stem_points += [(cx - width, stem_top * t, cz),
+                                (cx + width, stem_top * t, cz)]
+            else:
+                stem_points += [(cx, stem_top * t, cz - width),
+                                (cx, stem_top * t, cz + width)]
+        for segment in range(stem_segments):
+            a = base + 2 * segment
+            b, c, d = a + 1, a + 2, a + 3
+            stem_indices += [a, b, c, b, d, c, c, b, a, c, d, b]
+    for hair in range(22):
+        t = 0.08 + 0.80 * hair / 21.0
+        angle = 2.39996 * hair + 0.4 * variant
+        cx, cy, cz = lean_x * t * t, stem_top * t, lean_z * t * t
+        radial = 0.0032
+        length = 0.010 + 0.003 * (hair % 3)
+        base = len(stem_points)
+        stem_points += [
+            (cx + radial * math.cos(angle), cy, cz + radial * math.sin(angle)),
+            (cx + (radial + length) * math.cos(angle), cy + 0.003,
+             cz + (radial + length) * math.sin(angle)),
+            (cx + radial * math.cos(angle + 0.45), cy + 0.004,
+             cz + radial * math.sin(angle + 0.45)),
+        ]
+        stem_indices += [base, base + 1, base + 2, base + 2, base + 1, base]
+
+    # Four broad petals in two overlapping pairs form a continuous asymmetric bowl.
+    radial_steps, lateral_steps = 34, 96
+    bloom_y = stem_top - 0.006
+    phase = rng.uniform(0.0, 2.0 * math.pi)
+    petal_angles = [phase, phase + math.pi, phase + 0.5 * math.pi,
+                    phase + 1.5 * math.pi]
+    for petal, nominal_angle in enumerate(petal_angles):
+        angle = nominal_angle + rng.uniform(-0.09, 0.09)
+        length = rng.uniform(0.108, 0.130)
+        half_span = rng.uniform(1.20, 1.38)
+        whorl_lift = 0.005 if petal >= 2 else 0.0
+        side_tilt = rng.uniform(-0.014, 0.014)
+        bowl_height = rng.uniform(0.088, 0.125)
+        flop_center = rng.uniform(-0.62, 0.62)
+        flop_width = rng.uniform(0.30, 0.58)
+        flop_depth = rng.uniform(0.045, 0.080)
+        edge_curl = rng.uniform(-0.025, 0.018)
+        base = len(petal_points)
+        for row in range(radial_steps + 1):
+            u = row / radial_steps
+            eased = u * u * (3.0 - 2.0 * u)
+            angular_envelope = math.sin(0.5 * math.pi * (0.04 + 0.96 * u))
+            for column in range(lateral_steps + 1):
+                v = 2.0 * column / lateral_steps - 1.0
+                theta = angle + v * (0.68 + (half_span - 0.50) * angular_envelope)
+                rounded_side = 0.10 * eased * abs(v) ** 4
+                low_rim_wave = 0.0030 * u ** 5 * math.sin(
+                    3.0 * math.pi * v + 0.8 * petal
+                )
+                radius = 0.005 + length * (eased - rounded_side) + low_rim_wave
+                bowl = 0.008 * u + bowl_height * u ** 1.80
+                broad_crumple = 0.0065 * u ** 1.7 * math.sin(
+                    5.0 * math.pi * v + 5.5 * u + phase + 0.6 * petal
+                )
+                fine_veins = u * (
+                    0.0026 * math.sin(25.0 * math.pi * v + 2.3 * u + phase) +
+                    0.00125 * math.sin(53.0 * math.pi * v - 4.1 * u + petal) +
+                    0.00055 * math.sin(79.0 * math.pi * v + 7.0 * u + phase)
+                )
+                soft_edge = 0.0055 * u ** 6 * math.sin(
+                    4.0 * math.pi * v + 1.3 * petal
+                )
+                localized_flop = -flop_depth * u ** 2.4 * math.exp(
+                    -((v - flop_center) / flop_width) ** 2
+                )
+                margin_curl = edge_curl * u ** 3 * abs(v) ** 3
+                y = (bloom_y + whorl_lift + bowl + broad_crumple + fine_veins + soft_edge +
+                     localized_flop + margin_curl)
+                y += side_tilt * v * u
+                petal_points.append((lean_x + radius * math.cos(theta), y,
+                                     lean_z + radius * math.sin(theta)))
+        stride = lateral_steps + 1
+        for row in range(radial_steps):
+            for column in range(lateral_steps):
+                a = base + row * stride + column
+                b, c, d = a + 1, a + stride, a + stride + 1
+                triangles = [a, c, b, b, c, d, b, c, a, d, c, b]
+                if row >= radial_steps - 4:
+                    petal_rim_indices += triangles
+                else:
+                    petal_indices += triangles
+        for row in range(radial_steps + 1):
+            for column in range(lateral_steps + 1):
+                before_u = base + max(0, row - 1) * stride + column
+                after_u = base + min(radial_steps, row + 1) * stride + column
+                before_v = base + row * stride + max(0, column - 1)
+                after_v = base + row * stride + min(lateral_steps, column + 1)
+                du = tuple(petal_points[after_u][i] - petal_points[before_u][i]
+                           for i in range(3))
+                dv = tuple(petal_points[after_v][i] - petal_points[before_v][i]
+                           for i in range(3))
+                normal = (dv[1] * du[2] - dv[2] * du[1],
+                          dv[2] * du[0] - dv[0] * du[2],
+                          dv[0] * du[1] - dv[1] * du[0])
+                magnitude = math.sqrt(sum(value * value for value in normal))
+                normal = ((0.0, 1.0, 0.0) if magnitude < 1e-10 else
+                          tuple(value / magnitude for value in normal))
+                if normal[1] < 0.0:
+                    normal = tuple(-value for value in normal)
+                petal_normals.append(normal)
+
+    # A small dark receptacle closes the flower base beneath the stamens.
+    center_y = bloom_y + 0.018
+    receptacle_segments = 24
+    stamen_points.append((lean_x, center_y - 0.003, lean_z))
+    for segment in range(receptacle_segments):
+        theta = 2.0 * math.pi * segment / receptacle_segments
+        stamen_points.append((lean_x + 0.015 * math.cos(theta), center_y,
+                              lean_z + 0.015 * math.sin(theta)))
+    for segment in range(receptacle_segments):
+        a = 1 + segment
+        b = 1 + (segment + 1) % receptacle_segments
+        stamen_indices += [0, a, b, b, a, 0]
+
+    # Curved stamens rise as a clustered ring rather than lying down as spokes.
+    for stamen in range(28):
+        theta = 2.0 * math.pi * stamen / 28.0 + 0.11 * (stamen % 3)
+        inner_radius = 0.009
+        outer_radius = 0.019 + 0.002 * math.sin(5.0 * theta)
+        tangent_x, tangent_z = -math.sin(theta), math.cos(theta)
+        width = 0.00075
+        base = len(stamen_points)
+        stamen_points += [
+            (lean_x + inner_radius * math.cos(theta) - width * tangent_x,
+             center_y, lean_z + inner_radius * math.sin(theta) - width * tangent_z),
+            (lean_x + inner_radius * math.cos(theta) + width * tangent_x,
+             center_y, lean_z + inner_radius * math.sin(theta) + width * tangent_z),
+            (lean_x + 0.82 * outer_radius * math.cos(theta) - width * tangent_x,
+             center_y + 0.014, lean_z + 0.82 * outer_radius * math.sin(theta) - width * tangent_z),
+            (lean_x + 0.82 * outer_radius * math.cos(theta) + width * tangent_x,
+             center_y + 0.014, lean_z + 0.82 * outer_radius * math.sin(theta) + width * tangent_z),
+            (lean_x + outer_radius * math.cos(theta) - 2.0 * width * tangent_x,
+             center_y + 0.010, lean_z + outer_radius * math.sin(theta) - 2.0 * width * tangent_z),
+            (lean_x + outer_radius * math.cos(theta) + 2.0 * width * tangent_x,
+             center_y + 0.010, lean_z + outer_radius * math.sin(theta) + 2.0 * width * tangent_z),
+        ]
+        stamen_indices += [base, base + 2, base + 1,
+                           base + 1, base + 2, base + 3,
+                           base + 2, base + 4, base + 3,
+                           base + 3, base + 4, base + 5,
+                           base + 1, base + 2, base,
+                           base + 3, base + 2, base + 1,
+                           base + 3, base + 4, base + 2,
+                           base + 5, base + 4, base + 3]
+
+    # A small vertically ribbed seed capsule at the center of the stamen ring.
+    capsule_rings, capsule_segments = 6, 18
+    capsule_center_y = center_y + 0.014
+    for ring in range(capsule_rings + 1):
+        latitude = math.pi * ring / capsule_rings
+        for segment in range(capsule_segments):
+            theta = 2.0 * math.pi * segment / capsule_segments
+            rib = 1.0 + 0.10 * math.cos(9.0 * theta)
+            radius = 0.0078 * math.sin(latitude) * rib
+            capsule_points.append((lean_x + radius * math.cos(theta),
+                                   capsule_center_y + 0.0105 * math.cos(latitude),
+                                   lean_z + radius * math.sin(theta)))
+    for ring in range(capsule_rings):
+        for segment in range(capsule_segments):
+            a = ring * capsule_segments + segment
+            b = ring * capsule_segments + (segment + 1) % capsule_segments
+            c, d = a + capsule_segments, b + capsule_segments
+            capsule_indices += [a, c, b, b, c, d]
+
+    return {
+        "stem": (stem_points, stem_indices),
+        "petals": (petal_points, petal_indices, petal_normals),
+        "petal_rims": (petal_points, petal_rim_indices, petal_normals),
+        "stamens": (stamen_points, stamen_indices),
+        "capsule": (capsule_points, capsule_indices),
+    }
+
+
 def write_terrain_details(lines, terrain, config):
     """Write reusable ground-detail objects and terrain-aware instances."""
 
@@ -1486,6 +1692,7 @@ def write_terrain_details(lines, terrain, config):
     else:
         grasses = [("grass", grass, _grass_mesh)]
     layers = grasses + [
+        ("poppies", details.get("poppies", {}), _poppy_mesh),
         ("litter", details.get("litter", {}), None),
         ("rocks", details.get("rocks", {}), None),
         ("undergrowth", details.get("undergrowth", {}), _fern_mesh),
@@ -1500,10 +1707,11 @@ def write_terrain_details(lines, terrain, config):
         variants = max(1, int(layer.get("variants", len(colors))))
         for variant in range(variants):
             color = colors[variant % len(colors)]
-            lines += [
-                f'ObjectBegin "terrain_{name}_{variant}"',
-                f'    Material "diffuse" "rgb reflectance" [ {color[0]} {color[1]} {color[2]} ]',
-            ]
+            lines.append(f'ObjectBegin "terrain_{name}_{variant}"')
+            if name != "poppies":
+                lines.append(
+                    f'    Material "diffuse" "rgb reflectance" [ {color[0]} {color[1]} {color[2]} ]'
+                )
             if name == "rocks":
                 lines.append('    Shape "sphere" "float radius" [ 1 ]')
             elif name == "litter":
@@ -1516,9 +1724,57 @@ def write_terrain_details(lines, terrain, config):
             else:
                 if mesh_factory is _grass_mesh:
                     points, indices = mesh_factory(variant, layer)
+                elif mesh_factory is _poppy_mesh:
+                    parts = mesh_factory(variant)
+                    stem_color = layer.get("stem_reflectance", [0.035, 0.16, 0.025])
+                    center_color = layer.get("center_reflectance", [0.012, 0.006, 0.004])
+                    capsule_color = layer.get("capsule_reflectance", [0.34, 0.42, 0.12])
+                    lines.append(
+                        f'    Material "diffuse" "rgb reflectance" [ {stem_color[0]} {stem_color[1]} {stem_color[2]} ]'
+                    )
+                    _write_detail_mesh(lines, *parts["stem"])
+                    transmission = layer.get("petal_transmittance", [0.30, 0.018, 0.002])
+                    rim_transmission = layer.get("rim_transmittance", [0.42, 0.028, 0.003])
+                    dark = [0.55 * value for value in color]
+                    light = [min(1.0, 0.88 * value + 0.035) for value in color]
+                    texture_prefix = f"poppy_{variant}"
+                    lines += [
+                        '    TransformBegin',
+                        '        Scale 0.028 0.070 0.028',
+                        f'        Texture "{texture_prefix}_fiber" "float" "fbm"',
+                        '            "integer octaves" [ 6 ]',
+                        '            "float roughness" [ 0.68 ]',
+                        '    TransformEnd',
+                        f'    Texture "{texture_prefix}_dark" "spectrum" "constant"',
+                        f'        "rgb value" [ {dark[0]} {dark[1]} {dark[2]} ]',
+                        f'    Texture "{texture_prefix}_light" "spectrum" "constant"',
+                        f'        "rgb value" [ {light[0]} {light[1]} {light[2]} ]',
+                        f'    Texture "{texture_prefix}_color" "spectrum" "mix"',
+                        f'        "texture tex1" [ "{texture_prefix}_dark" ]',
+                        f'        "texture tex2" [ "{texture_prefix}_light" ]',
+                        f'        "texture amount" [ "{texture_prefix}_fiber" ]',
+                        f'    Material "diffusetransmission" "texture reflectance" [ "{texture_prefix}_color" ] '
+                        f'"rgb transmittance" [ {transmission[0]} {transmission[1]} {transmission[2]} ]',
+                    ]
+                    _write_detail_mesh(lines, *parts["petals"])
+                    lines.append(
+                        f'    Material "diffusetransmission" "texture reflectance" [ "{texture_prefix}_color" ] '
+                        f'"rgb transmittance" [ {rim_transmission[0]} {rim_transmission[1]} {rim_transmission[2]} ]'
+                    )
+                    _write_detail_mesh(lines, *parts["petal_rims"])
+                    lines.append(
+                        f'    Material "diffuse" "rgb reflectance" [ {center_color[0]} {center_color[1]} {center_color[2]} ]'
+                    )
+                    _write_detail_mesh(lines, *parts["stamens"])
+                    lines.append(
+                        f'    Material "diffuse" "rgb reflectance" [ {capsule_color[0]} {capsule_color[1]} {capsule_color[2]} ]'
+                    )
+                    _write_detail_mesh(lines, *parts["capsule"])
+                    points = indices = None
                 else:
                     points, indices = mesh_factory()
-                _write_detail_mesh(lines, points, indices)
+                if points is not None:
+                    _write_detail_mesh(lines, points, indices)
             lines += ['ObjectEnd', '']
 
         points = scatter_points(terrain, layer, 1000 * (layer_index + 1))
