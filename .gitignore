@@ -10,6 +10,7 @@ SessionArchive/
 
 # --- Generated scene files (produced by build_scene.py at runtime) ---
 **/scene_files/scene.pbrt
+**/scene_files/*.pbrt
 **/scene_files/volumes/
 **/scene_files/meshes/*.ply
 
@@ -35,3 +36,9 @@ render_log.txt
 docs/SpaceColonizationAlgorithm_Runion.pdf
 docs/runionsa.th2008.pdf
 docs/TheAlgorithmicBeautyOfPlants.pdf
+
+# --- Established local-only working material ---
+Gallery/
+space_col.py.bak
+Continuity — Session 2026-05-26:
+rgbgrid-medium/flat_landform_preview.py

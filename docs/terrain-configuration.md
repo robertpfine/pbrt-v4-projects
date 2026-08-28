@@ -2,10 +2,11 @@
 
 Procedural terrain is implemented in [`terrain.py`](../terrain.py), written to
 PBRT by [`rgbgrid-medium/build_scene.py`](../rgbgrid-medium/build_scene.py), and
-configured under `scene.terrain`.
+configured under `scene.terrain`. One authoritative JSON contains named
+landform profiles plus shared material and ecosystem-detail controls.
 
-The first supported terrain type is `rolling_hillside`. It combines a planar
-incline with deterministic, smooth, multi-octave value noise:
+Each named landform currently uses the `RollingHillside` implementation. It
+combines a planar incline with deterministic, smooth, multi-octave value noise:
 
 ```text
 y(x,z) = base_height
@@ -20,29 +21,26 @@ y(x,z) = base_height
 ```json
 "terrain": {
   "enabled": true,
-  "type": "rolling_hillside",
-  "size": [1200.0, 1200.0],
-  "resolution": [257, 257],
-  "base_height": 0.0,
-  "slope": {
-    "direction_degrees": 320.0,
-    "grade": 0.40,
-    "foreground_leveling": {
-      "enabled": true,
-      "direction_degrees": 51.5,
-      "start": 0.0,
-      "end": 180.0,
-      "minimum_grade_ratio": 0.0,
-      "target_height": 0.0
+  "active_landform": "flat_landform",
+  "landforms": {
+    "flat_landform": {
+      "size": [1200.0, 1200.0],
+      "resolution": [257, 257],
+      "base_height": 0.0,
+      "slope": {
+        "direction_degrees": 270.0,
+        "grade": 0.025,
+        "foreground_leveling": { "enabled": false }
+      },
+      "noise": {
+        "seed": 113,
+        "amplitude": 5.5,
+        "frequency": 0.0045,
+        "octaves": 4,
+        "persistence": 0.48,
+        "lacunarity": 2.0
+      }
     }
-  },
-  "noise": {
-    "seed": 7,
-    "amplitude": 14.0,
-    "frequency": 0.008,
-    "octaves": 3,
-    "persistence": 0.45,
-    "lacunarity": 2.0
   },
   "material": {
     "reflectance": [0.10, 0.17, 0.045]
@@ -50,6 +48,7 @@ y(x,z) = base_height
   "details": {
     "surface": { "enabled": true },
     "grass": { "enabled": true, "count": 2400 },
+    "poppies": { "enabled": true, "count": 120 },
     "litter": { "enabled": true, "count": 950 },
     "rocks": { "enabled": true, "count": 48 },
     "undergrowth": { "enabled": true, "count": 140 }
@@ -64,11 +63,19 @@ y(x,z) = base_height
 Creates and renders the terrain when `true`. When `false`, no terrain mesh is
 written and terrain-aware object placement is not applied.
 
-### `type`
+### `active_landform`
 
-Selects the terrain algorithm. The only currently supported value is
-`"rolling_hillside"`. Future terrain types can implement the same `height()`,
-`sample()`, and `mesh()` interface.
+Selects exactly one key from `landforms`. Changing it changes ground geometry
+without disconnecting or duplicating the shared material, grass, poppies,
+litter, rocks, or undergrowth configuration. The legacy top-level `type` layout
+remains readable for older configurations, but named landforms are preferred.
+
+### `landforms`
+
+Contains named geometry profiles. `right_dip_rise` preserves the established
+gully terrain; `flat_landform` provides a broad, gently rising meadow. These are
+configuration profiles of the same terrain implementation, not separate scene
+files or separate ecosystem stacks.
 
 ### `size`
 
@@ -232,9 +239,28 @@ contact and landform lighting without adding grass geometry.
 
 ## Surface and ecosystem details
 
-The optional `terrain.details` system adds five independently switchable layers.
-All placement is deterministic for a given seed and samples the actual terrain
-height, normal, and local slope.
+The optional `terrain.details` system adds one surface treatment plus five
+independently switchable instanced layers. All placement is deterministic for a
+given seed and samples the actual terrain height, normal, and local slope.
+
+Object layers may also constrain placement to the active camera with a
+`camera_frustum` block:
+
+```json
+"camera_frustum": {
+  "enabled": true,
+  "frame_margin": 0.02,
+  "bounds_radius": 0.95
+}
+```
+
+When enabled, candidates are rejected until `count` complete instances fit
+inside the camera frustum. `frame_margin` reserves a fraction of each half-frame
+at the image edges. `bounds_radius` is the object's conservative local-space
+radius; it is multiplied by each instance's randomized scale and aspect so
+petals and foliage are not accepted merely because their stem origin is in
+frame. This is a framing constraint, not an occlusion test: terrain and other
+geometry may still hide an accepted instance.
 
 ### `details.surface`
 
@@ -259,21 +285,21 @@ This layer enriches the terrain mesh itself rather than adding objects.
   component over the broad surface color. `fiber_frequency`,
   `fiber_anisotropy`, `fiber_octaves`, and `fiber_roughness` control its scale,
   directionality, and complexity. Together these controls can make distant and
-  middle-ground pasture register as continuous fibrous texture without blade
-  geometry.
+  middle-ground vegetated terrain register as continuous fibrous texture
+  without blade geometry.
 
-Set `mode` to `pasture_texture` to use deterministically generated seamless
-image maps instead of the generic fBm surface. The terrain mesh receives UV
-coordinates, and PBRT uses separate albedo and bump maps. This is intended for
-fields viewed at a distance, where grass should register as texture rather than
-as thousands of individual blades.
+Set `mode` to `terrain_surface_texture` to use deterministically generated
+seamless image maps instead of the generic fBm surface. The terrain mesh
+receives UV coordinates, and PBRT uses separate albedo and bump maps. This is
+intended for fields viewed at a distance, where grass should register as texture
+rather than as thousands of individual blades.
 
-The nested `pasture_texture` controls are:
+The nested `terrain_surface_texture` controls are:
 
 - `resolution`: width and height of both square texture maps.
-- `seed`: repeatable pasture pattern.
+- `seed`: repeatable surface pattern.
 - `flow_direction_degrees`: dominant lay of the elongated fibers.
-- `dark_color` and `light_color`: sRGB endpoints for broad pasture variation.
+- `dark_color` and `light_color`: sRGB endpoints for broad surface variation.
 - `fiber_contrast`: visibility of the fine interwoven directional pattern.
 - The seamless sward is synthesized from broad growth variation and several
   anisotropic frequency bands: long blades, short blades, and a weaker crossing
@@ -285,7 +311,8 @@ The nested `pasture_texture` controls are:
 
 ### Shared scatter controls
 
-The `grass`, `litter`, `rocks`, and `undergrowth` blocks share these controls:
+The `grass`, `poppies`, `litter`, `rocks`, and `undergrowth` blocks share these
+controls:
 
 - `enabled` activates the layer.
 - `count` is the requested number of object instances, not the number of blades

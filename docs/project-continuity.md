@@ -1,6 +1,6 @@
 # Project Continuity
 
-Last updated: 2026-08-27
+Last updated: 2026-08-28
 
 ## Purpose
 
@@ -42,7 +42,7 @@ and PBRT progress.
 - `terrain.py`: deterministic rolling-hillside terrain with explicit bounds,
   fBm-style value noise, partial foreground grading, terrain-aware placement,
   and a broad right-side dip/rise landform that forms the current gully.
-- `pasture_texture.py`: deterministic seamless spectral sward maps used below
+- `terrain_surface_texture.py`: deterministic seamless ground maps used below
   the instanced blade geometry.
 - `terrain_details.py`: deterministic terrain scatter plus the spatial direction
   field used by grass tropism.
@@ -52,10 +52,46 @@ or together. In particular, structural scaffolds may come from fractal or
 L-system rules while fine branching or crown occupation may come from space
 colonization.
 
-## Current scene state
+## 2026-08-28 terrain and poppy checkpoint
 
-The active scene contains one recursive fractal tree at the bottom of a gully on
-a large, naturally undulating hillside. Do not revert to an earlier terrain.
+The single authoritative scene configuration remains
+`rgbgrid-medium/config.json`; do not create per-landform JSON files. Terrain now
+selects one named entry with `scene.terrain.active_landform`. The named
+`right_dip_rise` and `flat_landform` profiles contain landform geometry only,
+while the material, surface treatment, and five instanced detail layers remain
+shared siblings under `scene.terrain`. The active profile is currently
+`flat_landform`.
+
+The poppy detail layer now contains a reusable botanical plant with a bowed
+hairy stem, tropic side buds and foliage, seven color variants, thin textured
+transmissive petals, basal blotches, a spheroidal ovary, cylindrical stigma
+arms, and a dense ring of cylindrical filaments with vertical anthers. The
+isolated `poppy_preview.py`, `pistil_preview.py`, and
+`reproductive_preview.py` builders preserve diagnostic views of this work.
+
+Terrain-detail scattering now optionally understands the active camera. The
+poppy `camera_frustum` block is enabled with a 2% frame margin and a conservative
+local bounding radius of `0.95`. When poppies are enabled, `count: 2600` now
+means 2,600 complete instances accepted inside the reduced camera frustum,
+rather than 2,600 placements scattered across the whole terrain rectangle.
+This constraint does not perform terrain-occlusion testing.
+
+The last render before the frustum change is `022442`. Its archived PBRT did
+contain 2,600 updated poppy instances, but only 793 instance origins fell inside
+the camera frustum. No render has yet been made with the new camera-constrained
+scatter.
+
+The current active configuration uses the square camera at eye
+`[310, 165, 390]`, looking at `[5, 100, -5]`, with a 55-degree field of view.
+Grass is enabled as 3.4 million seven-blade tufts with blade height `[8, 45]`.
+Poppies are enabled at 2,600 instances with randomized scale `[16, 47]`. Both
+L-system tree entries and both space-colonization tree entries are disabled.
+
+## Prior accepted gully scene
+
+The preserved `right_dip_rise` profile supported one recursive fractal tree at
+the bottom of a gully on a large, naturally undulating hillside. Do not destroy
+or flatten this accepted profile while working on `flat_landform`.
 The terrain is deliberately asymmetrical: it preserves the left fold while a
 broad right-side dip falls and then rises again. Foreground grading retains a
 partial slope instead of flattening the land into a rotated rectangle.
@@ -65,9 +101,9 @@ value is `2.5`; this finally gives the tree convincing physical proportion to th
 nearby gully. The camera has been pulled as far back as practical inside the
 existing foreground bounds and intentionally crops part of the crown.
 
-The grass is one continuous placement layer with 3.4 million seven-blade tufts
-(23.8 million blades). Blade height is currently `[8, 14]` before instance scale,
-making an intentionally tall sward. Grass geometry now exposes height, width,
+That scene used one continuous placement layer with 3.4 million seven-blade
+tufts (23.8 million blades). Blade height was `[8, 14]` before instance scale,
+making an intentionally tall sward. Grass geometry exposes height, width,
 segments, lean, bend, taper, droop, tuft construction, tropism, and a smooth
 spatial tropism field in JSON. Preserve the named `030125` droop and `030551`
 tropism looks in `rgbgrid-medium/grass_presets.json`.
@@ -97,7 +133,7 @@ The grain/noise in the atmospheric renders is currently desirable. The user
 explicitly said it supports an artistic formalism; do not raise sample count or
 denoise it merely for technical cleanliness.
 
-Current relevant configuration values include:
+Relevant values for the preserved gully/composite state include:
 
 - camera eye: `[545, 194, 695]`
 - camera target: `[5, 230, -5]`

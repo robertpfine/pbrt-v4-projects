@@ -50,8 +50,7 @@ class RollingHillside:
         self.octaves = int(noise.get("octaves", 3))
         self.persistence = float(noise.get("persistence", 0.5))
         self.lacunarity = float(noise.get("lacunarity", 2.0))
-        landforms = config.get("landforms", {})
-        right_profile = landforms.get("right_dip_rise", {})
+        right_profile = config.get("right_profile", {})
         self.right_profile_enabled = bool(right_profile.get("enabled", False))
         self.right_profile_angle = math.radians(
             float(right_profile.get("direction_degrees", 322.0))
@@ -185,6 +184,12 @@ def create_terrain(config):
 
     if not config.get("enabled", False):
         return None
+    active_landform = config.get("active_landform")
+    if active_landform is not None:
+        landforms = config.get("landforms", {})
+        if active_landform not in landforms:
+            raise ValueError(f"unknown active landform: {active_landform}")
+        return RollingHillside(landforms[active_landform])
     terrain_type = config.get("type", "rolling_hillside")
     if terrain_type != "rolling_hillside":
         raise ValueError(f"unsupported terrain type: {terrain_type}")

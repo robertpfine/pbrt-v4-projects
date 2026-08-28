@@ -33,7 +33,7 @@ if REPOSITORY_ROOT not in sys.path:
 from phyllotaxis import area_dome_points, dome_height, vogel_points
 from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
-from pasture_texture import generate_pasture_maps
+from terrain_surface_texture import generate_terrain_surface_maps
 from terrain import create_terrain
 from terrain_details import alignment_rotation, scatter_points, spatial_direction_offset
 
@@ -1211,15 +1211,17 @@ def write_terrain(lines, terrain, config, project_root):
         '# Procedural terrain',
         'AttributeBegin',
     ]
-    if surface.get("enabled", False) and surface.get("mode") == "pasture_texture":
-        pasture = surface.get("pasture_texture", {})
+    if surface.get("enabled", False) and surface.get("mode") == "terrain_surface_texture":
+        surface_texture = surface.get("terrain_surface_texture", {})
         texture_directory = os.path.join(project_root, "scene_files", "textures")
-        albedo_path, bump_path = generate_pasture_maps(pasture, texture_directory)
+        albedo_path, bump_path = generate_terrain_surface_maps(
+            surface_texture, texture_directory
+        )
         albedo_relative = os.path.relpath(albedo_path, project_root)
         bump_relative = os.path.relpath(bump_path, project_root)
-        bump_scale = float(pasture.get("bump_scale", 0.012))
+        bump_scale = float(surface_texture.get("bump_scale", 0.012))
         lines += [
-            '    Texture "terrain_pasture_albedo" "spectrum" "imagemap"',
+            '    Texture "terrain_surface_albedo" "spectrum" "imagemap"',
             f'        "string filename" [ "{albedo_relative}" ]',
             '        "string encoding" [ "sRGB" ]',
             '        "string wrap" [ "repeat" ]',
@@ -1227,22 +1229,22 @@ def write_terrain(lines, terrain, config, project_root):
         ]
         if bump_scale > 0.0:
             lines += [
-                '    Texture "terrain_pasture_bump_raw" "float" "imagemap"',
+                '    Texture "terrain_surface_bump_raw" "float" "imagemap"',
                 f'        "string filename" [ "{bump_relative}" ]',
                 '        "string encoding" [ "linear" ]',
                 '        "string wrap" [ "repeat" ]',
                 '        "string filter" [ "ewa" ]',
-                '    Texture "terrain_pasture_bump" "float" "scale"',
-                '        "texture tex" [ "terrain_pasture_bump_raw" ]',
+                '    Texture "terrain_surface_bump" "float" "scale"',
+                '        "texture tex" [ "terrain_surface_bump_raw" ]',
                 f'        "float scale" [ {bump_scale} ]',
                 '    Material "diffuse"',
-                '        "texture reflectance" [ "terrain_pasture_albedo" ]',
-                '        "texture displacement" [ "terrain_pasture_bump" ]',
+                '        "texture reflectance" [ "terrain_surface_albedo" ]',
+                '        "texture displacement" [ "terrain_surface_bump" ]',
             ]
         else:
             lines += [
                 '    Material "diffuse"',
-                '        "texture reflectance" [ "terrain_pasture_albedo" ]',
+                '        "texture reflectance" [ "terrain_surface_albedo" ]',
             ]
     elif surface.get("enabled", False):
         dark = surface.get("dark_reflectance", [v * 0.72 for v in reflectance])
@@ -1301,12 +1303,12 @@ def write_terrain(lines, terrain, config, project_root):
                 f'        "float scale" [ {fiber_strength} ]',
                 '    Texture "terrain_fiber" "spectrum" "constant"',
                 f'        "rgb value" [ {fiber[0]} {fiber[1]} {fiber[2]} ]',
-                '    Texture "terrain_pasture_color" "spectrum" "mix"',
+                '    Texture "terrain_surface_color" "spectrum" "mix"',
                 '        "texture tex1" [ "terrain_color" ]',
                 '        "texture tex2" [ "terrain_fiber" ]',
                 '        "texture amount" [ "terrain_fiber_amount" ]',
             ]
-            terrain_color = "terrain_pasture_color"
+            terrain_color = "terrain_surface_color"
         else:
             terrain_color = "terrain_color"
         lines += [
@@ -1474,17 +1476,40 @@ def _fern_mesh():
     return points, indices
 
 
-def _poppy_mesh(variant=0):
+def _poppy_mesh(variant=0, config=None):
     """Build a field poppy as an overlapping bowl with a detailed center."""
 
+    config = config or {}
+    tropism = config.get("tropism", {})
+    main_tropism = tropism.get("main_stem", {})
+    bud_tropism = tropism.get("emerging_buds", {})
+    foliage_tropism = tropism.get("foliage", {})
     rng = random.Random(27103 + 613 * variant)
     stem_points, stem_indices = [], []
-    petal_points, petal_indices, petal_rim_indices, petal_normals = [], [], [], []
-    stamen_points, stamen_indices = [], []
-    capsule_points, capsule_indices = [], []
-    stem_top = 0.89
-    lean_x = rng.uniform(-0.024, 0.024)
-    lean_z = rng.uniform(-0.024, 0.024)
+    foliage_points, foliage_indices = [], []
+    bud_points, bud_indices = [], []
+    petal_points, petal_indices, petal_base_indices, petal_rim_indices, petal_normals = [], [], [], [], []
+    receptacle_points, receptacle_indices = [], []
+    filament_points, filament_indices = [], []
+    anther_points, anther_indices = [], []
+    capsule_points, capsule_indices, capsule_normals = [], [], []
+    stigma_indices = []
+    stigma_tube_points, stigma_tube_indices = [], []
+    stem_top = float(main_tropism.get("height", 0.765))
+    main_direction = math.radians(float(main_tropism.get("direction_degrees", 32.0)))
+    main_bend = float(main_tropism.get("bend", 0.145))
+    lateral_sway = float(main_tropism.get("lateral_sway", 0.045))
+    lean_x = main_bend * math.cos(main_direction)
+    lean_z = main_bend * math.sin(main_direction)
+
+    def stem_center(t):
+        sweep = main_bend * t ** 1.55
+        cross = lateral_sway * math.sin(math.pi * t) * math.sin(1.7 * math.pi * t)
+        return (
+            math.cos(main_direction) * sweep - math.sin(main_direction) * cross,
+            stem_top * t,
+            math.sin(main_direction) * sweep + math.cos(main_direction) * cross,
+        )
 
     # A segmented, gently bowed stem with small outward hairs.
     stem_segments = 10
@@ -1493,8 +1518,7 @@ def _poppy_mesh(variant=0):
         base = len(stem_points)
         for segment in range(stem_segments + 1):
             t = segment / stem_segments
-            cx = lean_x * t * t
-            cz = lean_z * t * t
+            cx, _, cz = stem_center(t)
             width = half_width * (1.0 - 0.25 * t)
             if facing == 0:
                 stem_points += [(cx - width, stem_top * t, cz),
@@ -1509,7 +1533,7 @@ def _poppy_mesh(variant=0):
     for hair in range(22):
         t = 0.08 + 0.80 * hair / 21.0
         angle = 2.39996 * hair + 0.4 * variant
-        cx, cy, cz = lean_x * t * t, stem_top * t, lean_z * t * t
+        cx, cy, cz = stem_center(t)
         radial = 0.0032
         length = 0.010 + 0.003 * (hair % 3)
         base = len(stem_points)
@@ -1521,6 +1545,97 @@ def _poppy_mesh(variant=0):
              cz + radial * math.sin(angle + 0.45)),
         ]
         stem_indices += [base, base + 1, base + 2, base + 2, base + 1, base]
+
+    # Strongly nodding side stems carry emerging buds.
+    bud_count = int(bud_tropism.get("count", 2))
+    bud_droop = float(bud_tropism.get("droop", 0.30))
+    bud_reach = float(bud_tropism.get("reach", 0.28))
+    bud_direction = math.radians(float(bud_tropism.get("direction_degrees", 125.0)))
+    for bud_index in range(bud_count):
+        attach_t = 0.34 + 0.16 * bud_index
+        start_x, start_y, start_z = stem_center(attach_t)
+        angle = bud_direction + bud_index * math.pi
+        direction_x, direction_z = math.cos(angle), math.sin(angle)
+        side_x, side_z = -direction_z, direction_x
+        branch_base = len(stem_points)
+        branch_segments = 12
+        for segment in range(branch_segments + 1):
+            t = segment / branch_segments
+            horizontal = bud_reach * (0.35 * t + 0.65 * t * t)
+            cx = start_x + direction_x * horizontal
+            cz = start_z + direction_z * horizontal
+            cy = start_y + 0.36 * t - bud_droop * t ** 3
+            width = 0.0050 * (1.0 - 0.30 * t)
+            stem_points += [
+                (cx - side_x * width, cy, cz - side_z * width),
+                (cx + side_x * width, cy, cz + side_z * width),
+            ]
+        for segment in range(branch_segments):
+            a = branch_base + 2 * segment
+            b, c, d = a + 1, a + 2, a + 3
+            stem_indices += [a, b, c, b, d, c, c, b, a, c, d, b]
+        end_x = start_x + direction_x * bud_reach
+        end_z = start_z + direction_z * bud_reach
+        end_y = start_y + 0.36 - bud_droop
+        rings, segments = 6, 16
+        base = len(bud_points)
+        for ring in range(rings + 1):
+            latitude = math.pi * ring / rings
+            profile = math.sin(latitude) ** 0.72
+            for segment in range(segments):
+                theta = 2.0 * math.pi * segment / segments
+                radius = 0.020 * profile
+                bud_points.append((end_x + radius * math.cos(theta),
+                                   end_y + 0.038 * math.cos(latitude),
+                                   end_z + radius * math.sin(theta)))
+        for ring in range(rings):
+            for segment in range(segments):
+                a = base + ring * segments + segment
+                b = base + ring * segments + (segment + 1) % segments
+                c, d = a + segments, b + segments
+                bud_indices += [a, c, b, b, c, d]
+
+    # Alternating pinnately lobed leaves follow the bowed lower stem.
+    foliage_direction = math.radians(float(
+        foliage_tropism.get("direction_degrees", 205.0)
+    ))
+    foliage_spread = float(foliage_tropism.get("spread_degrees", 115.0))
+    foliage_droop = float(foliage_tropism.get("droop", 0.52))
+    for leaf_index, attach_t in enumerate(
+            (0.08, 0.12, 0.18, 0.25, 0.33, 0.42, 0.52, 0.63)):
+        alternating = -1.0 if leaf_index % 2 else 1.0
+        angle = (foliage_direction + alternating * math.radians(foliage_spread) *
+                 rng.uniform(0.28, 0.62) + rng.uniform(-0.18, 0.18))
+        direction_x, direction_z = math.cos(angle), math.sin(angle)
+        side_x, side_z = -direction_z, direction_x
+        length = rng.uniform(0.18, 0.28) * (1.0 - 0.025 * leaf_index)
+        max_width = rng.uniform(0.038, 0.058)
+        stem_x, stem_y, stem_z = stem_center(attach_t)
+        base = len(foliage_points)
+        leaf_steps = 18
+        for step in range(leaf_steps + 1):
+            t = step / leaf_steps
+            center_x = stem_x + direction_x * length * t
+            center_z = stem_z + direction_z * length * t
+            center_y = stem_y + length * (
+                0.34 * math.sin(math.pi * t) - foliage_droop * t ** 1.45
+            )
+            envelope = math.sin(math.pi * t) ** 0.65
+            lobes = 0.40 + 0.60 * (0.5 + 0.5 * math.cos(
+                8.0 * math.pi * t + 0.7 * leaf_index
+            ))
+            width = max_width * envelope * lobes
+            curl = 0.004 * math.sin(3.0 * math.pi * t + leaf_index)
+            foliage_points += [
+                (center_x - side_x * width, center_y + curl,
+                 center_z - side_z * width),
+                (center_x + side_x * width, center_y - curl,
+                 center_z + side_z * width),
+            ]
+        for step in range(leaf_steps):
+            a = base + 2 * step
+            b, c, d = a + 1, a + 2, a + 3
+            foliage_indices += [a, c, b, b, c, d, b, c, a, d, c, b]
 
     # Four broad petals in two overlapping pairs form a continuous asymmetric bowl.
     radial_steps, lateral_steps = 34, 96
@@ -1579,7 +1694,10 @@ def _poppy_mesh(variant=0):
                 a = base + row * stride + column
                 b, c, d = a + 1, a + stride, a + stride + 1
                 triangles = [a, c, b, b, c, d, b, c, a, d, c, b]
-                if row >= radial_steps - 4:
+                column_center = 2.0 * (column + 0.5) / lateral_steps - 1.0
+                if row < 7 and abs(column_center) < 0.42:
+                    petal_base_indices += triangles
+                elif row >= radial_steps - 4:
                     petal_rim_indices += triangles
                 else:
                     petal_indices += triangles
@@ -1603,79 +1721,203 @@ def _poppy_mesh(variant=0):
                     normal = tuple(-value for value in normal)
                 petal_normals.append(normal)
 
-    # A small dark receptacle closes the flower base beneath the stamens.
+    # A small dark receptacle closes the flower base beneath the organs.
     center_y = bloom_y + 0.018
     receptacle_segments = 24
-    stamen_points.append((lean_x, center_y - 0.003, lean_z))
+    receptacle_points.append((lean_x, center_y - 0.003, lean_z))
     for segment in range(receptacle_segments):
         theta = 2.0 * math.pi * segment / receptacle_segments
-        stamen_points.append((lean_x + 0.015 * math.cos(theta), center_y,
-                              lean_z + 0.015 * math.sin(theta)))
+        receptacle_points.append((lean_x + 0.017 * math.cos(theta), center_y,
+                                  lean_z + 0.017 * math.sin(theta)))
     for segment in range(receptacle_segments):
         a = 1 + segment
         b = 1 + (segment + 1) % receptacle_segments
-        stamen_indices += [0, a, b, b, a, 0]
+        receptacle_indices += [0, a, b, b, a, 0]
 
-    # Curved stamens rise as a clustered ring rather than lying down as spokes.
-    for stamen in range(28):
-        theta = 2.0 * math.pi * stamen / 28.0 + 0.11 * (stamen % 3)
-        inner_radius = 0.009
-        outer_radius = 0.019 + 0.002 * math.sin(5.0 * theta)
+    # Dense stamens follow a golden-angle spiral through an irregular annulus.
+    stamen_count = 2400
+    golden_angle = math.pi * (3.0 - math.sqrt(5.0))
+    for stamen in range(stamen_count):
+        theta = stamen * golden_angle + 0.19 * variant
+        fraction = (stamen + 0.5) / stamen_count
+        inner_radius = 0.0075 + 0.0243 * math.sqrt(fraction)
+        inner_radius *= 1.0 + 0.045 * math.sin(7.0 * theta)
+        outer_radius = inner_radius + 0.0025 + 0.0015 * math.sin(3.3 * theta) ** 2
+        height = 0.018 + 0.016 * (0.30 + 0.70 * math.sin(4.7 * theta) ** 2)
         tangent_x, tangent_z = -math.sin(theta), math.cos(theta)
-        width = 0.00075
-        base = len(stamen_points)
-        stamen_points += [
-            (lean_x + inner_radius * math.cos(theta) - width * tangent_x,
-             center_y, lean_z + inner_radius * math.sin(theta) - width * tangent_z),
-            (lean_x + inner_radius * math.cos(theta) + width * tangent_x,
-             center_y, lean_z + inner_radius * math.sin(theta) + width * tangent_z),
-            (lean_x + 0.82 * outer_radius * math.cos(theta) - width * tangent_x,
-             center_y + 0.014, lean_z + 0.82 * outer_radius * math.sin(theta) - width * tangent_z),
-            (lean_x + 0.82 * outer_radius * math.cos(theta) + width * tangent_x,
-             center_y + 0.014, lean_z + 0.82 * outer_radius * math.sin(theta) + width * tangent_z),
-            (lean_x + outer_radius * math.cos(theta) - 2.0 * width * tangent_x,
-             center_y + 0.010, lean_z + outer_radius * math.sin(theta) - 2.0 * width * tangent_z),
-            (lean_x + outer_radius * math.cos(theta) + 2.0 * width * tangent_x,
-             center_y + 0.010, lean_z + outer_radius * math.sin(theta) + 2.0 * width * tangent_z),
-        ]
-        stamen_indices += [base, base + 2, base + 1,
-                           base + 1, base + 2, base + 3,
-                           base + 2, base + 4, base + 3,
-                           base + 3, base + 4, base + 5,
-                           base + 1, base + 2, base,
-                           base + 3, base + 2, base + 1,
-                           base + 3, base + 4, base + 2,
-                           base + 5, base + 4, base + 3]
+        radial_x, radial_z = math.cos(theta), math.sin(theta)
+        filament_radius = 0.00062
+        base = len(filament_points)
+        filament_segments = 5
+        filament_sides = 8
+        for segment in range(filament_segments + 1):
+            t = segment / filament_segments
+            radius = inner_radius + (outer_radius - inner_radius) * t
+            bend = 0.0008 * math.sin(math.pi * t + 2.3 * theta)
+            cx = lean_x + radius * math.cos(theta) + bend * tangent_x
+            cz = lean_z + radius * math.sin(theta) + bend * tangent_z
+            cy = center_y + height * t
+            for side in range(filament_sides):
+                phi = 2.0 * math.pi * side / filament_sides
+                horizontal = filament_radius * math.cos(phi)
+                vertical = filament_radius * math.sin(phi)
+                filament_points.append((
+                    cx + horizontal * tangent_x,
+                    cy + vertical,
+                    cz + horizontal * tangent_z,
+                ))
+        for segment in range(filament_segments):
+            for side in range(filament_sides):
+                a = base + segment * filament_sides + side
+                b = base + segment * filament_sides + (side + 1) % filament_sides
+                c, d = a + filament_sides, b + filament_sides
+                filament_indices += [a, c, b, b, c, d]
 
-    # A small vertically ribbed seed capsule at the center of the stamen ring.
-    capsule_rings, capsule_segments = 6, 18
-    capsule_center_y = center_y + 0.014
+        # Each filament terminates in a vertically elongated anther whose long
+        # axis continues the filament rather than lying across it.
+        tip_x = lean_x + outer_radius * math.cos(theta)
+        tip_z = lean_z + outer_radius * math.sin(theta)
+        tip_y = center_y + height
+        base = len(anther_points)
+        anther_rings, anther_segments = 5, 8
+        for ring in range(anther_rings + 1):
+            latitude = math.pi * ring / anther_rings
+            for segment in range(anther_segments):
+                longitude = 2.0 * math.pi * segment / anther_segments
+                radial_offset = 0.00082 * math.sin(latitude) * math.cos(longitude)
+                tangent_offset = 0.00082 * math.sin(latitude) * math.sin(longitude)
+                vertical = 0.00275 * math.cos(latitude)
+                anther_points.append((
+                    tip_x + radial_offset * radial_x + tangent_offset * tangent_x,
+                    tip_y + vertical,
+                    tip_z + radial_offset * radial_z + tangent_offset * tangent_z,
+                ))
+        for ring in range(anther_rings):
+            for segment in range(anther_segments):
+                a = base + ring * anther_segments + segment
+                b = base + ring * anther_segments + (segment + 1) % anther_segments
+                c, d = a + anther_segments, b + anther_segments
+                anther_indices += [a, c, b, b, c, d]
+
+    # The pistil is one continuous polar surface.  Its upper ovary transitions
+    # directly into a lobed, papillate stigma rather than carrying an added decal.
+    capsule_rings, capsule_segments = 28, 144
+    capsule_center_y = center_y + 0.017
+    stigma_boundary = 0.82
+    stigma_faces = []
+    ovary_faces = []
     for ring in range(capsule_rings + 1):
-        latitude = math.pi * ring / capsule_rings
+        polar = math.pi * ring / capsule_rings
         for segment in range(capsule_segments):
             theta = 2.0 * math.pi * segment / capsule_segments
-            rib = 1.0 + 0.10 * math.cos(9.0 * theta)
-            radius = 0.0078 * math.sin(latitude) * rib
-            capsule_points.append((lean_x + radius * math.cos(theta),
-                                   capsule_center_y + 0.0105 * math.cos(latitude),
-                                   lean_z + radius * math.sin(theta)))
+            # The cylindrical stigma experiment requires a smooth ovary below
+            # the tubes; retaining the former raised ridges causes intersections.
+            rib = 1.0
+            radial = 0.0122 * math.sin(polar) ** 0.84 * rib
+            height = capsule_center_y + 0.0172 * math.cos(polar)
+            capsule_points.append((lean_x + radial * math.cos(theta), height,
+                                   lean_z + radial * math.sin(theta)))
     for ring in range(capsule_rings):
+        polar_mid = math.pi * (ring + 0.5) / capsule_rings
         for segment in range(capsule_segments):
+            theta_mid = 2.0 * math.pi * (segment + 0.5) / capsule_segments
             a = ring * capsule_segments + segment
             b = ring * capsule_segments + (segment + 1) % capsule_segments
             c, d = a + capsule_segments, b + capsule_segments
-            capsule_indices += [a, c, b, b, c, d]
+            face = [a, c, b, b, c, d]
+            arm = max(0.0, math.cos(16.0 * theta_mid)) ** 3.2
+            rounded_extent = 0.69 + 0.13 * math.sqrt(arm)
+            if polar_mid < 0.155 or (polar_mid < rounded_extent and arm > 0.14):
+                stigma_faces += face
+            else:
+                ovary_faces += face
+    # The tube experiment replaces the colored surface regions while retaining
+    # their subtle relief beneath the fused arms.
+    capsule_indices = ovary_faces + stigma_faces
+    stigma_indices = []
+
+    # Recompute smooth normals from the actually displaced surface so the
+    # stigmatic ridges retain their three-dimensional relief under diffuse light.
+    accumulated = [[0.0, 0.0, 0.0] for _ in capsule_points]
+    all_faces = ovary_faces + stigma_faces
+    for offset in range(0, len(all_faces), 3):
+        ia, ib, ic = all_faces[offset:offset + 3]
+        a, b, c = capsule_points[ia], capsule_points[ib], capsule_points[ic]
+        ab = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+        ac = (c[0] - a[0], c[1] - a[1], c[2] - a[2])
+        face_normal = (
+            ab[1] * ac[2] - ab[2] * ac[1],
+            ab[2] * ac[0] - ab[0] * ac[2],
+            ab[0] * ac[1] - ab[1] * ac[0],
+        )
+        for index in (ia, ib, ic):
+            accumulated[index][0] += face_normal[0]
+            accumulated[index][1] += face_normal[1]
+            accumulated[index][2] += face_normal[2]
+    for normal in accumulated:
+        magnitude = math.sqrt(sum(value * value for value in normal)) or 1.0
+        capsule_normals.append(tuple(value / magnitude for value in normal))
+
+    # Sixteen curved tubes follow the ovary surface.  Their tapered end rings
+    # form rounded tips, while their first rings overlap densely at the pole.
+    stigma_arm_count = 16
+    stigma_path_segments = 22
+    stigma_tube_sides = 10
+    stigma_radius = 0.00082
+    for arm_index in range(stigma_arm_count):
+        theta = 2.0 * math.pi * arm_index / stigma_arm_count
+        base = len(stigma_tube_points)
+        for path_index in range(stigma_path_segments + 1):
+            t = path_index / stigma_path_segments
+            polar = -0.10 + 0.90 * t
+            sine_polar = math.sin(polar)
+            radial = 0.0122 * math.copysign(abs(sine_polar) ** 0.84,
+                                            sine_polar)
+            surface_y = capsule_center_y + 0.0172 * math.cos(polar)
+            normal = (math.sin(polar) * math.cos(theta), math.cos(polar),
+                      math.sin(polar) * math.sin(theta))
+            azimuth = (-math.sin(theta), 0.0, math.cos(theta))
+            end_rounding = min(1.0,
+                               (stigma_path_segments - path_index) / 2.5)
+            local_radius = stigma_radius * math.sqrt(max(0.0, end_rounding))
+            center = (
+                lean_x + radial * math.cos(theta) + normal[0] * stigma_radius * 0.32,
+                surface_y + normal[1] * stigma_radius * 0.32,
+                lean_z + radial * math.sin(theta) + normal[2] * stigma_radius * 0.32,
+            )
+            for side in range(stigma_tube_sides):
+                phi = 2.0 * math.pi * side / stigma_tube_sides
+                stigma_tube_points.append((
+                    center[0] + local_radius * (math.cos(phi) * normal[0] +
+                                                math.sin(phi) * azimuth[0]),
+                    center[1] + local_radius * math.cos(phi) * normal[1],
+                    center[2] + local_radius * (math.cos(phi) * normal[2] +
+                                                math.sin(phi) * azimuth[2]),
+                ))
+        for path_index in range(stigma_path_segments):
+            for side in range(stigma_tube_sides):
+                a = base + path_index * stigma_tube_sides + side
+                b = base + path_index * stigma_tube_sides + (side + 1) % stigma_tube_sides
+                c, d = a + stigma_tube_sides, b + stigma_tube_sides
+                stigma_tube_indices += [a, c, b, b, c, d]
+
 
     return {
         "stem": (stem_points, stem_indices),
+        "foliage": (foliage_points, foliage_indices),
+        "buds": (bud_points, bud_indices),
         "petals": (petal_points, petal_indices, petal_normals),
+        "petal_bases": (petal_points, petal_base_indices, petal_normals),
         "petal_rims": (petal_points, petal_rim_indices, petal_normals),
-        "stamens": (stamen_points, stamen_indices),
-        "capsule": (capsule_points, capsule_indices),
+        "receptacle": (receptacle_points, receptacle_indices),
+        "filaments": (filament_points, filament_indices),
+        "anthers": (anther_points, anther_indices),
+        "capsule": (capsule_points, capsule_indices, capsule_normals),
+        "stigma": (stigma_tube_points, stigma_tube_indices),
     }
 
 
-def write_terrain_details(lines, terrain, config):
+def write_terrain_details(lines, terrain, config, camera=None, film=None):
     """Write reusable ground-detail objects and terrain-aware instances."""
 
     if terrain is None:
@@ -1725,14 +1967,31 @@ def write_terrain_details(lines, terrain, config):
                 if mesh_factory is _grass_mesh:
                     points, indices = mesh_factory(variant, layer)
                 elif mesh_factory is _poppy_mesh:
-                    parts = mesh_factory(variant)
+                    parts = mesh_factory(variant, layer)
                     stem_color = layer.get("stem_reflectance", [0.035, 0.16, 0.025])
-                    center_color = layer.get("center_reflectance", [0.012, 0.006, 0.004])
-                    capsule_color = layer.get("capsule_reflectance", [0.34, 0.42, 0.12])
+                    foliage_color = layer.get("foliage_reflectance", [0.09, 0.22, 0.07])
+                    center_colors = layer.get("center_reflectance_variants", [
+                        layer.get("center_reflectance", [0.012, 0.006, 0.004])
+                    ])
+                    capsule_colors = layer.get("capsule_reflectance_variants", [
+                        layer.get("capsule_reflectance", [0.34, 0.42, 0.12])
+                    ])
+                    anther_color = layer.get("anther_reflectance", [0.055, 0.010, 0.025])
+                    stigma_color = layer.get("stigma_reflectance", [0.52, 0.53, 0.18])
+                    blotch_flags = layer.get("basal_blotch_variants", [True])
+                    blotch_enabled = bool(blotch_flags[variant % len(blotch_flags)])
+                    blotch_color = layer.get("basal_blotch_reflectance", [0.012, 0.003, 0.009])
+                    center_color = center_colors[variant % len(center_colors)]
+                    capsule_color = capsule_colors[variant % len(capsule_colors)]
                     lines.append(
                         f'    Material "diffuse" "rgb reflectance" [ {stem_color[0]} {stem_color[1]} {stem_color[2]} ]'
                     )
                     _write_detail_mesh(lines, *parts["stem"])
+                    lines.append(
+                        f'    Material "diffuse" "rgb reflectance" [ {foliage_color[0]} {foliage_color[1]} {foliage_color[2]} ]'
+                    )
+                    _write_detail_mesh(lines, *parts["foliage"])
+                    _write_detail_mesh(lines, *parts["buds"])
                     transmission = layer.get("petal_transmittance", [0.30, 0.018, 0.002])
                     rim_transmission = layer.get("rim_transmittance", [0.42, 0.028, 0.003])
                     dark = [0.55 * value for value in color]
@@ -1757,6 +2016,11 @@ def write_terrain_details(lines, terrain, config):
                         f'"rgb transmittance" [ {transmission[0]} {transmission[1]} {transmission[2]} ]',
                     ]
                     _write_detail_mesh(lines, *parts["petals"])
+                    if blotch_enabled:
+                        lines.append(
+                            f'    Material "diffuse" "rgb reflectance" [ {blotch_color[0]} {blotch_color[1]} {blotch_color[2]} ]'
+                        )
+                    _write_detail_mesh(lines, *parts["petal_bases"])
                     lines.append(
                         f'    Material "diffusetransmission" "texture reflectance" [ "{texture_prefix}_color" ] '
                         f'"rgb transmittance" [ {rim_transmission[0]} {rim_transmission[1]} {rim_transmission[2]} ]'
@@ -1765,11 +2029,20 @@ def write_terrain_details(lines, terrain, config):
                     lines.append(
                         f'    Material "diffuse" "rgb reflectance" [ {center_color[0]} {center_color[1]} {center_color[2]} ]'
                     )
-                    _write_detail_mesh(lines, *parts["stamens"])
+                    _write_detail_mesh(lines, *parts["receptacle"])
+                    _write_detail_mesh(lines, *parts["filaments"])
+                    lines.append(
+                        f'    Material "diffuse" "rgb reflectance" [ {anther_color[0]} {anther_color[1]} {anther_color[2]} ]'
+                    )
+                    _write_detail_mesh(lines, *parts["anthers"])
                     lines.append(
                         f'    Material "diffuse" "rgb reflectance" [ {capsule_color[0]} {capsule_color[1]} {capsule_color[2]} ]'
                     )
                     _write_detail_mesh(lines, *parts["capsule"])
+                    lines.append(
+                        f'    Material "diffuse" "rgb reflectance" [ {stigma_color[0]} {stigma_color[1]} {stigma_color[2]} ]'
+                    )
+                    _write_detail_mesh(lines, *parts["stigma"])
                     points = indices = None
                 else:
                     points, indices = mesh_factory()
@@ -1777,7 +2050,13 @@ def write_terrain_details(lines, terrain, config):
                     _write_detail_mesh(lines, points, indices)
             lines += ['ObjectEnd', '']
 
-        points = scatter_points(terrain, layer, 1000 * (layer_index + 1))
+        points = scatter_points(
+            terrain,
+            layer,
+            1000 * (layer_index + 1),
+            camera=camera,
+            film=film,
+        )
         tropism = layer.get("blade", {}).get("tropism", {})
         tropism_enabled = bool(tropism.get("enabled", False))
         tropism_direction = float(tropism.get("direction_degrees", 0.0))
@@ -2286,7 +2565,13 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []))
     write_terrain(lines, terrain, terrain_config, project_root)
-    write_terrain_details(lines, terrain, terrain_config)
+    write_terrain_details(
+        lines,
+        terrain,
+        terrain_config,
+        camera=scene.get("camera"),
+        film=scene.get("film"),
+    )
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
     write_lsystem_trees(lines, scene.get("lsystem_trees", []), terrain)
 
