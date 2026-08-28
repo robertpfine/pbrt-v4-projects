@@ -212,6 +212,18 @@ include:
 
 Research PDFs are local reference material and should not be pushed to GitHub.
 
+### Continuity and handoff delivery
+
+Every checkpoint that updates a continuity or handoff record must complete both
+delivery steps before it is reported as finished:
+
+1. Commit the updated record and push the active branch to GitHub.
+2. Copy the current continuity/handoff record to the Google Drive session archive
+   at `gdrive:wipImages/pbrt-v4/SessionArchive/`.
+
+Confirm the Git commit, branch, and remotely stored Google Drive path to the user.
+A GitHub push alone does not complete continuity delivery.
+
 ## Working preferences and safeguards
 
 - Show render progress in a visible terminal.
