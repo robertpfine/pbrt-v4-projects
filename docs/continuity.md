@@ -24,6 +24,7 @@ and PBRT progress.
   - `4fa4e9c` (`Add spatial grass tropism and cloud shaft controls`)
   - `95d8b44` (`Add PBRT-v4 Art Studio proof of concept`)
   - `5cb45e8` (`Refine poppy framing and Art Studio render feedback`)
+  - `6c796b4` (`Establish landscape and sky module boundaries`)
 - Primary working scene: `scene_workspace/config.json`
 - Renderer: PBRT-v4 with CUDA/GPU rendering
 - Normal pipeline entry point: `./render_pipeline.sh`
