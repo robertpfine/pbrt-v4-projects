@@ -391,27 +391,35 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-1. Resume with the distant-hill formation system. Implement world-space
-   triangular terrain bands with explicitly designed ridge peaks and
-   front-to-back cross-sections. Perlin noise is agreed only as secondary
-   irregularity; it must not generate the primary silhouette. Begin with three
-   strongly differentiated depth layers. See `docs/scene-module-boundaries.md`.
-2. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
+Step 4 has three ordered elements:
+
+1. **Distant hills.** Implement world-space triangular terrain bands with
+   explicitly designed ridge peaks and front-to-back cross-sections. Perlin
+   noise is agreed only as secondary irregularity; it must not generate the
+   primary silhouette. Begin with three strongly differentiated depth layers.
+2. **Clouds.** Implement bounded volumetric formations made from designed
+   envelopes, blended lobes, vertical profiles, and subordinate 3D edge
+   erosion. Keep cloud shape, optical properties, atmosphere, and renderer
+   backend conceptually separate.
+3. **Water.** Establish `scene.landscape.water` as a first-class module and
+   develop water bodies, wave formation, optical behavior, and the interaction
+   between water and ground required for shore and ocean scenes. Waves are
+   subordinate behavior within water, not a peer top-level module.
+
+Additional continuity requirements:
+
+4. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
    homes of the accepted ground system and neutral infinite sky respectively.
    Do not create another scene JSON or change accepted rendered behavior.
-3. After the distant hills, implement clouds through `scene.sky.clouds` as
-   bounded volumetric formations made from designed envelopes, blended lobes,
-   vertical profiles, and subordinate 3D edge erosion. Keep cloud shape,
-   optical properties, atmosphere, and renderer backend conceptually separate.
-4. Continue extending the Python model and Qt inspector in response to artistic
+5. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
-5. Keep renderer implementations subordinate to artistic categories; in
+6. Keep renderer implementations subordinate to artistic categories; in
    particular, never generalize the specific PBRT `rgbgrid` medium into an
    atmosphere name.
-6. Preserve the accepted `053110` poppy baseline and the established grass,
+7. Preserve the accepted `053110` poppy baseline and the established grass,
    tree, terrain, and atmospheric work. Historical archive filenames remain
    unchanged and reproducible.
-7. Preserve readable and raw conversation archives in the gitignored
+8. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
 ## Conversation preservation

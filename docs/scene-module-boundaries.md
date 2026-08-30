@@ -51,6 +51,21 @@ darker and more articulated range, a broader middle range, and a simpler paler
 far range. The implementation belongs in a dedicated `distant_hills.py` module
 and should remain computationally small compared with the grass system.
 
+### Planned water boundary
+
+Water is the third ordered element of Step 4, after distant hills and clouds.
+It is a first-class landscape system on the same architectural level as distant
+hills, not a ground material or generic geometry entry. Its live boundary will
+be `scene.landscape.water`; that key is not added until the third element begins.
+
+The water module will encompass water bodies, surface geometry, wave formation,
+optical behavior, and shoreline interaction. Waves remain subordinate behavior
+within water. Shore scenes combine ground and water, while open-ocean scenes may
+make water the dominant visible landscape and leave ground as seabed or outside
+the frame. Candidate wave algorithms—including designed directional waves,
+spectral ocean waves, capillary detail, and shore-related deformation—remain
+implementation choices to be discussed before that element begins.
+
 The older tree and phyllotaxis arrays remain at their established scene paths
 for now. Moving them would prematurely decide the deferred relationship among
 reusable source objects, scene instances, and processes such as L-systems and
