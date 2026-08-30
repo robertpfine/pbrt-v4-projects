@@ -321,6 +321,14 @@ class Inspector(QtWidgets.QWidget):
         self._build_poppy_page()
         self._build_tree_page()
         self._module_boundary(
+            "water",
+            "Water",
+            ("scene", "landscape", "water"),
+            "The first-class landscape boundary is established and disabled. "
+            "Water bodies, waves, optics, and shoreline controls are the third "
+            "ordered element of Step 4.",
+        )
+        self._module_boundary(
             "distant_hills",
             "Distant Hills",
             ("scene", "landscape", "distant_hills"),
@@ -648,6 +656,7 @@ class StudioWindow(QtWidgets.QMainWindow):
             ("Grass", "grass", "landscape"),
             ("Flowers / Poppies", "poppies", "landscape"),
             ("Trees", "trees", "landscape"),
+            ("Water", "water", "landscape"),
             ("Distant Hills", "distant_hills", "landscape"),
             ("Sky", "sky", None),
             ("Clouds", "clouds", "sky"),

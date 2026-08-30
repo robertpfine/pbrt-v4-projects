@@ -176,6 +176,8 @@ module boundaries:
 
 - `scene.landscape.ground` contains the complete accepted ground system formerly
   stored at `scene.terrain`.
+- `scene.landscape.water` is present and disabled pending the third Step 4
+  implementation element: water bodies, waves, optics, and shoreline behavior.
 - `scene.landscape.distant_hills` is present and disabled pending its generator.
 - `scene.sky.background` contains the accepted neutral infinite environment
   formerly stored as the first entry in `scene.lights`.
@@ -401,10 +403,10 @@ Step 4 has three ordered elements:
    envelopes, blended lobes, vertical profiles, and subordinate 3D edge
    erosion. Keep cloud shape, optical properties, atmosphere, and renderer
    backend conceptually separate.
-3. **Water.** Establish `scene.landscape.water` as a first-class module and
-   develop water bodies, wave formation, optical behavior, and the interaction
-   between water and ground required for shore and ocean scenes. Waves are
-   subordinate behavior within water, not a peer top-level module.
+3. **Water.** Use the established `scene.landscape.water` boundary to develop
+   water bodies, wave formation, optical behavior, and the interaction between
+   water and ground required for shore and ocean scenes. Waves are subordinate
+   behavior within water, not a peer top-level module.
 
 Additional continuity requirements:
 

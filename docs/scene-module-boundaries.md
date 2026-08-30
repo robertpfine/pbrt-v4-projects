@@ -18,6 +18,7 @@ scene
 │   │       ├── litter
 │   │       ├── rocks
 │   │       └── undergrowth
+│   ├── water
 │   └── distant_hills
 └── sky
     ├── background
@@ -51,12 +52,13 @@ darker and more articulated range, a broader middle range, and a simpler paler
 far range. The implementation belongs in a dedicated `distant_hills.py` module
 and should remain computationally small compared with the grass system.
 
-### Planned water boundary
+### Water boundary
 
 Water is the third ordered element of Step 4, after distant hills and clouds.
 It is a first-class landscape system on the same architectural level as distant
-hills, not a ground material or generic geometry entry. Its live boundary will
-be `scene.landscape.water`; that key is not added until the third element begins.
+hills, not a ground material or generic geometry entry. Its live boundary is
+now established and disabled at `scene.landscape.water`; its generators and
+artistic controls remain the third implementation element.
 
 The water module will encompass water bodies, surface geometry, wave formation,
 optical behavior, and shoreline interaction. Waves remain subordinate behavior

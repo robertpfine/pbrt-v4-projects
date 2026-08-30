@@ -55,6 +55,9 @@ y(x,z) = base_height
       "undergrowth": { "enabled": true, "count": 140 }
     }
   },
+  "water": {
+    "enabled": false
+  },
   "distant_hills": {
     "enabled": false
   }

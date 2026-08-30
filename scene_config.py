@@ -222,6 +222,11 @@ class SceneConfig:
                 errors.append("landscape requires a distant_hills module")
             elif not isinstance(distant_hills.get("enabled", False), bool):
                 errors.append("distant_hills.enabled must be boolean")
+            water = landscape.get("water")
+            if not isinstance(water, dict):
+                errors.append("landscape requires a water module")
+            elif not isinstance(water.get("enabled", False), bool):
+                errors.append("water.enabled must be boolean")
         if ground is not None:
             active = ground.get("active_landform")
             landforms = ground.get("landforms")
@@ -309,6 +314,7 @@ class SceneConfig:
         grass = self.get(GROUND_PATH + ("details", "grass"))
         poppies = self.get(GROUND_PATH + ("details", "poppies"))
         distant_hills = self.get(("scene", "landscape", "distant_hills"))
+        water = self.get(("scene", "landscape", "water"))
         sky = self.get(SKY_PATH)
         grass_count = sum(
             int(layer.get("count", 0)) for layer in grass.get("layers", [])
@@ -320,6 +326,7 @@ class SceneConfig:
             f"Poppies: {'enabled' if poppies.get('enabled') else 'disabled'}, "
             f"{int(poppies.get('count', 0)):,} instances",
             f"Trees: {', '.join(enabled_trees) if enabled_trees else 'none'}",
+            f"Water: {'enabled' if water.get('enabled') else 'disabled'}",
             f"Distant hills: {'enabled' if distant_hills.get('enabled') else 'disabled'}",
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
             f"Clouds: {'enabled' if sky['clouds'].get('enabled') else 'disabled'}",

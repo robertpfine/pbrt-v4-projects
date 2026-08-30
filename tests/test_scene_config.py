@@ -27,6 +27,7 @@ class SceneConfigTests(unittest.TestCase):
           }
         }
       },
+      "water": { "enabled": false },
       "distant_hills": { "enabled": false }
     },
     "sky": {
@@ -103,6 +104,7 @@ class SceneConfigTests(unittest.TestCase):
         description = config.describe()
         self.assertIn("Landform: flat_landform", description)
         self.assertIn("Poppies:", description)
+        self.assertIn("Water: disabled", description)
         self.assertIn("Distant hills: disabled", description)
         self.assertIn("Sky background: enabled", description)
         self.assertIn("Clouds: disabled", description)
@@ -113,7 +115,10 @@ class SceneConfigTests(unittest.TestCase):
             (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
         )["scene"]
         self.assertNotIn("terrain", data)
-        self.assertEqual(set(data["landscape"]), {"ground", "distant_hills"})
+        self.assertEqual(
+            set(data["landscape"]),
+            {"ground", "water", "distant_hills"},
+        )
         self.assertEqual(set(data["sky"]), {"background", "clouds"})
         self.assertEqual(data["sky"]["background"]["type"], "infinite")
         self.assertTrue(all(light.get("type") != "infinite" for light in data["lights"]))

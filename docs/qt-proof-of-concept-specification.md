@@ -183,6 +183,7 @@ configuration model:
 
 ```text
 scene.landscape.ground
+scene.landscape.water
 scene.landscape.distant_hills
 scene.sky.background
 scene.sky.clouds

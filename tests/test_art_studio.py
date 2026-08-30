@@ -47,6 +47,7 @@ class ArtStudioTests(unittest.TestCase):
                 "grass",
                 "poppies",
                 "trees",
+                "water",
                 "distant_hills",
                 "sky",
                 "clouds",
