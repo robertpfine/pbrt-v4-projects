@@ -267,7 +267,10 @@ class Inspector(QtWidgets.QWidget):
         if isinstance(widget, QtWidgets.QCheckBox):
             widget.setChecked(bool(value))
         elif isinstance(widget, QtWidgets.QComboBox):
-            widget.setCurrentText(str(value))
+            if isinstance(value, int):
+                widget.setCurrentIndex(value)
+            else:
+                widget.setCurrentText(str(value))
         else:
             widget.setValue(value)
         del blocker
@@ -420,22 +423,39 @@ class Inspector(QtWidgets.QWidget):
         form = self._page(
             "poppies",
             "Flowers / Poppies",
-            "Count is the number of accepted instances inside the configured "
-            "camera-frustum margin when frustum placement is enabled.",
+            "Count is the number of selected placement references inside the "
+            "full camera frame. Choose whether the reference is the flower or "
+            "its root; plant geometry may be cropped at an edge.",
         )
         base = ("scene", "terrain", "details", "poppies")
         self._check(form, "Enabled", base + ("enabled",))
         self._integer(form, "Instances", base + ("count",))
         self._pair(form, "Scale", base + ("scale",), 0.0, 10_000.0, 3)
-        self._check(form, "Constrain to camera", base + ("camera_frustum", "enabled"))
-        self._number(
+        self._check(
             form,
-            "Frame margin",
-            base + ("camera_frustum", "frame_margin"),
-            0.0,
-            0.49,
-            4,
+            "Constrain placement to frame",
+            base + ("camera_frustum", "enabled"),
         )
+        reference_path = base + ("camera_frustum", "placement_reference")
+        reference = QtWidgets.QComboBox()
+        reference.setObjectName("poppy_placement_reference")
+        reference.addItem("Flower placement", "flower")
+        reference.addItem("Root placement", "root")
+
+        def set_reference(index: int) -> None:
+            value = reference.itemData(index)
+            if value is not None:
+                self._set(reference_path, value)
+
+        def refresh_reference() -> None:
+            value = str(self.config.get(reference_path, "root"))
+            index = reference.findData(value)
+            self._blocked(reference, max(0, index))
+
+        reference.currentIndexChanged.connect(set_reference)
+        form.addRow("Framing reference", reference)
+        self.refreshers.append(refresh_reference)
+        refresh_reference()
 
     def _build_tree_page(self) -> None:
         form = self._page(
@@ -580,10 +600,6 @@ class StudioWindow(QtWidgets.QMainWindow):
         self.log.setReadOnly(True)
         self.log.setMaximumBlockCount(100_000)
         self.log.setObjectName("renderLog")
-        self.progress_line = QtWidgets.QLabel()
-        self.progress_line.setObjectName("renderProgress")
-        self.progress_line.setTextFormat(QtCore.Qt.TextFormat.PlainText)
-        self.progress_line.setMinimumHeight(22)
         self._render_output_buffer = ""
         self.status_label = QtWidgets.QLabel()
 
@@ -655,7 +671,6 @@ class StudioWindow(QtWidgets.QMainWindow):
         log_layout = QtWidgets.QVBoxLayout(log_panel)
         log_layout.setContentsMargins(4, 2, 4, 4)
         log_layout.setSpacing(2)
-        log_layout.addWidget(self.progress_line)
         log_layout.addWidget(self.log, 1)
         log_dock.setWidget(log_panel)
         log_dock.setMinimumHeight(170)
@@ -768,7 +783,6 @@ class StudioWindow(QtWidgets.QMainWindow):
         self.log.appendPlainText("PBRT-v4 Art Studio render started")
         self.log.appendPlainText(f"Configuration: {self.config.path}")
         self._render_output_buffer = ""
-        self.progress_line.clear()
         self.render_process.setWorkingDirectory(str(ROOT))
         self.render_process.start(str(pipeline), [str(self.config.path)])
         self._update_status("Render running")
@@ -792,14 +806,7 @@ class StudioWindow(QtWidgets.QMainWindow):
             self._feed_render_output(output)
 
     def _feed_render_output(self, output: str) -> None:
-        """Render terminal output without expanding carriage-return progress.
-
-        PBRT redraws its progress indicator with ``\r``. A plain-text widget is
-        not a terminal emulator, so feeding those characters directly creates
-        many apparent progress lines. Complete newline-terminated messages go
-        into the persistent history; the unfinished or carriage-return line is
-        shown once in the dedicated live-progress label.
-        """
+        """Append complete terminal records to the persistent render log."""
         text = (self._render_output_buffer + output).replace("\r\n", "\n")
         self._render_output_buffer = ""
         segment_start = 0
@@ -807,21 +814,28 @@ class StudioWindow(QtWidgets.QMainWindow):
             if character not in "\r\n":
                 continue
             segment = text[segment_start:index]
-            if character == "\r":
-                self.progress_line.setText(segment)
-            else:
-                self.log.appendPlainText(segment)
-                self.progress_line.clear()
+            self._handle_render_line(segment)
             segment_start = index + 1
         self._render_output_buffer = text[segment_start:]
-        if self._render_output_buffer:
-            self.progress_line.setText(self._render_output_buffer)
+
+    def _handle_render_line(self, line: str) -> None:
+        marker = "ART_STUDIO_RENDER_READY="
+        if line.startswith(marker):
+            filename = Path(line[len(marker):])
+            if self.image.load(filename):
+                self.log.appendPlainText(f"Displayed local render: {filename.name}")
+                self._update_status("Local render complete; archive/sync continuing")
+            else:
+                self.log.appendPlainText(
+                    f"Local render completed but could not be displayed: {filename}"
+                )
+            return
+        self.log.appendPlainText(line)
 
     def _flush_render_output(self) -> None:
         if self._render_output_buffer:
-            self.log.appendPlainText(self._render_output_buffer)
+            self._handle_render_line(self._render_output_buffer)
             self._render_output_buffer = ""
-        self.progress_line.clear()
 
     def _render_finished(
         self,

@@ -253,9 +253,14 @@ class SceneConfig:
             ):
                 errors.append("poppies.scale must be an ascending pair")
             frustum = poppies.get("camera_frustum", {})
-            margin = frustum.get("frame_margin", 0.0)
-            if not isinstance(margin, (int, float)) or not 0 <= margin < 1:
-                errors.append("poppies camera frame margin must be in [0, 1)")
+            if not isinstance(frustum.get("enabled", False), bool):
+                errors.append("poppies visible-ground placement must be boolean")
+            placement_reference = frustum.get("placement_reference", "root")
+            if placement_reference not in {"root", "flower"}:
+                errors.append(
+                    "poppies.camera_frustum.placement_reference must be "
+                    "root or flower"
+                )
 
         grass = require(("scene", "terrain", "details", "grass"), dict)
         if grass is not None:

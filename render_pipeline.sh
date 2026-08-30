@@ -100,6 +100,10 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# The local image is complete at this point. PBRT-v4 Art Studio watches this
+# marker so it can display the image while archival and remote sync continue.
+echo "ART_STUDIO_RENDER_READY=${FINAL_BASE}.png"
+
 # --- 8. ARCHIVE REPRODUCIBILITY BUNDLE ---
 echo "Archiving reproducibility files..."
 cp "$SCENE_PATH"                    "${FINAL_BASE}.pbrt"

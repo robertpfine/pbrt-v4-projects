@@ -19,7 +19,10 @@ class SceneConfigTests(unittest.TestCase):
           "enabled": true,
           "count": 20,
           "scale": [1.0, 2.0],
-          "camera_frustum": { "enabled": true, "frame_margin": 0.02 }
+          "camera_frustum": {
+            "enabled": true,
+            "placement_reference": "flower"
+          }
         }
       }
     },
@@ -66,6 +69,18 @@ class SceneConfigTests(unittest.TestCase):
             path, source = self.make_config(directory)
             config = SceneConfig(path)
             config.set("scene.terrain.details.poppies.scale", [5.0, 1.0])
+            with self.assertRaises(SceneConfigError):
+                config.save()
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
+    def test_invalid_poppy_framing_reference_is_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set(
+                "scene.terrain.details.poppies.camera_frustum.placement_reference",
+                "whole_plant",
+            )
             with self.assertRaises(SceneConfigError):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)

@@ -66,8 +66,8 @@ def _normalize(vector, label):
     return tuple(component / length for component in vector)
 
 
-def _camera_frame(camera, film, frame_margin):
-    """Return an orthonormal camera frame and reduced frustum tangents."""
+def _camera_frame(camera, film):
+    """Return an orthonormal camera frame and full-image frustum tangents."""
 
     if camera is None:
         raise ValueError("camera-frustum scatter requires a camera configuration")
@@ -98,40 +98,74 @@ def _camera_frame(camera, film, frame_margin):
     fov = float(camera.get("fov", 90.0))
     if not 0.0 < fov < 180.0:
         raise ValueError("camera fov must be between 0 and 180 degrees")
-    if not 0.0 <= frame_margin < 1.0:
-        raise ValueError("camera_frustum.frame_margin must be in [0, 1)")
     film = film or {}
     x_resolution = float(film.get("x_resolution", 1.0))
     y_resolution = float(film.get("y_resolution", 1.0))
     if x_resolution <= 0.0 or y_resolution <= 0.0:
         raise ValueError("film resolution must be positive")
-    half_height = math.tan(math.radians(0.5 * fov)) * (1.0 - frame_margin)
+    half_height = math.tan(math.radians(0.5 * fov))
     half_width = half_height * x_resolution / y_resolution
     return eye, forward, right, up, half_width, half_height
 
 
-def _sphere_inside_camera_frustum(position, radius, frame):
-    """Return true only when a world-space sphere lies fully inside the view."""
+def _point_inside_camera_frustum(position, frame):
+    """Return true when a world-space placement point is inside the view."""
 
     eye, forward, right, up, half_width, half_height = frame
     offset = tuple(position[i] - eye[i] for i in range(3))
     depth = sum(offset[i] * forward[i] for i in range(3))
-    if depth <= radius:
+    if depth <= 0.0:
         return False
     horizontal = sum(offset[i] * right[i] for i in range(3))
     vertical = sum(offset[i] * up[i] for i in range(3))
 
-    # The distance from a sphere center to each perspective side plane must
-    # exceed its radius. This keeps the complete instance inside the frame.
     horizontal_clearance = depth * half_width - abs(horizontal)
     vertical_clearance = depth * half_height - abs(vertical)
+    return horizontal_clearance >= 0.0 and vertical_clearance >= 0.0
+
+
+def _rotate_axis_angle(vector, angle_degrees, axis):
+    """Rotate a vector with Rodrigues' formula."""
+
+    angle = math.radians(angle_degrees)
+    cosine = math.cos(angle)
+    sine = math.sin(angle)
+    x, y, z = vector
+    ax, ay, az = axis
+    dot = ax * x + ay * y + az * z
+    cross = (ay * z - az * y, az * x - ax * z, ax * y - ay * x)
     return (
-        horizontal_clearance >= radius * math.sqrt(1.0 + half_width ** 2)
-        and vertical_clearance >= radius * math.sqrt(1.0 + half_height ** 2)
+        x * cosine + cross[0] * sine + ax * dot * (1.0 - cosine),
+        y * cosine + cross[1] * sine + ay * dot * (1.0 - cosine),
+        z * cosine + cross[2] * sine + az * dot * (1.0 - cosine),
     )
 
 
-def scatter_points(terrain, config, seed_offset=0, camera=None, film=None):
+def _instance_anchor_position(point, local_anchor):
+    """Transform an object-space visibility anchor into world space."""
+
+    x = local_anchor[0] * point.scale * point.aspect[0]
+    y = local_anchor[1] * point.scale * point.aspect[1]
+    z = local_anchor[2] * point.scale * point.aspect[2]
+    direction = math.radians(point.rotation)
+    rotated = (
+        math.cos(direction) * x + math.sin(direction) * z,
+        y,
+        -math.sin(direction) * x + math.cos(direction) * z,
+    )
+    angle, axis = alignment_rotation(point.normal)
+    aligned = _rotate_axis_angle(rotated, angle, axis)
+    return tuple(point.position[i] + aligned[i] for i in range(3))
+
+
+def scatter_points(
+    terrain,
+    config,
+    seed_offset=0,
+    camera=None,
+    film=None,
+    visibility_anchor=None,
+):
     """Return deterministic placements accepted by region, slope, and patch masks."""
 
     if not config.get("enabled", False):
@@ -162,16 +196,9 @@ def scatter_points(terrain, config, seed_offset=0, camera=None, film=None):
     attraction_strength = float(attraction.get("strength", 0.0))
     camera_frustum = config.get("camera_frustum", {})
     constrain_to_camera = bool(camera_frustum.get("enabled", False))
-    local_bounds_radius = float(camera_frustum.get("bounds_radius", 0.0))
-    if local_bounds_radius < 0.0:
-        raise ValueError("camera_frustum.bounds_radius must not be negative")
     camera_frame = None
     if constrain_to_camera:
-        camera_frame = _camera_frame(
-            camera,
-            film,
-            float(camera_frustum.get("frame_margin", 0.0)),
-        )
+        camera_frame = _camera_frame(camera, film)
 
     result = []
     attempts = 0
@@ -207,19 +234,23 @@ def scatter_points(terrain, config, seed_offset=0, camera=None, film=None):
             rng.uniform(0.78, 1.22),
         )
         position = (x, sample.height + y_offset, z)
-        if constrain_to_camera:
-            world_radius = local_bounds_radius * scale * max(aspect)
-            if not _sphere_inside_camera_frustum(
-                    position, world_radius, camera_frame):
-                continue
-        result.append(ScatterPoint(
+        point = ScatterPoint(
             position=position,
             normal=sample.normal,
             rotation=rng.uniform(0.0, 360.0),
             scale=scale,
             aspect=aspect,
             variant=rng.randrange(variants),
-        ))
+        )
+        if constrain_to_camera:
+            reference_position = (
+                _instance_anchor_position(point, visibility_anchor)
+                if visibility_anchor is not None
+                else position
+            )
+            if not _point_inside_camera_frustum(reference_position, camera_frame):
+                continue
+        result.append(point)
     if constrain_to_camera and len(result) < count:
         raise ValueError(
             f"camera-frustum scatter accepted only {len(result)} of {count} "

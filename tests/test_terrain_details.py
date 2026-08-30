@@ -3,7 +3,8 @@ import unittest
 from terrain import RollingHillside
 from terrain_details import (
     _camera_frame,
-    _sphere_inside_camera_frustum,
+    _instance_anchor_position,
+    _point_inside_camera_frustum,
     scatter_points,
 )
 
@@ -33,12 +34,10 @@ class CameraFrustumScatterTests(unittest.TestCase):
             "variants": 3,
             "camera_frustum": {
                 "enabled": True,
-                "frame_margin": 0.03,
-                "bounds_radius": 0.8,
             },
         }
 
-    def test_requested_count_fits_completely_inside_camera(self):
+    def test_requested_count_uses_visible_ground_placements(self):
         points = scatter_points(
             self.terrain,
             self.config,
@@ -47,19 +46,38 @@ class CameraFrustumScatterTests(unittest.TestCase):
         )
         self.assertEqual(len(points), self.config["count"])
 
-        frustum = self.config["camera_frustum"]
-        frame = _camera_frame(
-            self.camera, self.film, frustum["frame_margin"]
-        )
+        frame = _camera_frame(self.camera, self.film)
         for point in points:
-            radius = frustum["bounds_radius"] * point.scale * max(point.aspect)
-            self.assertTrue(
-                _sphere_inside_camera_frustum(point.position, radius, frame)
-            )
+            self.assertTrue(_point_inside_camera_frustum(point.position, frame))
 
     def test_enabled_constraint_requires_camera(self):
         with self.assertRaisesRegex(ValueError, "requires a camera"):
             scatter_points(self.terrain, self.config)
+
+    def test_point_near_image_edge_is_not_inset_for_object_bounds(self):
+        frame = _camera_frame(self.camera, self.film)
+        self.assertTrue(_point_inside_camera_frustum((10.0, 0.0, 0.0), frame))
+
+    def test_object_anchor_not_root_controls_visible_instance_count(self):
+        anchor = (0.0, 3.0, 0.0)
+        points = scatter_points(
+            self.terrain,
+            {**self.config, "count": 1000},
+            camera=self.camera,
+            film=self.film,
+            visibility_anchor=anchor,
+        )
+        frame = _camera_frame(self.camera, self.film)
+        self.assertEqual(len(points), 1000)
+        self.assertTrue(any(
+            not _point_inside_camera_frustum(point.position, frame)
+            for point in points
+        ))
+        for point in points:
+            self.assertTrue(_point_inside_camera_frustum(
+                _instance_anchor_position(point, anchor),
+                frame,
+            ))
 
     def test_disabled_constraint_retains_camera_independent_scatter(self):
         config = dict(self.config)

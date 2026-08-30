@@ -288,8 +288,7 @@
           "scale": [16.0, 47.0],
           "camera_frustum": {
             "enabled": true,
-            "frame_margin": 0.02,
-            "bounds_radius": 0.95
+            "placement_reference": "flower"
           },
           "max_slope_degrees": 65.0,
           "patchiness": { "strength": 0.62, "frequency": 0.007 },

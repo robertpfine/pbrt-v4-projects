@@ -22,6 +22,7 @@ and PBRT progress.
 - Current visual-system checkpoints:
   - `573f8b8` (`Add configurable pasture terrain and grass tropism`)
   - `4fa4e9c` (`Add spatial grass tropism and cloud shaft controls`)
+  - `95d8b44` (`Add PBRT-v4 Art Studio proof of concept`)
 - Primary working scene: `scene_workspace/config.json`
 - Renderer: PBRT-v4 with CUDA/GPU rendering
 - Normal pipeline entry point: `./render_pipeline.sh`
@@ -70,16 +71,21 @@ formatting is preserved, saves atomically, and refuses to overwrite a file that
 was edited externally after loading.
 
 PySide6 6.10.1 is installed only in the gitignored repository-local `.venv`.
-`run_art_studio.sh` starts the interface. Eight configuration and offscreen Qt
-tests pass. The offscreen implementation screenshot is
+`run_art_studio.sh` starts the interface. The complete 22-test suite passes,
+including configuration, placement, pipeline-output, and offscreen Qt tests.
+The offscreen implementation screenshot is
 `docs/assets/pbrt-v4-art-studio-initial.png`; it is a local generated image and
 is retained as documentation rather than treated as render output.
 
-Two interaction corrections followed the first desktop launch. The application
+Further interaction corrections followed the first desktop launch. The application
 restores the operating-system SIGINT behavior so `Ctrl+C` reliably exits and
-returns the terminal prompt. PBRT carriage-return progress is displayed as one
-live updating line instead of accumulating repeated lines in the persistent
-history. Nine configuration and offscreen Qt tests now pass.
+returns the terminal prompt. PBRT timed progress snapshots are retained as
+ordinary lines in the persistent render log. An attempted single live-line
+display placed progress in a visually confusing detached bar and was removed;
+the small amount of log output has no meaningful rendering cost.
+The viewer now loads the completed local PNG immediately while archive and
+Google Drive synchronization continue in the background; it no longer waits
+for a very large generated PBRT scene file to finish uploading.
 
 ## Procedural object systems
 
@@ -124,16 +130,29 @@ isolated `poppy_preview.py`, `pistil_preview.py`, and
 `reproductive_preview.py` builders preserve diagnostic views of this work.
 
 Terrain-detail scattering now optionally understands the active camera. The
-poppy `camera_frustum` block is enabled with a 2% frame margin and a conservative
-local bounding radius of `0.95`. When poppies are enabled, `count: 2600` now
-means 2,600 complete instances accepted inside the reduced camera frustum,
-rather than 2,600 placements scattered across the whole terrain rectangle.
-This constraint does not perform terrain-occlusion testing.
+first poppy `camera_frustum` implementation used a 2% frame margin and a
+conservative whole-plant bounding sphere. Render `212758` exposed the resulting
+inset trapezoid: poppies stopped inside visible grass borders on the left,
+right, and bottom. That rule has now been removed. With
+`camera_frustum.enabled` true, `count: 2600` means exactly 2,600 instantiated
+poppies whose selected placement references project inside the full camera
+frame. There is no percentage inset and edge cropping does not disqualify an
+instance. `camera_frustum.placement_reference` explicitly switches between
+`flower` and `root`. The active `flower` choice frames the primary blossom and
+allows roots below the lower edge, eliminating the systematic grass band caused
+by root-based framing. This constraint does not perform terrain-occlusion
+testing.
 
-The last render before the frustum change is `022442`. Its archived PBRT did
-contain 2,600 updated poppy instances, but only 793 instance origins fell inside
-the camera frustum. No render has yet been made with the new camera-constrained
-scatter.
+The older render `022442` contained 2,600 updated poppy instances scattered
+across the whole terrain rectangle, but only 793 instance origins fell inside
+the camera frustum. Render `212758` was the first test of camera-constrained
+scatter and motivated the full-frame correction. Render `050817` verified that
+all 2,600 poppies populate the visible terrain, but exposed a flower-free band
+at the bottom because roots rather than blossoms were being frame-tested. The
+new `flower` placement reference corrects that cause. Render `053110` is the
+artist-accepted flower-placement baseline: all 2,600 requested instances use
+their primary blossom as the full-frame reference, roots may fall below the
+lower edge, and natural plant cropping remains allowed.
 
 The current active configuration uses the square camera at eye
 `[310, 165, 390]`, looking at `[5, 100, -5]`, with a 55-degree field of view.
@@ -297,22 +316,21 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-1. Launch `./run_art_studio.sh` on the desktop and review the actual Qt window
-   with the artist. The offscreen test verifies construction and bindings but
-   cannot replace evaluation of scale, typography, panel proportions, and the
-   desktop interaction feel.
-2. Decide which first established controls need deeper exposure after using the
-   shell. Extend the Python model and inspector in response to artistic use;
-   substantial generator and interface development is expected to continue.
-3. Implement distant hills for the receding horizon and a cloud system as
-   explicit future capabilities. They are required by the proof-of-concept
-   composition but are deliberately shown as unimplemented rather than faked.
-4. Continue the configuration refactor behind `SceneConfig`, keeping one
-   authoritative `config.json`. Separate artistic categories from renderer
-   implementation details; in particular, do not generalize `rgbgrid` into an
+1. Establish explicit landscape/sky module boundaries and migrate the existing
+   values within the one authoritative `scene_workspace/config.json`. Do not
+   create another scene JSON or change accepted rendered behavior during the
+   migration.
+2. Add distant hills for the receding horizon and clouds through those new
+   boundaries. These are required by the proof-of-concept composition and must
+   be real modules rather than interface placeholders.
+3. Continue extending the Python model and Qt inspector in response to artistic
+   use; substantial generator and interface development remains expected.
+4. Keep renderer implementations subordinate to artistic categories; in
+   particular, never generalize the specific PBRT `rgbgrid` medium into an
    atmosphere name.
-5. Preserve the established poppy, grass, tree, terrain, and atmospheric work.
-   Historical archive filenames remain unchanged and reproducible.
+5. Preserve the accepted `053110` poppy baseline and the established grass,
+   tree, terrain, and atmospheric work. Historical archive filenames remain
+   unchanged and reproducible.
 6. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 

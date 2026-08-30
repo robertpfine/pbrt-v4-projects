@@ -249,17 +249,21 @@ Object layers may also constrain placement to the active camera with a
 ```json
 "camera_frustum": {
   "enabled": true,
-  "frame_margin": 0.02,
-  "bounds_radius": 0.95
+  "placement_reference": "flower"
 }
 ```
 
-When enabled, candidates are rejected until `count` complete instances fit
-inside the camera frustum. `frame_margin` reserves a fraction of each half-frame
-at the image edges. `bounds_radius` is the object's conservative local-space
-radius; it is multiplied by each instance's randomized scale and aspect so
-petals and foliage are not accepted merely because their stem origin is in
-frame. This is a framing constraint, not an occlusion test: terrain and other
+When enabled, candidates are rejected until exactly `count` selected reference
+points project inside the full camera frame. No additional inset is applied.
+`placement_reference` is an explicit choice:
+
+- `flower` counts and frames the main flower head. Its root may be
+  below an image edge, and any portion of the plant may be naturally cropped.
+- `root` counts and frames the point where the plant enters the
+  terrain. This can leave a flower-free lower band because the blossom rises
+  above the accepted root position.
+
+This is a camera-frustum constraint, not an occlusion test: terrain and other
 geometry may still hide an accepted instance.
 
 ### `details.surface`

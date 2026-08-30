@@ -2050,12 +2050,31 @@ def write_terrain_details(lines, terrain, config, camera=None, film=None):
                     _write_detail_mesh(lines, points, indices)
             lines += ['ObjectEnd', '']
 
+        visibility_anchor = None
+        placement_reference = layer.get("camera_frustum", {}).get(
+            "placement_reference", "root"
+        )
+        if mesh_factory is _poppy_mesh and placement_reference == "flower":
+            main_tropism = layer.get("tropism", {}).get("main_stem", {})
+            stem_top = float(main_tropism.get("height", 0.765))
+            stem_bend = float(main_tropism.get("bend", 0.145))
+            stem_direction = math.radians(
+                float(main_tropism.get("direction_degrees", 32.0))
+            )
+            # Count and frame-test the primary blossom, not its ground contact.
+            # This permits roots below the lower edge when the blossom is visible.
+            visibility_anchor = (
+                stem_bend * math.cos(stem_direction),
+                stem_top,
+                stem_bend * math.sin(stem_direction),
+            )
         points = scatter_points(
             terrain,
             layer,
             1000 * (layer_index + 1),
             camera=camera,
             film=film,
+            visibility_anchor=visibility_anchor,
         )
         tropism = layer.get("blade", {}).get("tropism", {})
         tropism_enabled = bool(tropism.get("enabled", False))
