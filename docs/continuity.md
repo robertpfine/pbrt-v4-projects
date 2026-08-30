@@ -324,6 +324,9 @@ Research PDFs are local reference material and should not be pushed to GitHub.
 
 ### New-thread continuity protocol
 
+The repository-root `AGENTS.md` is the automatic bootstrap for Codex. It exists
+to route every new thread here; it does not duplicate or replace this record.
+
 Every new Codex thread working in this repository must read this complete
 `docs/continuity.md` file first. It is the canonical current handoff and takes
 precedence over every earlier or specialized record. Reading only the final
