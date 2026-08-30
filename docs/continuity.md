@@ -391,20 +391,27 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-1. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
+1. Resume with the distant-hill formation system. Implement world-space
+   triangular terrain bands with explicitly designed ridge peaks and
+   front-to-back cross-sections. Perlin noise is agreed only as secondary
+   irregularity; it must not generate the primary silhouette. Begin with three
+   strongly differentiated depth layers. See `docs/scene-module-boundaries.md`.
+2. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
    homes of the accepted ground system and neutral infinite sky respectively.
    Do not create another scene JSON or change accepted rendered behavior.
-2. Add distant hills and clouds through `scene.landscape.distant_hills` and
-   `scene.sky.clouds` as real modules rather than interface placeholders.
-3. Continue extending the Python model and Qt inspector in response to artistic
+3. After the distant hills, implement clouds through `scene.sky.clouds` as
+   bounded volumetric formations made from designed envelopes, blended lobes,
+   vertical profiles, and subordinate 3D edge erosion. Keep cloud shape,
+   optical properties, atmosphere, and renderer backend conceptually separate.
+4. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
-4. Keep renderer implementations subordinate to artistic categories; in
+5. Keep renderer implementations subordinate to artistic categories; in
    particular, never generalize the specific PBRT `rgbgrid` medium into an
    atmosphere name.
-5. Preserve the accepted `053110` poppy baseline and the established grass,
+6. Preserve the accepted `053110` poppy baseline and the established grass,
    tree, terrain, and atmospheric work. Historical archive filenames remain
    unchanged and reproducible.
-6. Preserve readable and raw conversation archives in the gitignored
+7. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
 ## Conversation preservation

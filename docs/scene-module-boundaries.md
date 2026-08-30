@@ -33,6 +33,24 @@ complete former `scene.terrain` object moved here without changing its values.
 `scene.landscape.distant_hills` is the explicit boundary for receding-horizon
 geometry. It is disabled until the step-4 generator and controls are built.
 
+### Agreed distant-hill formation
+
+The distant hills will be world-space triangular terrain bands, not painted
+backdrops or camera-facing billboards. Each band will rise from a concealed
+front edge to a designed ridge and descend behind it, producing real slopes and
+normals for PBRT lighting and atmospheric interaction.
+
+The primary form comes from explicit, artist-controlled peaks and ridge
+profiles: position, height, width, asymmetry, base elevation, and front-to-back
+cross-section. Perlin noise is a secondary irregularity and surface treatment;
+it must not dictate the overall silhouette. With noise amplitude set to zero,
+the configured hill range must still have a convincing intentional shape.
+
+The first study should use three strongly differentiated depth layers: a nearer
+darker and more articulated range, a broader middle range, and a simpler paler
+far range. The implementation belongs in a dedicated `distant_hills.py` module
+and should remain computationally small compared with the grass system.
+
 The older tree and phyllotaxis arrays remain at their established scene paths
 for now. Moving them would prematurely decide the deferred relationship among
 reusable source objects, scene instances, and processes such as L-systems and
@@ -46,6 +64,22 @@ remaining artistic lights when writing PBRT, preserving light order and output.
 
 `scene.sky.clouds` is the explicit boundary for the future cloud system. It is
 disabled until the step-4 generator and controls are built.
+
+### Agreed cloud-formation direction
+
+Clouds will be bounded volumetric formation objects rather than surface meshes
+or sky textures. The initial cumulus form will combine an artist-designed
+envelope, smoothly blended ellipsoidal density lobes, a vertical profile with a
+relatively broad base and selected upward towers, and three-dimensional noise
+for edge erosion and internal variation. Noise refines rather than composes the
+macro form.
+
+Shape parameters remain separate from optical properties such as density,
+scattering, absorption, and phase anisotropy. The artistic configuration names
+a cloud formation; the selected PBRT heterogeneous-volume representation stays
+a subordinate backend choice. Clouds remain discrete sky objects while fog is
+an atmosphere medium. Initial scene use should favor several distinct
+formations over obvious repetition of one instanced density field.
 
 Atmosphere, lighting, and camera remain separate artistic categories. The
 current `scene.fog` structure is the existing atmosphere implementation and is
