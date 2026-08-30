@@ -17,7 +17,7 @@ and PBRT progress.
 ## Repository and checkpoint
 
 - Repository root: `/home/rpf4/my-pbrt-projects`
-- Active branch: `space-colonization`
+- Active branch: `pbrt-v4-art-studio`
 - Remote: `https://github.com/robertpfine/pbrt-v4-projects.git`
 - Current visual-system checkpoints:
   - `573f8b8` (`Add configurable pasture terrain and grass tropism`)
@@ -29,6 +29,12 @@ and PBRT progress.
 - Renderer: PBRT-v4 with CUDA/GPU rendering
 - Normal pipeline entry point: `./render_pipeline.sh`
 - Shaft-composite entry point: `python3 render_shaft_composite.py`
+
+The `pbrt-v4-art-studio` branch was created from clean Step 3 checkpoint
+`2143b0b`. The earlier `space-colonization` branch remains intact as the
+historical development line for that tree system. New application-level GUI,
+configuration, landscape, sky, atmosphere, and rendering work belongs on
+`pbrt-v4-art-studio`.
 
 ## 2026-08-29 PBRT-v4 Art Studio checkpoint
 
@@ -340,7 +346,7 @@ A GitHub push alone does not complete continuity delivery.
 - Keep generated PBRT scenes, archives, backups, research PDFs, raw session
   logs, and verbatim transcripts out of Git.
 - Commit and push meaningful code/configuration/documentation checkpoints to
-  the `space-colonization` branch.
+  the active `pbrt-v4-art-studio` branch.
 
 ## Immediate follow-up work
 
