@@ -1,7 +1,7 @@
 # Lighting Configuration Guide
 
 Scene lights are configured in the `scene.lights` array and written to PBRT-v4
-by [`rgbgrid-medium/build_scene.py`](../rgbgrid-medium/build_scene.py). Multiple
+by [`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py). Multiple
 enabled lights contribute simultaneously.
 
 ## Parallel sunlight aperture

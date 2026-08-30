@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o pipefail
 
-cd /home/rpf4/my-pbrt-projects/rgbgrid-medium || exit 1
+cd /home/rpf4/my-pbrt-projects/scene_workspace || exit 1
 python3 pistil_preview.py || exit 1
 
 timestamp=$(date +%Y%m%d_%H%M%S)

@@ -40,7 +40,7 @@ Configuration is under `pipeline.shaft_composite`:
 Run from the repository root:
 
 ```bash
-python3 render_shaft_composite.py rgbgrid-medium
+python3 render_shaft_composite.py
 ```
 
 The base and shaft PNGs are retained as internal diagnostic passes, while the
@@ -52,7 +52,7 @@ file types—PNG, PBRT, JSON, Python, and shell script—plus the extra files ne
 for the two-pass composite.
 
 When `pipeline.rclone_sync.enabled` is `true`, the completed timestamped
-composite bundle is copied automatically to `project.remote_archive_path`.
+composite bundle is copied automatically to `archive.remote_path`.
 The sync selects every file sharing that render's timestamp prefix: the base
 and shaft scenes, diagnostic PNGs, final composite, configuration, build and
 render scripts, and compositing documentation. It does not select, overwrite,

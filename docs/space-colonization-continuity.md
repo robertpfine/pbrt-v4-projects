@@ -1,4 +1,4 @@
-# Space Colonization Project Continuity
+# Space Colonization Continuity
 
 Last updated: 2026-08-20
 
@@ -31,7 +31,7 @@ The project has since expanded from a single Figure 8-inspired tree into:
 
 ## Accepted tree architecture
 
-The active tree configuration is in `rgbgrid-medium/config.json`. Important choices
+The active tree configuration is in `scene_workspace/config.json`. Important choices
 include:
 
 - `D = 1.0`
@@ -55,7 +55,7 @@ with render-only branch straightening; earlier tests reintroduced strained angle
 ## Foliage
 
 Foliage generation is implemented in `foliage.py` and controlled by the active
-tree's `foliage` block in `rgbgrid-medium/config.json`.
+tree's `foliage` block in `scene_workspace/config.json`.
 
 Current important values:
 
@@ -73,7 +73,7 @@ the same foliage can inherit each grove instance's transform.
 
 ## Grove
 
-`rgbgrid-medium/build_scene.py` defines generated wood once and instances it using
+`scene_workspace/build_scene.py` defines generated wood once and instances it using
 the `scene.grove` configuration. Seven placements currently vary translation,
 Y rotation, and uniform scale. Foliage placements inherit the same instance
 transform. The grove is intentionally compact; the user did not want the crowns
@@ -104,7 +104,7 @@ The accepted checkpoint correctly applies 2700 K to the active distant light.
 Run:
 
 ```bash
-./render_pipeline.sh rgbgrid-medium
+./render_pipeline.sh
 ```
 
 The machine has an NVIDIA RTX 5090 and CUDA rendering is fast enough for iterative
@@ -123,7 +123,7 @@ env -i \
   XAUTHORITY="$XAUTHORITY" \
   LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64 \
   gnome-terminal --wait -- bash -c \
-  'cd /home/rpf4/my-pbrt-projects; ./render_pipeline.sh rgbgrid-medium'
+  'cd /home/rpf4/my-pbrt-projects; ./render_pipeline.sh'
 ```
 
 ## Source material and local-only files
@@ -146,4 +146,3 @@ Do not include those items in commits unless the user explicitly changes this po
    change per render whenever practical.
 4. Continue using visible-terminal renders.
 5. Establish and push Git checkpoints after the user accepts a meaningful state.
-

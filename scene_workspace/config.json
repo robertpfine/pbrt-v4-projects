@@ -1,7 +1,6 @@
 {
-  "project": {
-    "name": "rgbgrid-medium",
-    "remote_archive_path": "gdrive:wipImages/pbrt-v4"
+  "archive": {
+    "remote_path": "gdrive:wipImages/pbrt-v4"
   },
 
   "runtime": {
@@ -25,9 +24,10 @@
   },
 
   "scene": {
+    "name":             "untitled_landscape",
     "master_file":      "scene_files/scene.pbrt",
     "generated_medium": "scene_files/volumes/rgbgrid.pbrt",
-    "output_filename":  "rgbgrid_poc.png",
+    "output_filename":  "working_scene.png",
 
     "camera": {
       "enabled": true,

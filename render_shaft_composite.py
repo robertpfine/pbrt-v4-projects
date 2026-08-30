@@ -14,9 +14,9 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 
-def load_scene_builder(project_root):
-    path = os.path.join(project_root, "build_scene.py")
-    spec = importlib.util.spec_from_file_location("project_build_scene", path)
+def load_scene_builder(scene_root):
+    path = os.path.join(scene_root, "build_scene.py")
+    spec = importlib.util.spec_from_file_location("working_scene_builder", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -63,14 +63,14 @@ def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
     return result
 
 
-def render(builder, cfg, project_root, pbrt, flags, output_path):
+def render(builder, cfg, scene_root, pbrt, flags, output_path):
     print("Generating scene:", cfg["scene"]["master_file"], flush=True)
-    medium_rel = builder.write_medium(cfg, project_root)
-    builder.write_scene(cfg, project_root, medium_rel)
-    scene_path = os.path.join(project_root, cfg["scene"]["master_file"])
+    medium_rel = builder.write_medium(cfg, scene_root)
+    builder.write_scene(cfg, scene_root, medium_rel)
+    scene_path = os.path.join(scene_root, cfg["scene"]["master_file"])
     command = [pbrt, *flags, "--outfile", output_path, scene_path]
     print("Rendering:", output_path, flush=True)
-    subprocess.run(command, cwd=project_root, check=True)
+    subprocess.run(command, cwd=scene_root, check=True)
 
 
 def srgb_to_linear(values):
@@ -100,18 +100,18 @@ def composite(base_path, shaft_path, output_path, base_opacity, shaft_opacity,
     Image.fromarray(np.round(encoded * 255.0).astype(np.uint8), "RGB").save(output_path)
 
 
-def archive_supporting_files(prefix, repository_root, project_root):
+def archive_supporting_files(prefix, repository_root, scene_root):
     """Preserve the inputs needed to reproduce a composite render."""
     sources = {
-        os.path.join(project_root, "config.json"): prefix + "_config.json",
-        os.path.join(project_root, "build_scene.py"): prefix + "_build_scene.py",
+        os.path.join(scene_root, "config.json"): prefix + "_config.json",
+        os.path.join(scene_root, "build_scene.py"): prefix + "_build_scene.py",
         os.path.join(repository_root, "render_pipeline.sh"):
             prefix + "_render_pipeline.sh",
         os.path.join(repository_root, "render_shaft_composite.py"):
             prefix + "_render_shaft_composite.py",
-        os.path.join(project_root, "scene_files", "scene_base.pbrt"):
+        os.path.join(scene_root, "scene_files", "scene_base.pbrt"):
             prefix + "_base.pbrt",
-        os.path.join(project_root, "scene_files", "scene_shaft.pbrt"):
+        os.path.join(scene_root, "scene_files", "scene_shaft.pbrt"):
             prefix + "_shaft.pbrt",
         os.path.join(repository_root, "docs", "shaft-compositing.md"):
             prefix + "_shaft-compositing.md",
@@ -136,11 +136,16 @@ def sync_archive_bundle(prefix, archive, remote_path):
 
 
 def main():
-    if len(sys.argv) != 2:
-        raise SystemExit("Usage: render_shaft_composite.py <project-name>")
     repository_root = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.join(repository_root, sys.argv[1])
-    config_path = os.path.join(project_root, "config.json")
+    config_path = (
+        sys.argv[1]
+        if len(sys.argv) > 1
+        else os.path.join(repository_root, "scene_workspace", "config.json")
+    )
+    if os.path.isdir(config_path):
+        config_path = os.path.join(config_path, "config.json")
+    config_path = os.path.abspath(config_path)
+    scene_root = os.path.dirname(config_path)
     with open(config_path, "r") as handle:
         cfg = json.load(handle)
 
@@ -156,32 +161,37 @@ def main():
     archive = os.path.join(repository_root, "Archive")
     os.makedirs(archive, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    prefix = os.path.join(archive, f"{cfg['project']['name']}_{stamp}")
+    scene_name = cfg["scene"].get("name", "untitled_scene")
+    archive_stem = "".join(
+        character if character.isalnum() or character in "._-" else "_"
+        for character in scene_name
+    )
+    prefix = os.path.join(archive, f"{archive_stem}_{stamp}")
     base_path = prefix + "_base.png"
     shaft_path = prefix + "_shaft.png"
     composite_path = prefix + "_composite.png"
 
-    builder = load_scene_builder(project_root)
-    render(builder, configure_base(cfg, shaft_label), project_root,
+    builder = load_scene_builder(scene_root)
+    render(builder, configure_base(cfg, shaft_label), scene_root,
            pbrt, flags, base_path)
     render(builder, configure_shaft(
                cfg,
                shaft_label,
                float(options.get("surface_reflectance_scale", 0.0)),
                float(options.get("terrain_reflectance_scale", 0.0)),
-           ), project_root,
+           ), scene_root,
            pbrt, flags, shaft_path)
     composite(base_path, shaft_path, composite_path,
               float(options.get("base_opacity", 1.0)),
               float(options.get("shaft_opacity", 0.65)),
               float(options.get("blur_radius", 1.0)))
-    archive_supporting_files(prefix, repository_root, project_root)
+    archive_supporting_files(prefix, repository_root, scene_root)
     sync_options = cfg.get("pipeline", {}).get("rclone_sync", {})
     if sync_options.get("enabled", False):
         sync_archive_bundle(
             prefix,
             archive,
-            cfg["project"]["remote_archive_path"],
+            cfg["archive"]["remote_path"],
         )
     print("Composite complete:", composite_path, flush=True)
 

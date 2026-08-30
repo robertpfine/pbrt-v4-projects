@@ -1,6 +1,6 @@
-# Project Continuity
+# PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-08-28
+Last updated: 2026-08-30
 
 ## Purpose
 
@@ -22,10 +22,64 @@ and PBRT progress.
 - Current visual-system checkpoints:
   - `573f8b8` (`Add configurable pasture terrain and grass tropism`)
   - `4fa4e9c` (`Add spatial grass tropism and cloud shaft controls`)
-- Primary working scene: `rgbgrid-medium/config.json`
+- Primary working scene: `scene_workspace/config.json`
 - Renderer: PBRT-v4 with CUDA/GPU rendering
-- Normal pipeline entry point: `./render_pipeline.sh rgbgrid-medium`
-- Shaft-composite entry point: `python3 render_shaft_composite.py rgbgrid-medium`
+- Normal pipeline entry point: `./render_pipeline.sh`
+- Shaft-composite entry point: `python3 render_shaft_composite.py`
+
+## 2026-08-29 PBRT-v4 Art Studio checkpoint
+
+The artist selected **PBRT-v4 Art Studio** as the application name. The term
+`Project` remains reserved for the surrounding VS Code workspace and is not an
+entity in the artistic hierarchy. The former `rgbgrid-medium` working-directory
+name was an obsolete reference to an early volumetric experiment and has been
+replaced by the role-based `scene_workspace` name.
+
+`rgbgrid` must never serve as a generic label for atmosphere or volumetrics. It
+is retained only where code or historical files refer specifically to PBRT-v4's
+RGB-grid medium implementation. The artistic category exposed by the interface
+is `Atmosphere`; particular PBRT medium implementations remain subordinate
+technical choices.
+
+The active configuration no longer contains a top-level `project` object:
+
+- `scene.name` identifies the current working scene for archive filenames.
+- `archive.remote_path` identifies the Google Drive render destination.
+- `render_pipeline.sh` accepts an optional config path and defaults to
+  `scene_workspace/config.json`.
+- The ordinary render command is now `./render_pipeline.sh`.
+
+This naming migration does not change the PBRT-v4/CUDA build. The configured
+binary remains `/home/rpf4/pbrt-v4/build/pbrt`, GPU rendering remains enabled,
+and no render was launched during the interface implementation.
+
+The initial Qt shell is implemented in `pbrt_v4_art_studio.py`. It provides:
+
+- the approved scene-category hierarchy;
+- a central viewer for the latest completed render;
+- exact-value controls for established landform, ground, grass, poppy, tree,
+  sky, atmosphere, lighting, camera, and render parameters;
+- explicit placeholders for the required cloud and distant-hill systems;
+- validation, safe saving, JSON reload, render/stop controls, and a persistent
+  docked render log;
+- no `ADD` catalogue, templates, or real-time image manipulation.
+
+`scene_config.py` mediates the single authoritative JSON file. It validates
+known relationships, replaces only explicitly edited JSON value spans so manual
+formatting is preserved, saves atomically, and refuses to overwrite a file that
+was edited externally after loading.
+
+PySide6 6.10.1 is installed only in the gitignored repository-local `.venv`.
+`run_art_studio.sh` starts the interface. Eight configuration and offscreen Qt
+tests pass. The offscreen implementation screenshot is
+`docs/assets/pbrt-v4-art-studio-initial.png`; it is a local generated image and
+is retained as documentation rather than treated as render output.
+
+Two interaction corrections followed the first desktop launch. The application
+restores the operating-system SIGINT behavior so `Ctrl+C` reliably exits and
+returns the terminal prompt. PBRT carriage-return progress is displayed as one
+live updating line instead of accumulating repeated lines in the persistent
+history. Nine configuration and offscreen Qt tests now pass.
 
 ## Procedural object systems
 
@@ -55,7 +109,7 @@ colonization.
 ## 2026-08-28 terrain and poppy checkpoint
 
 The single authoritative scene configuration remains
-`rgbgrid-medium/config.json`; do not create per-landform JSON files. Terrain now
+`scene_workspace/config.json`; do not create per-landform JSON files. Terrain now
 selects one named entry with `scene.terrain.active_landform`. The named
 `right_dip_rise` and `flat_landform` profiles contain landform geometry only,
 while the material, surface treatment, and five instanced detail layers remain
@@ -106,7 +160,7 @@ tufts (23.8 million blades). Blade height was `[8, 14]` before instance scale,
 making an intentionally tall sward. Grass geometry exposes height, width,
 segments, lean, bend, taper, droop, tuft construction, tropism, and a smooth
 spatial tropism field in JSON. Preserve the named `030125` droop and `030551`
-tropism looks in `rgbgrid-medium/grass_presets.json`.
+tropism looks in `scene_workspace/grass_presets.json`.
 
 Important recent local renders:
 
@@ -243,27 +297,22 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-1. The next session changes artistic focus away from fog. The user judged the
-   grass beautiful and its JSON infrastructure highly useful, but the cost of
-   3.4 million tall tufts is not justified when fog hides their detail. Preserve
-   the grass implementation and presets, but restore the earlier, less expensive
-   short-pasture ground treatment for the active scene. This means changing the
-   ground-cover treatment, not reverting the accepted current terrain shape,
-   gully, camera, or 2.5 tree scale.
-2. Systematically kick the tires on the four remaining entries under
-   `scene.terrain.details`, using decisive rather than incremental tests:
-   `surface`, `litter`, `rocks`, and `undergrowth`. `surface` is the texture and
-   bump treatment attached directly to the terrain mesh; `litter`, `rocks`, and
-   `undergrowth` are terrain-aware scattered geometry. Explore one control at a
-   time with deliberately pronounced values, as was done for grass.
-3. Fog/shaft work is paused at `050947_composite`: broad atmospheric brightness
-   remains too high while localized shafts remain too dim. Intentional render
-   noise should be preserved if this exploration resumes.
-4. Continue broadening the modular scene system: procedural terrain types,
-   skies/clouds, atmosphere, lighting controls, and reusable plant/tree
-   components.
-5. Eventually reorganize the organically grown `config.json`, but only after
-   the current functional modules stabilize.
+1. Launch `./run_art_studio.sh` on the desktop and review the actual Qt window
+   with the artist. The offscreen test verifies construction and bindings but
+   cannot replace evaluation of scale, typography, panel proportions, and the
+   desktop interaction feel.
+2. Decide which first established controls need deeper exposure after using the
+   shell. Extend the Python model and inspector in response to artistic use;
+   substantial generator and interface development is expected to continue.
+3. Implement distant hills for the receding horizon and a cloud system as
+   explicit future capabilities. They are required by the proof-of-concept
+   composition but are deliberately shown as unimplemented rather than faked.
+4. Continue the configuration refactor behind `SceneConfig`, keeping one
+   authoritative `config.json`. Separate artistic categories from renderer
+   implementation details; in particular, do not generalize `rgbgrid` into an
+   atmosphere name.
+5. Preserve the established poppy, grass, tree, terrain, and atmospheric work.
+   Historical archive filenames remain unchanged and reproducible.
 6. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 

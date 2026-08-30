@@ -2,7 +2,7 @@
 # Last updated: 2026-05-26
 
 > This is a preserved legacy handoff. The current working handoff is
-> `docs/project-continuity.md`. After every continuity checkpoint, push the
+> `docs/continuity.md`. After every continuity checkpoint, push the
 > updated record to GitHub and copy it to
 > `gdrive:wipImages/pbrt-v4/SessionArchive/` as required by that document.
 

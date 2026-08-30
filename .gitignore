@@ -8,6 +8,9 @@ SessionArchive/
 **/*.png
 **/*.exr
 
+# Documentation images are intentional repository assets, not render output.
+!docs/assets/*.png
+
 # --- Generated scene files (produced by build_scene.py at runtime) ---
 **/scene_files/scene.pbrt
 **/scene_files/*.pbrt
@@ -17,6 +20,7 @@ SessionArchive/
 # --- Python ---
 __pycache__/
 **/__pycache__/
+.venv/
 *.pyc
 *.pyo
 
@@ -41,4 +45,4 @@ docs/TheAlgorithmicBeautyOfPlants.pdf
 Gallery/
 space_col.py.bak
 Continuity — Session 2026-05-26:
-rgbgrid-medium/flat_landform_preview.py
+scene_workspace/flat_landform_preview.py

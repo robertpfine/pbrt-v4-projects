@@ -1,7 +1,7 @@
 # Terrain Configuration Guide
 
 Procedural terrain is implemented in [`terrain.py`](../terrain.py), written to
-PBRT by [`rgbgrid-medium/build_scene.py`](../rgbgrid-medium/build_scene.py), and
+PBRT by [`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py), and
 configured under `scene.terrain`. One authoritative JSON contains named
 landform profiles plus shared material and ecosystem-detail controls.
 

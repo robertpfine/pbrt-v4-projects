@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-build_scene.py  —  rgbgrid-medium project
+build_scene.py  —  working-scene builder for PBRT-v4 Art Studio
 ========================================================
 Reads config.json and generates two files:
 
@@ -310,7 +310,7 @@ def write_fog_boundary(lines, fog):
     ]
 
 
-def write_medium(cfg, project_root):
+def write_medium(cfg, scene_root):
     """
     Generate scene_files/volumes/rgbgrid.pbrt.
 
@@ -321,7 +321,7 @@ def write_medium(cfg, project_root):
     Config reads:
       scene.grid            — grid dimensions, bounds, sigma_a
       scene.zones           — spectral zone definitions
-      scene.generated_medium — output path (relative to project root)
+      scene.generated_medium — output path (relative to working-scene root)
 
     Output file: the MakeNamedMedium "rgb_vol" block with
                  fully expanded sigma_s and sigma_a arrays.
@@ -335,7 +335,7 @@ def write_medium(cfg, project_root):
         print("  Grid disabled — skipping rgbgrid generation.")
         return None
     zones  = scene["zones"]
-    out    = os.path.join(project_root, scene["generated_medium"])
+    out    = os.path.join(scene_root, scene["generated_medium"])
 
     print(f"  Building {g_cfg['nx']}x{g_cfg['ny']}x{g_cfg['nz']} rgbgrid "
           f"(axis={g_cfg['axis']}, sigma_a={g_cfg['sigma_a']})...")
@@ -385,14 +385,14 @@ def write_medium(cfg, project_root):
 # They append pbrt-syntax lines to the shared `lines` list.
 # ==============================================================
 
-def write_header(lines, proj):
+def write_header(lines, scene_name):
     """
     Write the comment header at the top of scene.pbrt.
-    Config reads: project.name
+    Config reads: scene.name
     """
     lines += [
         "# FILE: scene.pbrt",
-        f"# PROJECT: {proj['name']}",
+        f"# SCENE: {scene_name}",
         "",
     ]
 
@@ -469,7 +469,7 @@ def write_medium_include(lines, medium_rel_path):
     Despite containing a MakeNamedMedium declaration, pbrt-v4
     correctly handles medium Includes inside the world section.
 
-    Input: medium_rel_path — path relative to the project root,
+    Input: medium_rel_path — path relative to the working-scene root,
                              as returned by write_medium().
     """
     lines += [
@@ -1186,7 +1186,7 @@ def write_lsystem_leaf(lines, start, end, width, reflectance):
     ]
 
 
-def write_terrain(lines, terrain, config, project_root):
+def write_terrain(lines, terrain, config, scene_root):
     """Write a procedural terrain as one PBRT triangle mesh."""
 
     if terrain is None:
@@ -1213,12 +1213,12 @@ def write_terrain(lines, terrain, config, project_root):
     ]
     if surface.get("enabled", False) and surface.get("mode") == "terrain_surface_texture":
         surface_texture = surface.get("terrain_surface_texture", {})
-        texture_directory = os.path.join(project_root, "scene_files", "textures")
+        texture_directory = os.path.join(scene_root, "scene_files", "textures")
         albedo_path, bump_path = generate_terrain_surface_maps(
             surface_texture, texture_directory
         )
-        albedo_relative = os.path.relpath(albedo_path, project_root)
-        bump_relative = os.path.relpath(bump_path, project_root)
+        albedo_relative = os.path.relpath(albedo_path, scene_root)
+        bump_relative = os.path.relpath(bump_path, scene_root)
         bump_scale = float(surface_texture.get("bump_scale", 0.012))
         lines += [
             '    Texture "terrain_surface_albedo" "spectrum" "imagemap"',
@@ -2526,7 +2526,7 @@ def write_planar_phyllotaxis(lines, patterns):
 # SECTION 6 — WRITE SCENE FILE (scene_files/scene.pbrt)
 # ==============================================================
 
-def write_scene(cfg, project_root, medium_rel_path):
+def write_scene(cfg, scene_root, medium_rel_path):
     """
     Assemble and write scene_files/scene.pbrt from config.json.
 
@@ -2534,16 +2534,15 @@ def write_scene(cfg, project_root, medium_rel_path):
       Pre-world:  header, camera, sampler, integrator, film, medium Include
       World:      WorldBegin, lights, geometry
 
-    Config reads: all of scene.*, project.name
-    Output file:  scene.master_file (relative to project root)
+    Config reads: all of scene.*
+    Output file:  scene.master_file (relative to working-scene root)
     """
     scene    = cfg["scene"]
-    proj     = cfg["project"]
-    out_path = os.path.join(project_root, scene["master_file"])
+    out_path = os.path.join(scene_root, scene["master_file"])
     lines    = []
 
     # --- Pre-world section ---
-    write_header(lines, proj)
+    write_header(lines, scene.get("name", "untitled_scene"))
     write_fog_medium(cfg, lines)
     write_camera(lines, scene["camera"])
     write_sampler(lines, scene["sampler"])
@@ -2564,7 +2563,7 @@ def write_scene(cfg, project_root, medium_rel_path):
     write_lights(lines, lights)
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []))
-    write_terrain(lines, terrain, terrain_config, project_root)
+    write_terrain(lines, terrain, terrain_config, scene_root)
     write_terrain_details(
         lines,
         terrain,
@@ -2644,11 +2643,11 @@ def main():
     with open(config_path, "r") as f:
         cfg = json.load(f)
 
-    project_root = os.path.dirname(os.path.abspath(config_path))
+    scene_root = os.path.dirname(os.path.abspath(config_path))
 
-    print(f"Building project: {cfg['project']['name']}")
-    medium_rel = write_medium(cfg, project_root)
-    write_scene(cfg, project_root, medium_rel)
+    print(f"Building scene: {cfg['scene'].get('name', 'untitled_scene')}")
+    medium_rel = write_medium(cfg, scene_root)
+    write_scene(cfg, scene_root, medium_rel)
     print("Build complete.")
 
 

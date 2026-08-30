@@ -2,7 +2,7 @@
 
 This guide documents the `fractal_tree` preset implemented in
 [`fractal_tree.py`](../fractal_tree.py) and rendered through
-[`rgbgrid-medium/build_scene.py`](../rgbgrid-medium/build_scene.py).
+[`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py).
 
 The configuration lives in an entry under:
 

@@ -2,7 +2,7 @@
 
 The current atmosphere system provides a finite homogeneous fog medium for
 PBRT-v4. It is configured under `scene.fog` and written by
-[`rgbgrid-medium/build_scene.py`](../rgbgrid-medium/build_scene.py).
+[`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py).
 
 ```json
 "fog": {
