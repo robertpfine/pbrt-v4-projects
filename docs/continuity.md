@@ -311,6 +311,9 @@ two-pass composite—not a direct fog/shaft render—as the intended result.
 Documentation should evolve alongside functionality. Current focused documents
 include:
 
+- `docs/artistic-tool-vision.md`
+- `docs/qt-proof-of-concept-specification.md`
+- `docs/scene-module-boundaries.md`
 - `docs/fractal-tree-configuration.md`
 - `docs/terrain-configuration.md`
 - `docs/atmosphere-configuration.md`
@@ -318,6 +321,41 @@ include:
 - `docs/shaft-compositing.md`
 
 Research PDFs are local reference material and should not be pushed to GitHub.
+
+### New-thread continuity protocol
+
+Every new Codex thread working in this repository must read this complete
+`docs/continuity.md` file first. It is the canonical current handoff and takes
+precedence over every earlier or specialized record. Reading only the final
+"Immediate follow-up work" section is insufficient because accepted visual
+states, workflow safeguards, naming decisions, and archive obligations appear
+throughout this file.
+
+After reading this file, use the following routing rather than assuming that a
+specialized document is obsolete or that a historical document is current:
+
+1. Read `docs/artistic-tool-vision.md` and
+   `docs/qt-proof-of-concept-specification.md` for the artist-approved purpose,
+   terminology, hierarchy, and interaction model.
+2. Read `docs/scene-module-boundaries.md` before changing the live JSON
+   hierarchy or implementing landscape, distant-hill, sky, or cloud modules.
+3. Read the focused configuration guide for any subsystem being changed:
+   terrain, atmosphere, lighting, shaft compositing, or fractal trees.
+4. Read `docs/space-colonization-continuity.md` before resuming detailed
+   space-colonization tree or grove work. It is a subordinate subsystem record;
+   its old branch and scene state do not override this canonical handoff.
+5. Treat `HANDOFF.md`, `HANDOFF05262026.md`, `HANDOFF_05252026.md`, and
+   `HANDOFF_05242026.md` as historical evidence from May 2026. Consult them when
+   tracing earlier pipeline decisions, PBRT lessons, or branch history, but do
+   not use their active-work, branch, configuration-path, or next-step claims as
+   current instructions.
+6. Consult the gitignored `SessionArchive/` transcript and raw session snapshot
+   only when the canonical and routed documents do not resolve an ambiguity.
+
+The canonical Google Drive copy is
+`gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md`. A new thread with access
+to the repository should use the committed local copy first because it travels
+with the active branch; the Drive copy is the external handoff backup.
 
 ### Continuity and handoff delivery
 
