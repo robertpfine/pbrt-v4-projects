@@ -11,7 +11,7 @@ def main():
     output = Path(__file__).parent / "scene_files" / "poppy_preview.pbrt"
     config_path = Path(__file__).parent / "config.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
-    poppy_config = config["scene"]["terrain"]["details"]["poppies"]
+    poppy_config = config["scene"]["landscape"]["ground"]["details"]["poppies"]
     parts = _poppy_mesh(0, poppy_config)
     lines = [
         '# FILE: poppy_preview.pbrt',

@@ -10,21 +10,28 @@ class SceneConfigTests(unittest.TestCase):
     def make_config(self, directory):
         source = '''{
   "scene": {
-    "terrain": {
-      "active_landform": "flat",
-      "landforms": { "flat": {}, "gully": {} },
-      "details": {
-        "grass": { "enabled": true, "layers": [{ "count": 10 }] },
-        "poppies": {
-          "enabled": true,
-          "count": 20,
-          "scale": [1.0, 2.0],
-          "camera_frustum": {
+    "landscape": {
+      "ground": {
+        "active_landform": "flat",
+        "landforms": { "flat": {}, "gully": {} },
+        "details": {
+          "grass": { "enabled": true, "layers": [{ "count": 10 }] },
+          "poppies": {
             "enabled": true,
-            "placement_reference": "flower"
+            "count": 20,
+            "scale": [1.0, 2.0],
+            "camera_frustum": {
+              "enabled": true,
+              "placement_reference": "flower"
+            }
           }
         }
-      }
+      },
+      "distant_hills": { "enabled": false }
+    },
+    "sky": {
+      "background": { "enabled": true, "type": "infinite" },
+      "clouds": { "enabled": false }
     },
     "camera": {
       "look_at": { "eye": [0, 1, 2], "look": [0, 0, 0], "up": [0, 1, 0] },
@@ -45,7 +52,7 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)
             config = SceneConfig(path)
-            config.set("scene.terrain.details.poppies.count", 2600)
+            config.set("scene.landscape.ground.details.poppies.count", 2600)
             config.set("scene.camera.look_at.eye", [4, 5, 6])
             config.save()
             result = path.read_text(encoding="utf-8")
@@ -59,7 +66,7 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             config = SceneConfig(path)
-            config.set("scene.terrain.details.poppies.count", 21)
+            config.set("scene.landscape.ground.details.poppies.count", 21)
             path.write_text(path.read_text() + "\n", encoding="utf-8")
             with self.assertRaises(SceneConfigConflictError):
                 config.save()
@@ -68,7 +75,10 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)
             config = SceneConfig(path)
-            config.set("scene.terrain.details.poppies.scale", [5.0, 1.0])
+            config.set(
+                "scene.landscape.ground.details.poppies.scale",
+                [5.0, 1.0],
+            )
             with self.assertRaises(SceneConfigError):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
@@ -78,7 +88,8 @@ class SceneConfigTests(unittest.TestCase):
             path, source = self.make_config(directory)
             config = SceneConfig(path)
             config.set(
-                "scene.terrain.details.poppies.camera_frustum.placement_reference",
+                "scene.landscape.ground.details.poppies."
+                "camera_frustum.placement_reference",
                 "whole_plant",
             )
             with self.assertRaises(SceneConfigError):
@@ -92,14 +103,33 @@ class SceneConfigTests(unittest.TestCase):
         description = config.describe()
         self.assertIn("Landform: flat_landform", description)
         self.assertIn("Poppies:", description)
+        self.assertIn("Distant hills: disabled", description)
+        self.assertIn("Sky background: enabled", description)
+        self.assertIn("Clouds: disabled", description)
+
+    def test_current_scene_uses_explicit_landscape_and_sky_boundaries(self):
+        root = Path(__file__).resolve().parents[1]
+        data = json.loads(
+            (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
+        )["scene"]
+        self.assertNotIn("terrain", data)
+        self.assertEqual(set(data["landscape"]), {"ground", "distant_hills"})
+        self.assertEqual(set(data["sky"]), {"background", "clouds"})
+        self.assertEqual(data["sky"]["background"]["type"], "infinite")
+        self.assertTrue(all(light.get("type") != "infinite" for light in data["lights"]))
 
     def test_saved_json_remains_parseable(self):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             config = SceneConfig(path)
-            config.set("scene.terrain.active_landform", "gully")
+            config.set("scene.landscape.ground.active_landform", "gully")
             config.save()
-            self.assertEqual(json.loads(path.read_text())["scene"]["terrain"]["active_landform"], "gully")
+            self.assertEqual(
+                json.loads(path.read_text())["scene"]["landscape"]["ground"][
+                    "active_landform"
+                ],
+                "gully",
+            )
 
 
 if __name__ == "__main__":

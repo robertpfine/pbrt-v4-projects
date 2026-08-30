@@ -2,8 +2,8 @@
 
 Procedural terrain is implemented in [`terrain.py`](../terrain.py), written to
 PBRT by [`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py), and
-configured under `scene.terrain`. One authoritative JSON contains named
-landform profiles plus shared material and ecosystem-detail controls.
+configured under `scene.landscape.ground`. One authoritative JSON contains
+named landform profiles plus shared material and ecosystem-detail controls.
 
 Each named landform currently uses the `RollingHillside` implementation. It
 combines a planar incline with deterministic, smooth, multi-octave value noise:
@@ -19,39 +19,44 @@ y(x,z) = base_height
 ## Complete example
 
 ```json
-"terrain": {
-  "enabled": true,
-  "active_landform": "flat_landform",
-  "landforms": {
-    "flat_landform": {
-      "size": [1200.0, 1200.0],
-      "resolution": [257, 257],
-      "base_height": 0.0,
-      "slope": {
-        "direction_degrees": 270.0,
-        "grade": 0.025,
-        "foreground_leveling": { "enabled": false }
-      },
-      "noise": {
-        "seed": 113,
-        "amplitude": 5.5,
-        "frequency": 0.0045,
-        "octaves": 4,
-        "persistence": 0.48,
-        "lacunarity": 2.0
+"landscape": {
+  "ground": {
+    "enabled": true,
+    "active_landform": "flat_landform",
+    "landforms": {
+      "flat_landform": {
+        "size": [1200.0, 1200.0],
+        "resolution": [257, 257],
+        "base_height": 0.0,
+        "slope": {
+          "direction_degrees": 270.0,
+          "grade": 0.025,
+          "foreground_leveling": { "enabled": false }
+        },
+        "noise": {
+          "seed": 113,
+          "amplitude": 5.5,
+          "frequency": 0.0045,
+          "octaves": 4,
+          "persistence": 0.48,
+          "lacunarity": 2.0
+        }
       }
+    },
+    "material": {
+      "reflectance": [0.10, 0.17, 0.045]
+    },
+    "details": {
+      "surface": { "enabled": true },
+      "grass": { "enabled": true, "count": 2400 },
+      "poppies": { "enabled": true, "count": 120 },
+      "litter": { "enabled": true, "count": 950 },
+      "rocks": { "enabled": true, "count": 48 },
+      "undergrowth": { "enabled": true, "count": 140 }
     }
   },
-  "material": {
-    "reflectance": [0.10, 0.17, 0.045]
-  },
-  "details": {
-    "surface": { "enabled": true },
-    "grass": { "enabled": true, "count": 2400 },
-    "poppies": { "enabled": true, "count": 120 },
-    "litter": { "enabled": true, "count": 950 },
-    "rocks": { "enabled": true, "count": 48 },
-    "undergrowth": { "enabled": true, "count": 140 }
+  "distant_hills": {
+    "enabled": false
   }
 }
 ```

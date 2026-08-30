@@ -72,7 +72,7 @@ formatting is preserved, saves atomically, and refuses to overwrite a file that
 was edited externally after loading.
 
 PySide6 6.10.1 is installed only in the gitignored repository-local `.venv`.
-`run_art_studio.sh` starts the interface. The complete 22-test suite passes,
+`run_art_studio.sh` starts the interface. The complete 23-test suite passes,
 including configuration, placement, pipeline-output, and offscreen Qt tests.
 The offscreen implementation screenshot is
 `docs/assets/pbrt-v4-art-studio-initial.png`; it is a local generated image and
@@ -117,10 +117,10 @@ colonization.
 
 The single authoritative scene configuration remains
 `scene_workspace/config.json`; do not create per-landform JSON files. Terrain now
-selects one named entry with `scene.terrain.active_landform`. The named
+selects one named entry with `scene.landscape.ground.active_landform`. The named
 `right_dip_rise` and `flat_landform` profiles contain landform geometry only,
 while the material, surface treatment, and five instanced detail layers remain
-shared siblings under `scene.terrain`. The active profile is currently
+shared siblings under `scene.landscape.ground`. The active profile is currently
 `flat_landform`.
 
 The poppy detail layer now contains a reusable botanical plant with a bowed
@@ -160,6 +160,32 @@ The current active configuration uses the square camera at eye
 Grass is enabled as 3.4 million seven-blade tufts with blade height `[8, 45]`.
 Poppies are enabled at 2,600 instances with randomized scale `[16, 47]`. Both
 L-system tree entries and both space-colonization tree entries are disabled.
+
+## 2026-08-30 landscape and sky boundary migration
+
+Step 3 of the agreed proof-of-concept sequence is implemented without creating
+a second configuration file. The one authoritative JSON now has these explicit
+module boundaries:
+
+- `scene.landscape.ground` contains the complete accepted ground system formerly
+  stored at `scene.terrain`.
+- `scene.landscape.distant_hills` is present and disabled pending its generator.
+- `scene.sky.background` contains the accepted neutral infinite environment
+  formerly stored as the first entry in `scene.lights`.
+- `scene.sky.clouds` is present and disabled pending its generator.
+- `scene.lights` now contains only the remaining point, spot, and distant lights.
+
+The builder reconstructs the original PBRT light ordering by writing the sky
+background before the remaining lights. After migration, rebuilding the full
+3.4-million-tuft scene produced the exact same 936,127,421-byte PBRT file and
+SHA-256 hash as before migration:
+`dfb1781890823c10da1d483358294748d3d2ad2db767a168e24c54774f88a929`.
+This is a byte-for-byte behavior-preservation check; no GPU render was needed.
+
+Tree, grove, and planar-phyllotaxis arrays retain their established paths. The
+relationship among reusable source objects, scene instances, and creation
+processes remains explicitly deferred and was not decided indirectly during
+this bounded migration. See `docs/scene-module-boundaries.md`.
 
 ## Prior accepted gully scene
 
@@ -317,13 +343,11 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-1. Establish explicit landscape/sky module boundaries and migrate the existing
-   values within the one authoritative `scene_workspace/config.json`. Do not
-   create another scene JSON or change accepted rendered behavior during the
-   migration.
-2. Add distant hills for the receding horizon and clouds through those new
-   boundaries. These are required by the proof-of-concept composition and must
-   be real modules rather than interface placeholders.
+1. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
+   homes of the accepted ground system and neutral infinite sky respectively.
+   Do not create another scene JSON or change accepted rendered behavior.
+2. Add distant hills and clouds through `scene.landscape.distant_hills` and
+   `scene.sky.clouds` as real modules rather than interface placeholders.
 3. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
 4. Keep renderer implementations subordinate to artistic categories; in

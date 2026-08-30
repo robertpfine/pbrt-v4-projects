@@ -81,14 +81,20 @@
       "y_resolution": 2000
     },
 
-    "lights": [
-      {
+    "sky": {
+      "background": {
         "enabled": true,
         "type": "infinite",
         "color_mode": "rgb",
         "color": [0.32, 0.40, 0.52],
         "scale": 0.12
       },
+      "clouds": {
+        "enabled": false
+      }
+    },
+
+    "lights": [
       {
         "enabled": false,
         "type": "point",
@@ -148,255 +154,260 @@
       "reflectance": [0.001, 0.001, 0.001]
     },
 
-    "terrain": {
-      "enabled": true,
-      "active_landform": "flat_landform",
-      "landforms": {
-        "right_dip_rise": {
-          "size": [1900.0, 1600.0],
-          "center": [150.0, -100.0],
-          "resolution": [401, 337],
-          "base_height": 0.0,
-          "slope": {
-            "direction_degrees": 320.0,
-            "grade": 0.40,
-            "foreground_leveling": {
-              "enabled": true,
-              "direction_degrees": 51.5,
-              "start": 0.0,
-              "end": 360.0,
-              "minimum_grade_ratio": 0.35,
-              "target_height": null
-            }
-          },
-          "noise": {
-            "seed": 7,
-            "amplitude": 14.0,
-            "frequency": 0.008,
-            "octaves": 3,
-            "persistence": 0.45,
-            "lacunarity": 2.0
-          },
-          "right_profile": {
-            "enabled": true,
-            "direction_degrees": 142.0,
-            "dip_center": 140.0,
-            "dip_width": 140.0,
-            "dip_depth": 100.0,
-            "rise_center": 480.0,
-            "rise_width": 150.0,
-            "rise_height": 260.0
-          }
-        },
-        "flat_landform": {
-          "size": [1900.0, 1600.0],
-          "center": [150.0, -100.0],
-          "resolution": [321, 269],
-          "base_height": 0.0,
-          "slope": {
-            "direction_degrees": 270.0,
-            "grade": 0.025,
-            "foreground_leveling": { "enabled": false }
-          },
-          "noise": {
-            "seed": 113,
-            "amplitude": 5.5,
-            "frequency": 0.0045,
-            "octaves": 4,
-            "persistence": 0.48,
-            "lacunarity": 2.0
-          }
-        }
-      },
-      "material": {
-        "reflectance": [0.10, 0.17, 0.045]
-      },
-      "details": {
-        "surface": {
-          "enabled": true,
-          "mode": "terrain_surface_texture",
-          "terrain_surface_texture": {
-            "resolution": 2048,
-            "seed": 97,
-            "flow_direction_degrees": 18.0,
-            "dark_color": [58, 104, 31],
-            "light_color": [105, 151, 55],
-            "fiber_contrast": 0.055,
-            "bump_contrast": 0.10,
-            "bump_scale": 0.008
-          }
-        },
-        "grass": {
-          "enabled": true,
-          "seed": 41,
-          "region": { "center": [150.0, -100.0], "size": [1900.0, 1600.0] },
-          "max_slope_degrees": 70.0,
-          "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
-          "y_offset": 0.03,
-          "variants": 3,
-          "blade": {
-            "height": [8.0, 25.0],
-            "width": [0.025, 0.050],
-            "segments": 3,
-            "lean": [0.10, 0.28],
-            "lean_spread_degrees": 31.51267873219528,
-            "bend": [-0.055, 0.055],
-            "bend_exponent": 1.45,
-            "tip_droop": [0.0, 0.0],
-            "tropism": {
-              "enabled": true,
-              "direction_degrees": 45.0,
-              "strength": [3.0, 7.0],
-              "direction_variation_degrees": 70.0,
-              "curvature_exponent": 2.0,
-              "field": {
+    "landscape": {
+      "ground": {
+        "enabled": true,
+        "active_landform": "flat_landform",
+        "landforms": {
+          "right_dip_rise": {
+            "size": [1900.0, 1600.0],
+            "center": [150.0, -100.0],
+            "resolution": [401, 337],
+            "base_height": 0.0,
+            "slope": {
+              "direction_degrees": 320.0,
+              "grade": 0.40,
+              "foreground_leveling": {
                 "enabled": true,
-                "seed": 113,
-                "frequency": 0.004,
-                "direction_variation_degrees": 160.0,
-                "octaves": 2,
-                "persistence": 0.40,
-                "random_jitter_degrees": 20.0
+                "direction_degrees": 51.5,
+                "start": 0.0,
+                "end": 360.0,
+                "minimum_grade_ratio": 0.35,
+                "target_height": null
               }
             },
-            "taper_exponent": 1.35
-          },
-          "tuft": {
-            "blades": 7,
-            "radius": [0.025, 0.14],
-            "angle_jitter_degrees": 18.0
-          },
-          "reflectance_variants": [
-            [0.045, 0.16, 0.020],
-            [0.075, 0.22, 0.030],
-            [0.12, 0.20, 0.035]
-          ],
-          "layers": [
-            {
-              "count": 3400000,
-              "seed": 41,
-              "scale": [1.0, 1.7],
-              "patchiness": { "strength": 0.12, "frequency": 0.012 }
+            "noise": {
+              "seed": 7,
+              "amplitude": 14.0,
+              "frequency": 0.008,
+              "octaves": 3,
+              "persistence": 0.45,
+              "lacunarity": 2.0
+            },
+            "right_profile": {
+              "enabled": true,
+              "direction_degrees": 142.0,
+              "dip_center": 140.0,
+              "dip_width": 140.0,
+              "dip_depth": 100.0,
+              "rise_center": 480.0,
+              "rise_width": 150.0,
+              "rise_height": 260.0
             }
-          ]
+          },
+          "flat_landform": {
+            "size": [1900.0, 1600.0],
+            "center": [150.0, -100.0],
+            "resolution": [321, 269],
+            "base_height": 0.0,
+            "slope": {
+              "direction_degrees": 270.0,
+              "grade": 0.025,
+              "foreground_leveling": { "enabled": false }
+            },
+            "noise": {
+              "seed": 113,
+              "amplitude": 5.5,
+              "frequency": 0.0045,
+              "octaves": 4,
+              "persistence": 0.48,
+              "lacunarity": 2.0
+            }
+          }
         },
-        "poppies": {
-          "enabled": true,
-          "count": 2600,
-          "seed": 131,
-          "region": { "center": [150.0, -100.0], "size": [1900.0, 1600.0] },
-          "scale": [16.0, 47.0],
-          "camera_frustum": {
+        "material": {
+          "reflectance": [0.10, 0.17, 0.045]
+        },
+        "details": {
+          "surface": {
             "enabled": true,
-            "placement_reference": "flower"
-          },
-          "max_slope_degrees": 65.0,
-          "patchiness": { "strength": 0.62, "frequency": 0.007 },
-          "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
-          "y_offset": 0.05,
-          "variants": 7,
-          "stem_reflectance": [0.035, 0.16, 0.025],
-          "foliage_reflectance": [0.08, 0.21, 0.065],
-          "tropism": {
-            "main_stem": {
-              "direction_degrees": 88.0,
-              "height": 0.765,
-              "bend": 0.135,
-              "lateral_sway": 0.045
-            },
-            "emerging_buds": {
-              "count": 2,
-              "direction_degrees": 4.0,
-              "reach": 0.28,
-              "droop": 0.30
-            },
-            "foliage": {
-              "direction_degrees": 205.0,
-              "spread_degrees": 115.0,
-              "droop": 0.52
+            "mode": "terrain_surface_texture",
+            "terrain_surface_texture": {
+              "resolution": 2048,
+              "seed": 97,
+              "flow_direction_degrees": 18.0,
+              "dark_color": [58, 104, 31],
+              "light_color": [105, 151, 55],
+              "fiber_contrast": 0.055,
+              "bump_contrast": 0.10,
+              "bump_scale": 0.008
             }
           },
-          "center_reflectance": [0.012, 0.006, 0.004],
-          "capsule_reflectance": [0.16, 0.30, 0.09],
-          "anther_reflectance": [0.055, 0.010, 0.025],
-          "stigma_reflectance": [0.42, 0.10, 0.12],
-          "stigma_center_reflectance": [0.018, 0.002, 0.008],
-          "basal_blotch_reflectance": [0.012, 0.003, 0.009],
-          "basal_blotch_variants": [true, true, true, true, false, false, false],
-          "color_names": [
-            "scarlet", "vermilion", "orange", "coral", "apricot", "gold", "cream"
-          ],
-          "center_reflectance_variants": [
-            [0.012, 0.006, 0.004],
-            [0.016, 0.007, 0.003],
-            [0.12, 0.055, 0.008],
-            [0.025, 0.010, 0.004],
-            [0.38, 0.22, 0.035],
-            [0.48, 0.30, 0.045],
-            [0.52, 0.34, 0.065]
-          ],
-          "petal_transmittance": [0.14, 0.008, 0.001],
-          "rim_transmittance": [0.42, 0.028, 0.003],
-          "reflectance_variants": [
-            [0.92, 0.055, 0.004],
-            [0.98, 0.12, 0.006],
-            [1.00, 0.28, 0.010],
-            [0.96, 0.20, 0.075],
-            [0.96, 0.46, 0.13],
-            [0.96, 0.62, 0.12],
-            [0.92, 0.80, 0.55]
-          ]
-        },
-        "litter": {
-          "enabled": false,
-          "count": 950,
-          "seed": 53,
-          "region": { "center": [0.0, 0.0], "size": [300.0, 300.0] },
-          "scale": [0.7, 2.2],
-          "max_slope_degrees": 42.0,
-          "patchiness": { "strength": 0.48, "frequency": 0.035 },
-          "attraction": { "center": [0.0, 0.0], "radius": 150.0, "strength": 0.75 },
-          "y_offset": 0.055,
-          "variants": 3,
-          "reflectance_variants": [
-            [0.16, 0.070, 0.018],
-            [0.22, 0.11, 0.025],
-            [0.095, 0.050, 0.015]
-          ]
-        },
-        "rocks": {
-          "enabled": false,
-          "count": 48,
-          "seed": 67,
-          "region": { "center": [0.0, 0.0], "size": [620.0, 620.0] },
-          "scale": [1.6, 5.8],
-          "max_slope_degrees": 48.0,
-          "patchiness": { "strength": 0.64, "frequency": 0.012 },
-          "exclusion": { "center": [0.0, 0.0], "radius": 14.0 },
-          "y_offset": -1.0,
-          "variants": 3,
-          "reflectance_variants": [
-            [0.14, 0.13, 0.105],
-            [0.095, 0.10, 0.075],
-            [0.18, 0.16, 0.12]
-          ]
-        },
-        "undergrowth": {
-          "enabled": false,
-          "count": 140,
-          "seed": 79,
-          "region": { "center": [0.0, 0.0], "size": [440.0, 440.0] },
-          "scale": [2.0, 4.8],
-          "max_slope_degrees": 30.0,
-          "patchiness": { "strength": 0.88, "frequency": 0.020 },
-          "exclusion": { "center": [0.0, 0.0], "radius": 24.0 },
-          "y_offset": 0.04,
-          "variants": 2,
-          "reflectance_variants": [
-            [0.025, 0.13, 0.030],
-            [0.040, 0.18, 0.040]
-          ]
+          "grass": {
+            "enabled": true,
+            "seed": 41,
+            "region": { "center": [150.0, -100.0], "size": [1900.0, 1600.0] },
+            "max_slope_degrees": 70.0,
+            "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
+            "y_offset": 0.03,
+            "variants": 3,
+            "blade": {
+              "height": [8.0, 25.0],
+              "width": [0.025, 0.050],
+              "segments": 3,
+              "lean": [0.10, 0.28],
+              "lean_spread_degrees": 31.51267873219528,
+              "bend": [-0.055, 0.055],
+              "bend_exponent": 1.45,
+              "tip_droop": [0.0, 0.0],
+              "tropism": {
+                "enabled": true,
+                "direction_degrees": 45.0,
+                "strength": [3.0, 7.0],
+                "direction_variation_degrees": 70.0,
+                "curvature_exponent": 2.0,
+                "field": {
+                  "enabled": true,
+                  "seed": 113,
+                  "frequency": 0.004,
+                  "direction_variation_degrees": 160.0,
+                  "octaves": 2,
+                  "persistence": 0.40,
+                  "random_jitter_degrees": 20.0
+                }
+              },
+              "taper_exponent": 1.35
+            },
+            "tuft": {
+              "blades": 7,
+              "radius": [0.025, 0.14],
+              "angle_jitter_degrees": 18.0
+            },
+            "reflectance_variants": [
+              [0.045, 0.16, 0.020],
+              [0.075, 0.22, 0.030],
+              [0.12, 0.20, 0.035]
+            ],
+            "layers": [
+              {
+                "count": 3400000,
+                "seed": 41,
+                "scale": [1.0, 1.7],
+                "patchiness": { "strength": 0.12, "frequency": 0.012 }
+              }
+            ]
+          },
+          "poppies": {
+            "enabled": true,
+            "count": 2600,
+            "seed": 131,
+            "region": { "center": [150.0, -100.0], "size": [1900.0, 1600.0] },
+            "scale": [16.0, 47.0],
+            "camera_frustum": {
+              "enabled": true,
+              "placement_reference": "flower"
+            },
+            "max_slope_degrees": 65.0,
+            "patchiness": { "strength": 0.62, "frequency": 0.007 },
+            "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
+            "y_offset": 0.05,
+            "variants": 7,
+            "stem_reflectance": [0.035, 0.16, 0.025],
+            "foliage_reflectance": [0.08, 0.21, 0.065],
+            "tropism": {
+              "main_stem": {
+                "direction_degrees": 88.0,
+                "height": 0.765,
+                "bend": 0.135,
+                "lateral_sway": 0.045
+              },
+              "emerging_buds": {
+                "count": 2,
+                "direction_degrees": 4.0,
+                "reach": 0.28,
+                "droop": 0.30
+              },
+              "foliage": {
+                "direction_degrees": 205.0,
+                "spread_degrees": 115.0,
+                "droop": 0.52
+              }
+            },
+            "center_reflectance": [0.012, 0.006, 0.004],
+            "capsule_reflectance": [0.16, 0.30, 0.09],
+            "anther_reflectance": [0.055, 0.010, 0.025],
+            "stigma_reflectance": [0.42, 0.10, 0.12],
+            "stigma_center_reflectance": [0.018, 0.002, 0.008],
+            "basal_blotch_reflectance": [0.012, 0.003, 0.009],
+            "basal_blotch_variants": [true, true, true, true, false, false, false],
+            "color_names": [
+              "scarlet", "vermilion", "orange", "coral", "apricot", "gold", "cream"
+            ],
+            "center_reflectance_variants": [
+              [0.012, 0.006, 0.004],
+              [0.016, 0.007, 0.003],
+              [0.12, 0.055, 0.008],
+              [0.025, 0.010, 0.004],
+              [0.38, 0.22, 0.035],
+              [0.48, 0.30, 0.045],
+              [0.52, 0.34, 0.065]
+            ],
+            "petal_transmittance": [0.14, 0.008, 0.001],
+            "rim_transmittance": [0.42, 0.028, 0.003],
+            "reflectance_variants": [
+              [0.92, 0.055, 0.004],
+              [0.98, 0.12, 0.006],
+              [1.00, 0.28, 0.010],
+              [0.96, 0.20, 0.075],
+              [0.96, 0.46, 0.13],
+              [0.96, 0.62, 0.12],
+              [0.92, 0.80, 0.55]
+            ]
+          },
+          "litter": {
+            "enabled": false,
+            "count": 950,
+            "seed": 53,
+            "region": { "center": [0.0, 0.0], "size": [300.0, 300.0] },
+            "scale": [0.7, 2.2],
+            "max_slope_degrees": 42.0,
+            "patchiness": { "strength": 0.48, "frequency": 0.035 },
+            "attraction": { "center": [0.0, 0.0], "radius": 150.0, "strength": 0.75 },
+            "y_offset": 0.055,
+            "variants": 3,
+            "reflectance_variants": [
+              [0.16, 0.070, 0.018],
+              [0.22, 0.11, 0.025],
+              [0.095, 0.050, 0.015]
+            ]
+          },
+          "rocks": {
+            "enabled": false,
+            "count": 48,
+            "seed": 67,
+            "region": { "center": [0.0, 0.0], "size": [620.0, 620.0] },
+            "scale": [1.6, 5.8],
+            "max_slope_degrees": 48.0,
+            "patchiness": { "strength": 0.64, "frequency": 0.012 },
+            "exclusion": { "center": [0.0, 0.0], "radius": 14.0 },
+            "y_offset": -1.0,
+            "variants": 3,
+            "reflectance_variants": [
+              [0.14, 0.13, 0.105],
+              [0.095, 0.10, 0.075],
+              [0.18, 0.16, 0.12]
+            ]
+          },
+          "undergrowth": {
+            "enabled": false,
+            "count": 140,
+            "seed": 79,
+            "region": { "center": [0.0, 0.0], "size": [440.0, 440.0] },
+            "scale": [2.0, 4.8],
+            "max_slope_degrees": 30.0,
+            "patchiness": { "strength": 0.88, "frequency": 0.020 },
+            "exclusion": { "center": [0.0, 0.0], "radius": 24.0 },
+            "y_offset": 0.04,
+            "variants": 2,
+            "reflectance_variants": [
+              [0.025, 0.13, 0.030],
+              [0.040, 0.18, 0.040]
+            ]
+          }
         }
+      },
+      "distant_hills": {
+        "enabled": false
       }
     },
 

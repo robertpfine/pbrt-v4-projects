@@ -11,7 +11,7 @@ def main():
     root = Path(__file__).parent
     output = root / "scene_files" / "reproductive_preview.pbrt"
     config = json.loads((root / "config.json").read_text(encoding="utf-8"))
-    poppy_config = config["scene"]["terrain"]["details"]["poppies"]
+    poppy_config = config["scene"]["landscape"]["ground"]["details"]["poppies"]
     parts = _poppy_mesh(0, poppy_config)
     lines = [
         '# FILE: reproductive_preview.pbrt',

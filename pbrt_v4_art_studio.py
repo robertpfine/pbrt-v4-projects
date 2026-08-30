@@ -23,7 +23,7 @@ except ImportError as error:  # pragma: no cover - exercised before Qt starts
         "requirements-gui.txt before starting PBRT-v4 Art Studio."
     ) from error
 
-from scene_config import SceneConfig, SceneConfigError
+from scene_config import GROUND_PATH, SKY_PATH, SceneConfig, SceneConfigError
 
 
 ROOT = Path(__file__).resolve().parent
@@ -278,6 +278,29 @@ class Inspector(QtWidgets.QWidget):
     def _placeholder(self, key: str, title: str, text: str) -> None:
         self._page(key, title, text)
 
+    def _module_boundary(
+        self,
+        key: str,
+        title: str,
+        path: tuple[str | int, ...],
+        note: str,
+    ) -> None:
+        form = self._page(key, title, note)
+        location = QtWidgets.QLabel(".".join(str(part) for part in path))
+        location.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        state = QtWidgets.QLabel()
+        form.addRow("Configuration", location)
+        form.addRow("Current state", state)
+
+        def refresh_state() -> None:
+            module = self.config.get(path)
+            state.setText("enabled" if module.get("enabled", False) else "disabled")
+
+        self.refreshers.append(refresh_state)
+        refresh_state()
+
     def _build_pages(self) -> None:
         self._build_scene_page()
         self._placeholder(
@@ -289,26 +312,28 @@ class Inspector(QtWidgets.QWidget):
         self._placeholder(
             "landscape",
             "Landscape",
-            "Ground, landform, grass, flowers, trees, and distant hills remain "
-            "independent categories available in any working order.",
+            "scene.landscape is the boundary for the ground and receding-horizon "
+            "systems. Ground contents remain independently editable.",
         )
         self._build_ground_page()
         self._build_landform_page()
         self._build_grass_page()
         self._build_poppy_page()
         self._build_tree_page()
-        self._placeholder(
+        self._module_boundary(
             "distant_hills",
             "Distant Hills",
-            "Required for the receding horizon in the proof of concept. The "
-            "dedicated generator and controls have not yet been implemented.",
+            ("scene", "landscape", "distant_hills"),
+            "The configuration boundary is established and disabled. Generator "
+            "and artistic controls are the next implementation step.",
         )
         self._build_sky_page()
-        self._placeholder(
+        self._module_boundary(
             "clouds",
             "Clouds",
-            "Required for the proof of concept. The cloud generator and its "
-            "parameter model have not yet been implemented.",
+            SKY_PATH + ("clouds",),
+            "The configuration boundary is established and disabled. Generator "
+            "and artistic controls are the next implementation step.",
         )
         self._build_atmosphere_page()
         self._build_lighting_page()
@@ -346,7 +371,7 @@ class Inspector(QtWidgets.QWidget):
             "This controls the surface treatment beneath independently enabled "
             "grass, flowers, stones, undergrowth, and litter.",
         )
-        base = ("scene", "terrain", "details", "surface")
+        base = GROUND_PATH + ("details", "surface")
         self._check(form, "Surface treatment", base + ("enabled",))
         mode = QtWidgets.QLabel(str(self.config.get(base + ("mode",))))
         mode.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -359,7 +384,7 @@ class Inspector(QtWidgets.QWidget):
             "The landform defines geometry. Ground contents remain separate and "
             "can be edited after this choice.",
         )
-        path = ("scene", "terrain", "active_landform")
+        path = GROUND_PATH + ("active_landform",)
         combo = QtWidgets.QComboBox()
         combo.addItems(self.config.landform_names())
         combo.setCurrentText(str(self.config.get(path)))
@@ -369,7 +394,7 @@ class Inspector(QtWidgets.QWidget):
             lambda: self._blocked(combo, str(self.config.get(path)))
         )
         active = str(self.config.get(path))
-        root = ("scene", "terrain", "landforms", active)
+        root = GROUND_PATH + ("landforms", active)
         self._pair(form, "Size", root + ("size",), 1.0, 100_000.0, 2)
         self._number(form, "Base height", root + ("base_height",), decimals=3)
         self._number(
@@ -396,7 +421,7 @@ class Inspector(QtWidgets.QWidget):
             "Population and blade controls use exact values; the render, not the "
             "interface, shows their visual consequence.",
         )
-        base = ("scene", "terrain", "details", "grass")
+        base = GROUND_PATH + ("details", "grass")
         self._check(form, "Enabled", base + ("enabled",))
         self._integer(form, "Tuft instances", base + ("layers", 0, "count"))
         self._integer(form, "Blades per tuft", base + ("tuft", "blades"), 1, 100)
@@ -427,7 +452,7 @@ class Inspector(QtWidgets.QWidget):
             "full camera frame. Choose whether the reference is the flower or "
             "its root; plant geometry may be cropped at an edge.",
         )
-        base = ("scene", "terrain", "details", "poppies")
+        base = GROUND_PATH + ("details", "poppies")
         self._check(form, "Enabled", base + ("enabled",))
         self._integer(form, "Instances", base + ("count",))
         self._pair(form, "Scale", base + ("scale",), 0.0, 10_000.0, 3)
@@ -515,7 +540,7 @@ class Inspector(QtWidgets.QWidget):
             "The current neutral sky comes from the established infinite light. "
             "Clouds are a separate category.",
         )
-        base = ("scene", "lights", 0)
+        base = SKY_PATH + ("background",)
         self._check(form, "Enabled", base + ("enabled",))
         self._vector(form, "Color", base + ("color",))
         self._number(form, "Intensity", base + ("scale",), 0.0, 1_000_000.0, 4)
@@ -713,14 +738,12 @@ class StudioWindow(QtWidgets.QMainWindow):
             QLabel#inspectorNote { color: #aeb6bd; padding-bottom: 10px; }
             QDockWidget::title { background: #2a3037; padding: 5px; }
             QPlainTextEdit#renderLog { font-family: monospace; font-size: 12px; }
-            QLabel#renderProgress { background: #171b20; color: #f0b84c;
-                                    font-family: monospace; padding: 2px 5px; }
             """
         )
 
     def _configuration_changed(self, path: str) -> None:
         self._update_status(f"Unsaved change: {path}")
-        if path.startswith("scene.terrain.active_landform"):
+        if path.startswith("scene.landscape.ground.active_landform"):
             self.log.appendPlainText(
                 "Landform selected. Reopen the studio after saving to refresh "
                 "landform-specific inspector fields."

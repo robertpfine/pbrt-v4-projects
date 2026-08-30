@@ -1,8 +1,8 @@
 # PBRT-v4 Art Studio: Qt Proof-of-Concept Specification
 
-Status: Initial shell implemented; runtime visual verification awaits the local
-PySide6 dependency. This document defines the first bounded implementation; it
-does not define the complete future medium.
+Status: Initial shell implemented and exercised in the desktop workflow. This
+document defines the first bounded implementation; it does not define the
+complete future medium.
 
 Visual reference:
 [`assets/qt-proof-of-concept.png`](assets/qt-proof-of-concept.png)
@@ -177,9 +177,21 @@ A Python configuration model will mediate between that file and Qt. It will:
 Manual editing of `config.json` remains valid. The Python model does not create
 a second scene configuration.
 
-The complete JSON hierarchy will not be refactored before the proof of concept.
-Later reorganization can occur behind the Python configuration model after the
-interface has demonstrated which structure is useful artistically.
+The initial shell preceded any complete JSON refactor. Desktop use then
+identified a bounded structural need, implemented behind the Python
+configuration model:
+
+```text
+scene.landscape.ground
+scene.landscape.distant_hills
+scene.sky.background
+scene.sky.clouds
+```
+
+The ground and neutral infinite-sky values migrated without changing PBRT
+output. Distant hills and clouds now have disabled module boundaries for their
+next implementation step. This is not a complete object/process refactor; see
+[`scene-module-boundaries.md`](scene-module-boundaries.md).
 
 ## Implemented entry points
 

@@ -58,12 +58,19 @@ class ArtStudioTests(unittest.TestCase):
         )
 
     def test_control_change_saves_to_the_single_configuration(self):
-        path = ("scene", "terrain", "details", "poppies", "count")
+        path = (
+            "scene", "landscape", "ground", "details", "poppies", "count"
+        )
         self.window.inspector._set(path, 2700)
         self.assertTrue(self.window.config.dirty)
         self.assertTrue(self.window.save_config())
         result = json.loads(self.config_path.read_text(encoding="utf-8"))
-        self.assertEqual(result["scene"]["terrain"]["details"]["poppies"]["count"], 2700)
+        self.assertEqual(
+            result["scene"]["landscape"]["ground"]["details"]["poppies"][
+                "count"
+            ],
+            2700,
+        )
         self.assertNotIn("project", result)
 
     def test_poppy_placement_reference_switch_updates_config(self):
@@ -77,7 +84,8 @@ class ArtStudioTests(unittest.TestCase):
         self.application.processEvents()
         self.assertEqual(
             self.window.config.get(
-                "scene.terrain.details.poppies.camera_frustum.placement_reference"
+                "scene.landscape.ground.details.poppies."
+                "camera_frustum.placement_reference"
             ),
             "root",
         )

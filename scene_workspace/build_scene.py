@@ -2576,17 +2576,23 @@ def write_scene(cfg, scene_root, medium_rel_path):
     
     if medium_rel_path is not None:
         write_medium_include(lines, medium_rel_path)
-    terrain_config = scene.get("terrain", {})
-    terrain = create_terrain(terrain_config)
-    lights = scene.get("lights", [])
+    landscape_config = scene.get("landscape", {})
+    ground_config = landscape_config.get("ground", {})
+    terrain = create_terrain(ground_config)
+    sky_config = scene.get("sky", {})
+    lights = []
+    background = sky_config.get("background")
+    if background:
+        lights.append(background)
+    lights.extend(scene.get("lights", []))
     write_lights(lines, lights)
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []))
-    write_terrain(lines, terrain, terrain_config, scene_root)
+    write_terrain(lines, terrain, ground_config, scene_root)
     write_terrain_details(
         lines,
         terrain,
-        terrain_config,
+        ground_config,
         camera=scene.get("camera"),
         film=scene.get("film"),
     )

@@ -12,6 +12,8 @@ from typing import Any, Iterable
 
 JsonPath = tuple[str | int, ...]
 _MISSING = object()
+GROUND_PATH: JsonPath = ("scene", "landscape", "ground")
+SKY_PATH: JsonPath = ("scene", "sky")
 
 
 class SceneConfigError(ValueError):
@@ -188,9 +190,11 @@ class SceneConfig:
             self._pending[normalized] = deepcopy(value)
 
     def landform_names(self) -> tuple[str, ...]:
-        landforms = self.get(("scene", "terrain", "landforms"))
+        landforms = self.get(GROUND_PATH + ("landforms",))
         if not isinstance(landforms, dict):
-            raise SceneConfigError("scene.terrain.landforms must be an object")
+            raise SceneConfigError(
+                "scene.landscape.ground.landforms must be an object"
+            )
         return tuple(landforms)
 
     def validate(self) -> list[str]:
@@ -210,14 +214,34 @@ class SceneConfig:
                 return None
             return value
 
-        terrain = require(("scene", "terrain"), dict)
-        if terrain is not None:
-            active = terrain.get("active_landform")
-            landforms = terrain.get("landforms")
+        landscape = require(("scene", "landscape"), dict)
+        ground = require(GROUND_PATH, dict) if landscape is not None else None
+        if landscape is not None:
+            distant_hills = landscape.get("distant_hills")
+            if not isinstance(distant_hills, dict):
+                errors.append("landscape requires a distant_hills module")
+            elif not isinstance(distant_hills.get("enabled", False), bool):
+                errors.append("distant_hills.enabled must be boolean")
+        if ground is not None:
+            active = ground.get("active_landform")
+            landforms = ground.get("landforms")
             if not isinstance(active, str) or not isinstance(landforms, dict):
-                errors.append("terrain requires active_landform and landforms")
+                errors.append("landscape.ground requires active_landform and landforms")
             elif active not in landforms:
                 errors.append(f"unknown active landform: {active}")
+
+        sky = require(SKY_PATH, dict)
+        if sky is not None:
+            background = sky.get("background")
+            clouds = sky.get("clouds")
+            if not isinstance(background, dict):
+                errors.append("sky requires a background module")
+            elif background.get("type") != "infinite":
+                errors.append("sky.background.type must be infinite")
+            if not isinstance(clouds, dict):
+                errors.append("sky requires a clouds module")
+            elif not isinstance(clouds.get("enabled", False), bool):
+                errors.append("sky.clouds.enabled must be boolean")
 
         camera = require(("scene", "camera"), dict)
         if camera is not None:
@@ -239,7 +263,7 @@ class SceneConfig:
                 if not isinstance(value, int) or value <= 0:
                     errors.append(f"film.{name} must be a positive integer")
 
-        poppies = require(("scene", "terrain", "details", "poppies"), dict)
+        poppies = require(GROUND_PATH + ("details", "poppies"), dict)
         if poppies is not None:
             count = poppies.get("count")
             if not isinstance(count, int) or count < 0:
@@ -262,7 +286,7 @@ class SceneConfig:
                     "root or flower"
                 )
 
-        grass = require(("scene", "terrain", "details", "grass"), dict)
+        grass = require(GROUND_PATH + ("details", "grass"), dict)
         if grass is not None:
             layers = grass.get("layers", [])
             if not isinstance(layers, list) or not layers:
@@ -282,18 +306,23 @@ class SceneConfig:
         for index, entry in enumerate(self.get(("scene", "trees"), [])):
             if entry.get("enabled", False):
                 enabled_trees.append(entry.get("name", f"space_colonization_{index}"))
-        grass = self.get(("scene", "terrain", "details", "grass"))
-        poppies = self.get(("scene", "terrain", "details", "poppies"))
+        grass = self.get(GROUND_PATH + ("details", "grass"))
+        poppies = self.get(GROUND_PATH + ("details", "poppies"))
+        distant_hills = self.get(("scene", "landscape", "distant_hills"))
+        sky = self.get(SKY_PATH)
         grass_count = sum(
             int(layer.get("count", 0)) for layer in grass.get("layers", [])
         )
         return "\n".join((
-            f"Landform: {self.get(('scene', 'terrain', 'active_landform'))}",
+            f"Landform: {self.get(GROUND_PATH + ('active_landform',))}",
             f"Grass: {'enabled' if grass.get('enabled') else 'disabled'}, "
             f"{grass_count:,} tufts",
             f"Poppies: {'enabled' if poppies.get('enabled') else 'disabled'}, "
             f"{int(poppies.get('count', 0)):,} instances",
             f"Trees: {', '.join(enabled_trees) if enabled_trees else 'none'}",
+            f"Distant hills: {'enabled' if distant_hills.get('enabled') else 'disabled'}",
+            f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
+            f"Clouds: {'enabled' if sky['clouds'].get('enabled') else 'disabled'}",
             f"Fog: {'enabled' if self.get(('scene', 'fog', 'enabled'), False) else 'disabled'}",
         ))
 

@@ -1,6 +1,7 @@
 # Grass configuration
 
-Grass controls live under `scene.terrain.details.grass` in `config.json`.
+Grass controls live under `scene.landscape.ground.details.grass` in
+`config.json`.
 Values in `blade` and `tuft` define each reusable tuft mesh. The layer's
 `scale` is applied afterward to every dimension of each instance.
 

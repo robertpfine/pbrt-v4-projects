@@ -58,8 +58,10 @@ def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
     for light in result["scene"].get("lights", []):
         light["enabled"] = light.get("label") == shaft_label
     scale_reflectances(result["scene"], surface_scale)
-    result["scene"]["terrain"] = copy.deepcopy(cfg["scene"]["terrain"])
-    scale_reflectances(result["scene"]["terrain"], terrain_scale)
+    result["scene"]["landscape"]["ground"] = copy.deepcopy(
+        cfg["scene"]["landscape"]["ground"]
+    )
+    scale_reflectances(result["scene"]["landscape"]["ground"], terrain_scale)
     return result
 
 
