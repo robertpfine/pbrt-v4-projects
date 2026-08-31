@@ -25,6 +25,7 @@ and PBRT progress.
   - `95d8b44` (`Add PBRT-v4 Art Studio proof of concept`)
   - `5cb45e8` (`Refine poppy framing and Art Studio render feedback`)
   - `6c796b4` (`Establish landscape and sky module boundaries`)
+  - `73694c8` (`Checkpoint horizon studies before height-field reset`)
 - Primary working scene: `scene_workspace/config.json`
 - Renderer: PBRT-v4 with CUDA/GPU rendering
 - Normal pipeline entry point: `./render_pipeline.sh`
@@ -198,7 +199,7 @@ this bounded migration. See `docs/scene-module-boundaries.md`.
 
 ## 2026-08-31 pre-refactor distant-hills checkpoint
 
-The current working state is checkpointed before replacing the first
+Git checkpoint `73694c8` preserves the current working state before replacing the first
 distant-hills implementation. It is recoverable evidence of the composition and
 experiments, but the artist has explicitly rejected its ridge-band construction
 as the direction for further development.
