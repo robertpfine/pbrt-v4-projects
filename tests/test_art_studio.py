@@ -91,6 +91,23 @@ class ArtStudioTests(unittest.TestCase):
             "root",
         )
 
+    def test_distant_hill_controls_edit_selected_layer_and_peak(self):
+        layer_selector = self.window.findChild(
+            QtWidgets.QComboBox,
+            "distant_hill_layer",
+        )
+        peak_selector = self.window.findChild(
+            QtWidgets.QComboBox,
+            "distant_hill_peak",
+        )
+        self.assertIsNotNone(layer_selector)
+        self.assertIsNotNone(peak_selector)
+        layer_selector.setCurrentIndex(1)
+        peak_selector.setCurrentIndex(2)
+        self.application.processEvents()
+        self.assertEqual(layer_selector.currentText(), "middle_range")
+        self.assertEqual(peak_selector.currentText(), "Peak 3")
+
     def test_no_add_control_is_present(self):
         buttons = self.window.findChildren(QtWidgets.QAbstractButton)
         self.assertNotIn("Add", {button.text() for button in buttons})

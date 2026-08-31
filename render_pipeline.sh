@@ -109,6 +109,7 @@ echo "Archiving reproducibility files..."
 cp "$SCENE_PATH"                    "${FINAL_BASE}.pbrt"
 cp "$CONFIG_FILE"                   "${FINAL_BASE}_config.json"
 cp "${SCENE_ROOT}/build_scene.py" "${FINAL_BASE}_build_scene.py" 2>/dev/null || true
+cp "${REPO_ROOT}/distant_hills.py" "${FINAL_BASE}_distant_hills.py" 2>/dev/null || true
 cp "${REPO_ROOT}/render_pipeline.sh" "${FINAL_BASE}_render_pipeline.sh" 2>/dev/null || true
 
 # Update metadata headers in archived .pbrt copy
@@ -123,6 +124,7 @@ if [ "$RUN_SYNC" = "true" ]; then
         --include "${ARCHIVE_STEM}_${TS}.pbrt" \
         --include "${ARCHIVE_STEM}_${TS}_config.json" \
         --include "${ARCHIVE_STEM}_${TS}_build_scene.py" \
+        --include "${ARCHIVE_STEM}_${TS}_distant_hills.py" \
         --include "${ARCHIVE_STEM}_${TS}_render_pipeline.sh" \
         --drive-chunk-size=64M \
         --low-level-retries=5

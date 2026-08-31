@@ -190,8 +190,9 @@ scene.sky.clouds
 ```
 
 The ground and neutral infinite-sky values migrated without changing PBRT
-output. Distant hills and clouds now have disabled module boundaries for their
-next implementation step. This is not a complete object/process refactor; see
+output. Distant hills now have a three-layer generator and focused inspector;
+clouds retain a disabled module boundary for their next implementation step.
+This is not a complete object/process refactor; see
 [`scene-module-boundaries.md`](scene-module-boundaries.md).
 
 ## Implemented entry points

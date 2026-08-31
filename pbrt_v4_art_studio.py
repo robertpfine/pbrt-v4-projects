@@ -23,7 +23,13 @@ except ImportError as error:  # pragma: no cover - exercised before Qt starts
         "requirements-gui.txt before starting PBRT-v4 Art Studio."
     ) from error
 
-from scene_config import GROUND_PATH, SKY_PATH, SceneConfig, SceneConfigError
+from scene_config import (
+    GROUND_PATH,
+    HILLS_PATH,
+    SKY_PATH,
+    SceneConfig,
+    SceneConfigError,
+)
 
 
 ROOT = Path(__file__).resolve().parent
@@ -328,13 +334,7 @@ class Inspector(QtWidgets.QWidget):
             "Water bodies, waves, optics, and shoreline controls are the third "
             "ordered element of Step 4.",
         )
-        self._module_boundary(
-            "distant_hills",
-            "Distant Hills",
-            ("scene", "landscape", "distant_hills"),
-            "The configuration boundary is established and disabled. Generator "
-            "and artistic controls are the next implementation step.",
-        )
+        self._build_distant_hills_page()
         self._build_sky_page()
         self._module_boundary(
             "clouds",
@@ -540,6 +540,260 @@ class Inspector(QtWidgets.QWidget):
         )
         self.refreshers.append(refresh_tree)
         refresh_tree()
+
+    def _build_distant_hills_page(self) -> None:
+        form = self._page(
+            "distant_hills",
+            "Distant Hills",
+            "Real terrain bands create the receding horizon. Explicit "
+            "peaks control each silhouette; Perlin noise adds subordinate "
+            "irregularity and can be set to zero without removing the hills.",
+        )
+        self._check(form, "Enabled", HILLS_PATH + ("enabled",))
+        tree_line_path = HILLS_PATH + ("tree_line",)
+        tree_line_heading = QtWidgets.QLabel("Horizon tree line")
+        tree_line_heading.setObjectName("inspectorSubheading")
+        form.addRow(tree_line_heading)
+        self._check(form, "Tree line enabled", tree_line_path + ("enabled",))
+        tree_line_layer = QtWidgets.QLabel(
+            str(self.config.get(tree_line_path + ("layer",)))
+        )
+        form.addRow("Anchored ridge", tree_line_layer)
+        self._integer(form, "Tree silhouettes", tree_line_path + ("count",), 0, 100_000)
+        self._pair(form, "Tree height", tree_line_path + ("height",), 0.1, 10_000.0)
+        self._pair(
+            form,
+            "Crown radius",
+            tree_line_path + ("crown_radius",),
+            0.01,
+            10_000.0,
+        )
+        self._integer(
+            form,
+            "Irregular clusters",
+            tree_line_path + ("cluster_count",),
+            1,
+            10_000,
+        )
+        self._number(
+            form,
+            "Evergreen fraction",
+            tree_line_path + ("evergreen_fraction",),
+            0.0,
+            1.0,
+            3,
+        )
+        layers = self.config.get(HILLS_PATH + ("layers",))
+        layer_selector = QtWidgets.QComboBox()
+        layer_selector.setObjectName("distant_hill_layer")
+        for layer in layers:
+            layer_selector.addItem(str(layer.get("name", "unnamed layer")))
+        form.addRow("Depth layer", layer_selector)
+
+        layer_enabled = QtWidgets.QCheckBox()
+        center = [QtWidgets.QDoubleSpinBox(), QtWidgets.QDoubleSpinBox()]
+        size = [QtWidgets.QDoubleSpinBox(), QtWidgets.QDoubleSpinBox()]
+        rotation = QtWidgets.QDoubleSpinBox()
+        base_elevation = QtWidgets.QDoubleSpinBox()
+        ridge_height = QtWidgets.QDoubleSpinBox()
+        ridge_position = QtWidgets.QDoubleSpinBox()
+        front_power = QtWidgets.QDoubleSpinBox()
+        back_power = QtWidgets.QDoubleSpinBox()
+        noise_amplitude = QtWidgets.QDoubleSpinBox()
+        noise_frequency = QtWidgets.QDoubleSpinBox()
+        reflectance = [
+            QtWidgets.QDoubleSpinBox(),
+            QtWidgets.QDoubleSpinBox(),
+            QtWidgets.QDoubleSpinBox(),
+        ]
+        peak_selector = QtWidgets.QComboBox()
+        peak_selector.setObjectName("distant_hill_peak")
+        peak_position = QtWidgets.QDoubleSpinBox()
+        peak_height = QtWidgets.QDoubleSpinBox()
+        peak_width = QtWidgets.QDoubleSpinBox()
+        peak_asymmetry = QtWidgets.QDoubleSpinBox()
+
+        def configure(
+            widget: QtWidgets.QDoubleSpinBox,
+            minimum: float,
+            maximum: float,
+            decimals: int,
+        ) -> None:
+            widget.setRange(minimum, maximum)
+            widget.setDecimals(decimals)
+
+        for widget in center:
+            configure(widget, -100_000.0, 100_000.0, 2)
+        for widget in size:
+            configure(widget, 1.0, 100_000.0, 2)
+        configure(rotation, -360.0, 360.0, 2)
+        configure(base_elevation, -100_000.0, 100_000.0, 2)
+        configure(ridge_height, 0.0, 100_000.0, 2)
+        configure(ridge_position, 0.01, 0.99, 3)
+        configure(front_power, 0.05, 20.0, 3)
+        configure(back_power, 0.05, 20.0, 3)
+        configure(noise_amplitude, 0.0, 100_000.0, 2)
+        configure(noise_frequency, 0.0, 100.0, 5)
+        for widget in reflectance:
+            configure(widget, 0.0, 1.0, 4)
+        configure(peak_position, -1.5, 1.5, 3)
+        configure(peak_height, -100_000.0, 100_000.0, 2)
+        configure(peak_width, 0.001, 3.0, 3)
+        configure(peak_asymmetry, -0.95, 0.95, 3)
+
+        def vector_row(widgets: list[QtWidgets.QDoubleSpinBox], prefixes: str) -> QtWidgets.QWidget:
+            row = QtWidgets.QWidget()
+            layout = QtWidgets.QHBoxLayout(row)
+            layout.setContentsMargins(0, 0, 0, 0)
+            for widget, prefix in zip(widgets, prefixes):
+                widget.setPrefix(f"{prefix} ")
+                layout.addWidget(widget)
+            return row
+
+        form.addRow("Layer active", layer_enabled)
+        form.addRow("World center", vector_row(center, "XZ"))
+        form.addRow("Width / depth", vector_row(size, "WD"))
+        form.addRow("Rotation", rotation)
+        form.addRow("Base elevation", base_elevation)
+        form.addRow("Base ridge height", ridge_height)
+        form.addRow("Ridge depth", ridge_position)
+        form.addRow("Front slope power", front_power)
+        form.addRow("Rear slope power", back_power)
+        form.addRow("Noise amplitude", noise_amplitude)
+        form.addRow("Noise frequency", noise_frequency)
+        form.addRow("Reflectance", vector_row(reflectance, "RGB"))
+        form.addRow("Designed peak", peak_selector)
+        form.addRow("Peak position", peak_position)
+        form.addRow("Peak height", peak_height)
+        form.addRow("Peak width", peak_width)
+        form.addRow("Peak asymmetry", peak_asymmetry)
+
+        def layer_path(*parts: str | int) -> tuple[str | int, ...]:
+            return HILLS_PATH + ("layers", layer_selector.currentIndex()) + parts
+
+        def peak_path(field: str) -> tuple[str | int, ...]:
+            return layer_path("peaks", peak_selector.currentIndex(), field)
+
+        def set_pair(field: str, index: int, value: float) -> None:
+            path = layer_path(field)
+            values = list(self.config.get(path))
+            values[index] = value
+            self._set(path, values)
+
+        def set_reflectance(index: int, value: float) -> None:
+            path = layer_path("material", "reflectance")
+            values = list(self.config.get(path))
+            values[index] = value
+            self._set(path, values)
+
+        def populate_peaks() -> None:
+            blocker = QtCore.QSignalBlocker(peak_selector)
+            previous = max(0, peak_selector.currentIndex())
+            peak_selector.clear()
+            peaks = self.config.get(layer_path("peaks"))
+            for index in range(len(peaks)):
+                peak_selector.addItem(f"Peak {index + 1}")
+            peak_selector.setCurrentIndex(min(previous, max(0, len(peaks) - 1)))
+            del blocker
+
+        def refresh_values() -> None:
+            populate_peaks()
+            self._blocked(layer_enabled, self.config.get(layer_path("enabled")))
+            for index, widget in enumerate(center):
+                self._blocked(widget, float(self.config.get(layer_path("center"))[index]))
+            for index, widget in enumerate(size):
+                self._blocked(widget, float(self.config.get(layer_path("size"))[index]))
+            self._blocked(rotation, float(self.config.get(layer_path("rotation_degrees"))))
+            self._blocked(base_elevation, float(self.config.get(layer_path("base_elevation"))))
+            self._blocked(ridge_height, float(self.config.get(layer_path("ridge_base_height"))))
+            self._blocked(
+                ridge_position,
+                float(self.config.get(layer_path("cross_section", "ridge_position"))),
+            )
+            self._blocked(
+                front_power,
+                float(self.config.get(layer_path("cross_section", "front_power"))),
+            )
+            self._blocked(
+                back_power,
+                float(self.config.get(layer_path("cross_section", "back_power"))),
+            )
+            self._blocked(
+                noise_amplitude,
+                float(self.config.get(layer_path("noise", "amplitude"))),
+            )
+            self._blocked(
+                noise_frequency,
+                float(self.config.get(layer_path("noise", "frequency"))),
+            )
+            colors = self.config.get(layer_path("material", "reflectance"))
+            for index, widget in enumerate(reflectance):
+                self._blocked(widget, float(colors[index]))
+            refresh_peak()
+
+        def refresh_peak() -> None:
+            if peak_selector.count() == 0:
+                return
+            self._blocked(peak_position, float(self.config.get(peak_path("position"))))
+            self._blocked(peak_height, float(self.config.get(peak_path("height"))))
+            self._blocked(peak_width, float(self.config.get(peak_path("width"))))
+            self._blocked(
+                peak_asymmetry, float(self.config.get(peak_path("asymmetry")))
+            )
+
+        layer_selector.currentIndexChanged.connect(lambda _index: refresh_values())
+        peak_selector.currentIndexChanged.connect(lambda _index: refresh_peak())
+        layer_enabled.toggled.connect(lambda value: self._set(layer_path("enabled"), value))
+        for index, widget in enumerate(center):
+            widget.valueChanged.connect(
+                lambda value, i=index: set_pair("center", i, value)
+            )
+        for index, widget in enumerate(size):
+            widget.valueChanged.connect(
+                lambda value, i=index: set_pair("size", i, value)
+            )
+        rotation.valueChanged.connect(
+            lambda value: self._set(layer_path("rotation_degrees"), value)
+        )
+        base_elevation.valueChanged.connect(
+            lambda value: self._set(layer_path("base_elevation"), value)
+        )
+        ridge_height.valueChanged.connect(
+            lambda value: self._set(layer_path("ridge_base_height"), value)
+        )
+        ridge_position.valueChanged.connect(
+            lambda value: self._set(layer_path("cross_section", "ridge_position"), value)
+        )
+        front_power.valueChanged.connect(
+            lambda value: self._set(layer_path("cross_section", "front_power"), value)
+        )
+        back_power.valueChanged.connect(
+            lambda value: self._set(layer_path("cross_section", "back_power"), value)
+        )
+        noise_amplitude.valueChanged.connect(
+            lambda value: self._set(layer_path("noise", "amplitude"), value)
+        )
+        noise_frequency.valueChanged.connect(
+            lambda value: self._set(layer_path("noise", "frequency"), value)
+        )
+        for index, widget in enumerate(reflectance):
+            widget.valueChanged.connect(
+                lambda value, i=index: set_reflectance(i, value)
+            )
+        peak_position.valueChanged.connect(
+            lambda value: self._set(peak_path("position"), value)
+        )
+        peak_height.valueChanged.connect(
+            lambda value: self._set(peak_path("height"), value)
+        )
+        peak_width.valueChanged.connect(
+            lambda value: self._set(peak_path("width"), value)
+        )
+        peak_asymmetry.valueChanged.connect(
+            lambda value: self._set(peak_path("asymmetry"), value)
+        )
+        self.refreshers.append(refresh_values)
+        refresh_values()
 
     def _build_sky_page(self) -> None:
         form = self._page(

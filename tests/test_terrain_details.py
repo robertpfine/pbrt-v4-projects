@@ -87,6 +87,35 @@ class CameraFrustumScatterTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual(len(first), config["count"])
 
+    def test_camera_depth_fade_removes_instances_beyond_far_boundary(self):
+        config = {
+            **self.config,
+            "camera_frustum": {
+                "enabled": True,
+                "depth_fade": {
+                    "enabled": True,
+                    "start": 20.0,
+                    "end": 45.0,
+                    "minimum_density": 0.0,
+                },
+            },
+        }
+        points = scatter_points(
+            self.terrain,
+            config,
+            camera=self.camera,
+            film=self.film,
+        )
+        frame = _camera_frame(self.camera, self.film)
+        eye, forward = frame[0], frame[1]
+        depths = [
+            sum((point.position[i] - eye[i]) * forward[i] for i in range(3))
+            for point in points
+        ]
+        self.assertEqual(len(points), config["count"])
+        self.assertLessEqual(max(depths), 45.0)
+        self.assertTrue(any(depth > 20.0 for depth in depths))
+
 
 if __name__ == "__main__":
     unittest.main()

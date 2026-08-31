@@ -13,6 +13,7 @@ from typing import Any, Iterable
 JsonPath = tuple[str | int, ...]
 _MISSING = object()
 GROUND_PATH: JsonPath = ("scene", "landscape", "ground")
+HILLS_PATH: JsonPath = ("scene", "landscape", "distant_hills")
 SKY_PATH: JsonPath = ("scene", "sky")
 
 
@@ -214,6 +215,37 @@ class SceneConfig:
                 return None
             return value
 
+        def validate_depth_fade(owner: str, frustum: Any) -> None:
+            if not isinstance(frustum, dict):
+                errors.append(f"{owner}.camera_frustum must be an object")
+                return
+            fade = frustum.get("depth_fade", {})
+            if not isinstance(fade, dict):
+                errors.append(f"{owner}.camera_frustum.depth_fade must be an object")
+                return
+            if not fade.get("enabled", False):
+                return
+            start = fade.get("start")
+            end = fade.get("end")
+            minimum = fade.get("minimum_density", 0.0)
+            if (
+                not isinstance(start, (int, float))
+                or not isinstance(end, (int, float))
+                or start < 0
+                or end <= start
+            ):
+                errors.append(
+                    f"{owner}.camera_frustum.depth_fade requires 0 <= start < end"
+                )
+            if (
+                not isinstance(minimum, (int, float))
+                or not 0.0 <= minimum <= 1.0
+            ):
+                errors.append(
+                    f"{owner}.camera_frustum.depth_fade.minimum_density "
+                    "must be in [0, 1]"
+                )
+
         landscape = require(("scene", "landscape"), dict)
         ground = require(GROUND_PATH, dict) if landscape is not None else None
         if landscape is not None:
@@ -222,6 +254,195 @@ class SceneConfig:
                 errors.append("landscape requires a distant_hills module")
             elif not isinstance(distant_hills.get("enabled", False), bool):
                 errors.append("distant_hills.enabled must be boolean")
+            else:
+                layers = distant_hills.get("layers")
+                if layers is None and not distant_hills.get("enabled", False):
+                    layers = []
+                elif not isinstance(layers, list) or not layers:
+                    errors.append("distant_hills.layers must contain at least one layer")
+                if layers:
+                    names = []
+                    enabled_names = []
+                    for index, layer in enumerate(layers):
+                        prefix = f"distant_hills.layers.{index}"
+                        if not isinstance(layer, dict):
+                            errors.append(f"{prefix} must be an object")
+                            continue
+                        name = layer.get("name")
+                        if not isinstance(name, str) or not name.strip():
+                            errors.append(f"{prefix}.name must be a non-empty string")
+                        else:
+                            names.append(name)
+                        if not isinstance(layer.get("enabled"), bool):
+                            errors.append(f"{prefix}.enabled must be boolean")
+                        elif layer.get("enabled") and isinstance(name, str):
+                            enabled_names.append(name)
+                        for field in ("center", "size", "resolution"):
+                            value = layer.get(field)
+                            if not isinstance(value, list) or len(value) != 2:
+                                errors.append(f"{prefix}.{field} must contain two values")
+                        size = layer.get("size", [])
+                        if len(size) == 2 and not all(
+                            isinstance(value, (int, float)) and value > 0
+                            for value in size
+                        ):
+                            errors.append(f"{prefix}.size values must be positive")
+                        resolution = layer.get("resolution", [])
+                        if len(resolution) == 2 and not all(
+                            isinstance(value, int) and value >= 2
+                            for value in resolution
+                        ):
+                            errors.append(
+                                f"{prefix}.resolution values must be integers at least 2"
+                            )
+                        ridge_position = layer.get("cross_section", {}).get(
+                            "ridge_position"
+                        )
+                        if not isinstance(ridge_position, (int, float)) or not (
+                            0.0 < ridge_position < 1.0
+                        ):
+                            errors.append(
+                                f"{prefix}.cross_section.ridge_position must be "
+                                "between 0 and 1"
+                            )
+                        peaks = layer.get("peaks", [])
+                        ridge_profile = layer.get("ridge_profile", [])
+                        if not isinstance(peaks, list):
+                            errors.append(f"{prefix}.peaks must be an array")
+                        elif peaks:
+                            for peak_index, peak in enumerate(peaks):
+                                peak_prefix = f"{prefix}.peaks.{peak_index}"
+                                if not isinstance(peak, dict):
+                                    errors.append(f"{peak_prefix} must be an object")
+                                    continue
+                                width = peak.get("width")
+                                if not isinstance(width, (int, float)) or width <= 0:
+                                    errors.append(f"{peak_prefix}.width must be positive")
+                                asymmetry = peak.get("asymmetry")
+                                if not isinstance(asymmetry, (int, float)) or not (
+                                    -0.95 <= asymmetry <= 0.95
+                                ):
+                                    errors.append(
+                                        f"{peak_prefix}.asymmetry must be in [-0.95, 0.95]"
+                                    )
+                        if not isinstance(ridge_profile, list):
+                            errors.append(f"{prefix}.ridge_profile must be an array")
+                        elif ridge_profile:
+                            previous_position = None
+                            if len(ridge_profile) < 2:
+                                errors.append(
+                                    f"{prefix}.ridge_profile must contain at least two points"
+                                )
+                            for point_index, point in enumerate(ridge_profile):
+                                point_prefix = (
+                                    f"{prefix}.ridge_profile.{point_index}"
+                                )
+                                if not isinstance(point, dict):
+                                    errors.append(f"{point_prefix} must be an object")
+                                    continue
+                                position = point.get("position")
+                                height = point.get("height")
+                                if not isinstance(position, (int, float)) or not (
+                                    -1.0 <= position <= 1.0
+                                ):
+                                    errors.append(
+                                        f"{point_prefix}.position must be in [-1, 1]"
+                                    )
+                                elif (
+                                    previous_position is not None
+                                    and position <= previous_position
+                                ):
+                                    errors.append(
+                                        f"{prefix}.ridge_profile positions must ascend"
+                                    )
+                                else:
+                                    previous_position = position
+                                if not isinstance(height, (int, float)) or height < 0:
+                                    errors.append(
+                                        f"{point_prefix}.height must be non-negative"
+                                    )
+                        elif not peaks:
+                            errors.append(
+                                f"{prefix} requires peaks or a ridge_profile"
+                            )
+                    if len(names) != len(set(names)):
+                        errors.append("distant_hills layer names must be unique")
+                    tree_line = distant_hills.get("tree_line", {})
+                    if not isinstance(tree_line, dict):
+                        errors.append("distant_hills.tree_line must be an object")
+                    elif tree_line.get("enabled", False):
+                        if tree_line.get("layer") not in enabled_names:
+                            errors.append(
+                                "distant_hills.tree_line.layer must name an active layer"
+                            )
+                        count = tree_line.get("count")
+                        if not isinstance(count, int) or count < 0:
+                            errors.append(
+                                "distant_hills.tree_line.count must be non-negative"
+                            )
+                        for field in (
+                            "lateral_range",
+                            "height",
+                            "crown_radius",
+                            "evergreen_height",
+                            "evergreen_crown_radius",
+                        ):
+                            value = tree_line.get(field)
+                            if (
+                                not isinstance(value, list)
+                                or len(value) != 2
+                                or not all(isinstance(item, (int, float)) for item in value)
+                                or value[0] >= value[1]
+                            ):
+                                errors.append(
+                                    f"distant_hills.tree_line.{field} must be an ascending pair"
+                                )
+                        variants = tree_line.get("reflectance_variants")
+                        if (
+                            not isinstance(variants, list)
+                            or not variants
+                            or any(
+                                not isinstance(color, list)
+                                or len(color) != 3
+                                or not all(isinstance(value, (int, float)) for value in color)
+                                for color in variants
+                            )
+                        ):
+                            errors.append(
+                                "distant_hills.tree_line.reflectance_variants must contain RGB triples"
+                            )
+                        evergreen_variants = tree_line.get(
+                            "evergreen_reflectance_variants"
+                        )
+                        if (
+                            not isinstance(evergreen_variants, list)
+                            or not evergreen_variants
+                            or any(
+                                not isinstance(color, list)
+                                or len(color) != 3
+                                or not all(
+                                    isinstance(value, (int, float))
+                                    for value in color
+                                )
+                                for color in evergreen_variants
+                            )
+                            or (
+                                isinstance(variants, list)
+                                and len(evergreen_variants) != len(variants)
+                            )
+                        ):
+                            errors.append(
+                                "distant_hills.tree_line.evergreen_reflectance_variants "
+                                "must match the deciduous RGB variants"
+                            )
+                        for field in ("evergreen_fraction", "clustered_fraction"):
+                            value = tree_line.get(field)
+                            if not isinstance(value, (int, float)) or not (
+                                0.0 <= value <= 1.0
+                            ):
+                                errors.append(
+                                    f"distant_hills.tree_line.{field} must be in [0, 1]"
+                                )
             water = landscape.get("water")
             if not isinstance(water, dict):
                 errors.append("landscape requires a water module")
@@ -282,17 +503,20 @@ class SceneConfig:
             ):
                 errors.append("poppies.scale must be an ascending pair")
             frustum = poppies.get("camera_frustum", {})
-            if not isinstance(frustum.get("enabled", False), bool):
-                errors.append("poppies visible-ground placement must be boolean")
-            placement_reference = frustum.get("placement_reference", "root")
-            if placement_reference not in {"root", "flower"}:
-                errors.append(
-                    "poppies.camera_frustum.placement_reference must be "
-                    "root or flower"
-                )
+            validate_depth_fade("poppies", frustum)
+            if isinstance(frustum, dict):
+                if not isinstance(frustum.get("enabled", False), bool):
+                    errors.append("poppies visible-ground placement must be boolean")
+                placement_reference = frustum.get("placement_reference", "root")
+                if placement_reference not in {"root", "flower"}:
+                    errors.append(
+                        "poppies.camera_frustum.placement_reference must be "
+                        "root or flower"
+                    )
 
         grass = require(GROUND_PATH + ("details", "grass"), dict)
         if grass is not None:
+            validate_depth_fade("grass", grass.get("camera_frustum", {}))
             layers = grass.get("layers", [])
             if not isinstance(layers, list) or not layers:
                 errors.append("grass.layers must contain at least one layer")
@@ -313,11 +537,15 @@ class SceneConfig:
                 enabled_trees.append(entry.get("name", f"space_colonization_{index}"))
         grass = self.get(GROUND_PATH + ("details", "grass"))
         poppies = self.get(GROUND_PATH + ("details", "poppies"))
-        distant_hills = self.get(("scene", "landscape", "distant_hills"))
+        distant_hills = self.get(HILLS_PATH)
         water = self.get(("scene", "landscape", "water"))
         sky = self.get(SKY_PATH)
         grass_count = sum(
             int(layer.get("count", 0)) for layer in grass.get("layers", [])
+        )
+        hill_layer_count = sum(
+            bool(layer.get("enabled"))
+            for layer in distant_hills.get("layers", [])
         )
         return "\n".join((
             f"Landform: {self.get(GROUND_PATH + ('active_landform',))}",
@@ -327,7 +555,8 @@ class SceneConfig:
             f"{int(poppies.get('count', 0)):,} instances",
             f"Trees: {', '.join(enabled_trees) if enabled_trees else 'none'}",
             f"Water: {'enabled' if water.get('enabled') else 'disabled'}",
-            f"Distant hills: {'enabled' if distant_hills.get('enabled') else 'disabled'}",
+            f"Distant hills: {'enabled' if distant_hills.get('enabled') else 'disabled'}, "
+            f"{hill_layer_count} {'layer' if hill_layer_count == 1 else 'layers'}",
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
             f"Clouds: {'enabled' if sky['clouds'].get('enabled') else 'disabled'}",
             f"Fog: {'enabled' if self.get(('scene', 'fog', 'enabled'), False) else 'disabled'}",

@@ -124,6 +124,13 @@ def _point_inside_camera_frustum(position, frame):
     return horizontal_clearance >= 0.0 and vertical_clearance >= 0.0
 
 
+def _camera_depth(position, frame):
+    """Return signed distance along the camera's forward axis."""
+
+    eye, forward = frame[0], frame[1]
+    return sum((position[i] - eye[i]) * forward[i] for i in range(3))
+
+
 def _rotate_axis_angle(vector, angle_degrees, axis):
     """Rotate a vector with Rodrigues' formula."""
 
@@ -197,8 +204,20 @@ def scatter_points(
     camera_frustum = config.get("camera_frustum", {})
     constrain_to_camera = bool(camera_frustum.get("enabled", False))
     camera_frame = None
+    depth_fade = camera_frustum.get("depth_fade", {})
+    depth_fade_enabled = bool(depth_fade.get("enabled", False))
+    depth_fade_start = float(depth_fade.get("start", 0.0))
+    depth_fade_end = float(depth_fade.get("end", 0.0))
+    depth_fade_minimum = float(depth_fade.get("minimum_density", 0.0))
     if constrain_to_camera:
         camera_frame = _camera_frame(camera, film)
+    if depth_fade_enabled:
+        if not constrain_to_camera:
+            raise ValueError("camera depth fade requires camera-frustum placement")
+        if depth_fade_start < 0.0 or depth_fade_end <= depth_fade_start:
+            raise ValueError("camera depth fade requires 0 <= start < end")
+        if not 0.0 <= depth_fade_minimum <= 1.0:
+            raise ValueError("camera depth fade minimum_density must be in [0, 1]")
 
     result = []
     attempts = 0
@@ -250,6 +269,18 @@ def scatter_points(
             )
             if not _point_inside_camera_frustum(reference_position, camera_frame):
                 continue
+            if depth_fade_enabled:
+                depth = _camera_depth(reference_position, camera_frame)
+                fade_fraction = max(0.0, min(
+                    1.0,
+                    (depth - depth_fade_start)
+                    / (depth_fade_end - depth_fade_start),
+                ))
+                density = 1.0 - (
+                    1.0 - depth_fade_minimum
+                ) * _fade(fade_fraction)
+                if rng.random() > density:
+                    continue
         result.append(point)
     if constrain_to_camera and len(result) < count:
         raise ValueError(

@@ -32,7 +32,9 @@ ground material, surface treatment, and terrain-aware detail populations. The
 complete former `scene.terrain` object moved here without changing its values.
 
 `scene.landscape.distant_hills` is the explicit boundary for receding-horizon
-geometry. It is disabled until the step-4 generator and controls are built.
+geometry. Its generator, three initial depth layers, validation, and Qt controls
+are implemented in Step 4.1. The module switch remains independent of the
+accepted ground system.
 
 ### Agreed distant-hill formation
 
@@ -51,6 +53,12 @@ The first study should use three strongly differentiated depth layers: a nearer
 darker and more articulated range, a broader middle range, and a simpler paler
 far range. The implementation belongs in a dedicated `distant_hills.py` module
 and should remain computationally small compared with the grass system.
+
+That implementation now uses deterministic gradient-Perlin fBm and is described
+in [`distant-hills-configuration.md`](distant-hills-configuration.md). Exact
+preservation was verified with the module disabled: the complete generated PBRT
+scene retained its accepted 936,127,421-byte size and SHA-256 hash
+`dfb1781890823c10da1d483358294748d3d2ad2db767a168e24c54774f88a929`.
 
 ### Water boundary
 

@@ -97,6 +97,27 @@ class SceneConfigTests(unittest.TestCase):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
+    def test_invalid_camera_depth_fade_is_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set(
+                "scene.landscape.ground.details.poppies.camera_frustum",
+                {
+                    "enabled": True,
+                    "placement_reference": "flower",
+                    "depth_fade": {
+                        "enabled": True,
+                        "start": 40.0,
+                        "end": 20.0,
+                        "minimum_density": 0.0,
+                    },
+                },
+            )
+            with self.assertRaises(SceneConfigError):
+                config.save()
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
     def test_current_scene_is_valid_and_describable(self):
         root = Path(__file__).resolve().parents[1]
         config = SceneConfig(root / "scene_workspace" / "config.json")
@@ -105,7 +126,16 @@ class SceneConfigTests(unittest.TestCase):
         self.assertIn("Landform: flat_landform", description)
         self.assertIn("Poppies:", description)
         self.assertIn("Water: disabled", description)
-        self.assertIn("Distant hills: disabled", description)
+        enabled_layers = sum(
+            layer.get("enabled", False)
+            for layer in config.get(
+                "scene.landscape.distant_hills.layers",
+            )
+        )
+        self.assertIn(
+            f"Distant hills: enabled, {enabled_layers} layers",
+            description,
+        )
         self.assertIn("Sky background: enabled", description)
         self.assertIn("Clouds: disabled", description)
 

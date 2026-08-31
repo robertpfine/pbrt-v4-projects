@@ -1,6 +1,6 @@
 # PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-08-30
+Last updated: 2026-08-31
 
 ## Purpose
 
@@ -195,6 +195,58 @@ Tree, grove, and planar-phyllotaxis arrays retain their established paths. The
 relationship among reusable source objects, scene instances, and creation
 processes remains explicitly deferred and was not decided indirectly during
 this bounded migration. See `docs/scene-module-boundaries.md`.
+
+## 2026-08-31 pre-refactor distant-hills checkpoint
+
+The current working state is checkpointed before replacing the first
+distant-hills implementation. It is recoverable evidence of the composition and
+experiments, but the artist has explicitly rejected its ridge-band construction
+as the direction for further development.
+
+The current composition uses:
+
+- camera eye `[388, 165, 491]`, target `[5, 155, -5]`, and FOV `50`;
+- film resolution `2000 x 1450`;
+- the active `flat_landform` with zero grade and zero landform noise;
+- preview grass density of 340,000 seven-blade tufts;
+- 2,600 established poppies framed by their primary flowers;
+- no fog;
+- a low 4600 K sun behind the camera at `[35, 14, 45]`;
+- an `intermediate_field`, experimental `distant_hills` ridge band, and a
+  sparse 260-instance horizon tree population.
+
+The horizon-tree experiment in render `022305` replaces the former continuous
+white row with dark foliage colors, irregular gaps, 70% rounded deciduous
+forms, and 30% narrower tiered evergreens. The tree work may be retained as a
+separate horizon-vegetation capability, but it must not remain conceptually
+embedded inside the replacement hill landform. The poppy color definitions
+were not changed; their brighter variation in recent renders came from the
+frontal sunlight.
+
+The experimental distant-hills implementation added deterministic triangular
+terrain bands, explicit peaks, a later 21-point `ridge_profile`, Perlin
+irregularity, and softened shading normals. It produced a conspicuous hard
+contour where the solid ridge met the sky. The artist clarified that an
+algorithmic control profile may exist internally, but the rendered image must
+not read as though the ridge has been outlined. Repeated correction of that
+band architecture accumulated too many mechanisms and is now superseded.
+
+The approved next direction is a deliberate restart with simpler objectives:
+
+1. Replace the ridge-band and prescribed-skyline model with one continuous 3D
+   height-field surface whose elevation varies across both width and depth.
+2. Begin with one broad, low, off-center rise beyond the meadow. Establish only
+   its distance, scale, perspective, color, and natural meeting with the sky.
+3. Do not begin with multiple depth ranges, an authored visible outline,
+   atmosphere, fog, or decorative complexity.
+4. Move horizon vegetation outside the distant-hills landform module before
+   rebuilding it further.
+5. Add further landform variation only after the simple initial surface is
+   artistically understood and accepted.
+
+The artist explicitly requested this checkpoint before the replacement begins.
+Do not treat render `022305` or the current `ridge_profile` as an accepted hill
+design merely because they are preserved here.
 
 ## Prior accepted gully scene
 
@@ -395,10 +447,11 @@ A GitHub push alone does not complete continuity delivery.
 
 Step 4 has three ordered elements:
 
-1. **Distant hills.** Implement world-space triangular terrain bands with
-   explicitly designed ridge peaks and front-to-back cross-sections. Perlin
-   noise is agreed only as secondary irregularity; it must not generate the
-   primary silhouette. Begin with three strongly differentiated depth layers.
+1. **Distant hills.** Replace the current experimental ridge-band implementation
+   with the simple continuous 3D height-field restart specified in the
+   2026-08-31 checkpoint above. Begin with one broad low off-center rise and no
+   prescribed visible skyline. Keep fog off. Separate horizon vegetation from
+   the landform before extending either system.
 2. **Clouds.** Implement bounded volumetric formations made from designed
    envelopes, blended lobes, vertical profiles, and subordinate 3D edge
    erosion. Keep cloud shape, optical properties, atmosphere, and renderer

@@ -32,11 +32,11 @@
     "camera": {
       "enabled": true,
       "look_at": {
-        "eye":  [310, 165.0, 390],
-        "look": [5, 100.0, -5],
+        "eye":  [388.0, 165.0, 491.0],
+        "look": [5.0, 155.0, -5.0],
         "up":   [0, 1, 0]
       },
-      "fov": 55.0
+      "fov": 50.0
     },
 
     "sampler": {
@@ -53,14 +53,14 @@
 
     "fog": {
       "enabled": false,
-      "sigma_a": 0.00002,
-      "sigma_s": 0.00030,
-      "g": 0.65,
+      "sigma_a": 0.000003,
+      "sigma_s": 0.00014,
+      "g": 0.55,
       "camera_inside": true,
-      "boundary_center": [0.0, 100.0, 0.0],
-      "boundary_radius": 1400.0,
+      "boundary_center": [0.0, 200.0, -500.0],
+      "boundary_radius": 5200.0,
       "noise": {
-        "enabled": true,
+        "enabled": false,
         "type": "perlin",
         "seed": 19,
         "resolution": [48, 36, 48],
@@ -78,7 +78,7 @@
     "film": {
       "enabled": true,
       "x_resolution": 2000,
-      "y_resolution": 2000
+      "y_resolution": 1450
     },
 
     "sky": {
@@ -118,7 +118,7 @@
         "enabled": true,
         "label": "morning_sun",
         "type": "distant",
-        "from": [-5, 16.0, -25],
+        "from": [35.0, 14.0, 45.0],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
         "temperature": 4600,
@@ -196,20 +196,20 @@
             }
           },
           "flat_landform": {
-            "size": [1900.0, 1600.0],
-            "center": [150.0, -100.0],
-            "resolution": [321, 269],
+            "size": [3000.0, 2800.0],
+            "center": [-400.0, -700.0],
+            "resolution": [401, 373],
             "base_height": 0.0,
             "slope": {
               "direction_degrees": 270.0,
-              "grade": 0.025,
+              "grade": 0.0,
               "foreground_leveling": { "enabled": false }
             },
             "noise": {
               "seed": 113,
-              "amplitude": 5.5,
+              "amplitude": 0.0,
               "frequency": 0.0045,
-              "octaves": 4,
+              "octaves": 3,
               "persistence": 0.48,
               "lacunarity": 2.0
             }
@@ -236,7 +236,16 @@
           "grass": {
             "enabled": true,
             "seed": 41,
-            "region": { "center": [150.0, -100.0], "size": [1900.0, 1600.0] },
+            "region": { "center": [-400.0, -700.0], "size": [3000.0, 2800.0] },
+            "camera_frustum": {
+              "enabled": true,
+              "depth_fade": {
+                "enabled": true,
+                "start": 1850.0,
+                "end": 2400.0,
+                "minimum_density": 0.0
+              }
+            },
             "max_slope_degrees": 70.0,
             "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
             "y_offset": 0.03,
@@ -280,7 +289,7 @@
             ],
             "layers": [
               {
-                "count": 3400000,
+                "count": 340000,
                 "seed": 41,
                 "scale": [1.0, 1.7],
                 "patchiness": { "strength": 0.12, "frequency": 0.012 }
@@ -291,11 +300,17 @@
             "enabled": true,
             "count": 2600,
             "seed": 131,
-            "region": { "center": [150.0, -100.0], "size": [1900.0, 1600.0] },
+            "region": { "center": [-400.0, -700.0], "size": [3000.0, 2800.0] },
             "scale": [16.0, 47.0],
             "camera_frustum": {
               "enabled": true,
-              "placement_reference": "flower"
+              "placement_reference": "flower",
+              "depth_fade": {
+                "enabled": true,
+                "start": 1800.0,
+                "end": 2425.0,
+                "minimum_density": 0.0
+              }
             },
             "max_slope_degrees": 65.0,
             "patchiness": { "strength": 0.62, "frequency": 0.007 },
@@ -410,7 +425,176 @@
         "enabled": false
       },
       "distant_hills": {
-        "enabled": false
+        "enabled": true,
+        "layers": [
+          {
+            "name": "near_range",
+            "enabled": false,
+            "center": [-790.0, -1036.0],
+            "size": [3400.0, 600.0],
+            "rotation_degrees": -142.35,
+            "resolution": [241, 33],
+            "base_elevation": -110.0,
+            "ridge_base_height": 165.0,
+            "cross_section": {
+              "ridge_position": 0.36,
+              "front_power": 1.15,
+              "back_power": 0.90
+            },
+            "peaks": [
+              { "position": -0.72, "height": 110.0, "width": 0.16, "asymmetry": -0.30 },
+              { "position": -0.24, "height": 170.0, "width": 0.16, "asymmetry": 0.38 },
+              { "position": 0.27, "height": 135.0, "width": 0.19, "asymmetry": -0.42 },
+              { "position": 0.73, "height": 90.0, "width": 0.14, "asymmetry": 0.24 }
+            ],
+            "noise": {
+              "seed": 211,
+              "amplitude": 18.0,
+              "frequency": 0.010,
+              "octaves": 4,
+              "persistence": 0.50,
+              "lacunarity": 2.0
+            },
+            "material": { "reflectance": [0.115, 0.140, 0.075] }
+          },
+          {
+            "name": "middle_range",
+            "enabled": false,
+            "center": [-1004.0, -1313.0],
+            "size": [4000.0, 700.0],
+            "rotation_degrees": -142.35,
+            "resolution": [221, 29],
+            "base_elevation": -150.0,
+            "ridge_base_height": 185.0,
+            "cross_section": {
+              "ridge_position": 0.42,
+              "front_power": 1.05,
+              "back_power": 0.82
+            },
+            "peaks": [
+              { "position": -0.58, "height": 150.0, "width": 0.25, "asymmetry": 0.34 },
+              { "position": 0.05, "height": 205.0, "width": 0.28, "asymmetry": -0.28 },
+              { "position": 0.68, "height": 115.0, "width": 0.22, "asymmetry": 0.44 }
+            ],
+            "noise": {
+              "seed": 307,
+              "amplitude": 12.0,
+              "frequency": 0.007,
+              "octaves": 3,
+              "persistence": 0.48,
+              "lacunarity": 2.0
+            },
+            "material": { "reflectance": [0.160, 0.180, 0.120] }
+          },
+          {
+            "name": "intermediate_field",
+            "enabled": true,
+            "center": [-1248.0, -1630.0],
+            "size": [5200.0, 240.0],
+            "rotation_degrees": -142.35,
+            "resolution": [321, 9],
+            "base_elevation": -1.5,
+            "ridge_base_height": 6.0,
+            "cross_section": {
+              "ridge_position": 0.50,
+              "front_power": 0.90,
+              "back_power": 0.90
+            },
+            "peaks": [
+              { "position": -0.82, "height": 1.0, "width": 0.18, "asymmetry": -0.20 },
+              { "position": -0.38, "height": 2.0, "width": 0.20, "asymmetry": 0.34 },
+              { "position": 0.02, "height": 1.4, "width": 0.27, "asymmetry": -0.18 },
+              { "position": 0.43, "height": 1.8, "width": 0.22, "asymmetry": 0.30 },
+              { "position": 0.82, "height": 1.0, "width": 0.17, "asymmetry": -0.24 }
+            ],
+            "noise": {
+              "seed": 401,
+              "amplitude": 0.35,
+              "frequency": 0.0030,
+              "octaves": 3,
+              "persistence": 0.46,
+              "lacunarity": 2.0
+            },
+            "material": { "reflectance": [0.055, 0.095, 0.050] }
+          },
+          {
+            "name": "distant_hills",
+            "enabled": true,
+            "center": [-2970.0, -3860.0],
+            "size": [9600.0, 260.0],
+            "rotation_degrees": -142.35,
+            "resolution": [361, 9],
+            "base_elevation": -100.0,
+            "ridge_base_height": 0.0,
+            "shading_normal_up_blend": 0.92,
+            "cross_section": {
+              "ridge_position": 0.62,
+              "front_power": 0.82,
+              "back_power": 0.76
+            },
+            "peaks": [],
+            "ridge_profile": [
+              { "position": -1.00, "height": 245.0 },
+              { "position": -0.90, "height": 252.0 },
+              { "position": -0.79, "height": 282.0 },
+              { "position": -0.70, "height": 305.0 },
+              { "position": -0.61, "height": 286.0 },
+              { "position": -0.52, "height": 263.0 },
+              { "position": -0.43, "height": 292.0 },
+              { "position": -0.34, "height": 315.0 },
+              { "position": -0.24, "height": 296.0 },
+              { "position": -0.13, "height": 268.0 },
+              { "position": -0.03, "height": 280.0 },
+              { "position": 0.08, "height": 258.0 },
+              { "position": 0.19, "height": 265.0 },
+              { "position": 0.30, "height": 287.0 },
+              { "position": 0.40, "height": 270.0 },
+              { "position": 0.52, "height": 291.0 },
+              { "position": 0.63, "height": 304.0 },
+              { "position": 0.73, "height": 283.0 },
+              { "position": 0.84, "height": 269.0 },
+              { "position": 0.93, "height": 278.0 },
+              { "position": 1.00, "height": 258.0 }
+            ],
+            "noise": {
+              "seed": 607,
+              "amplitude": 9.0,
+              "frequency": 0.0022,
+              "octaves": 4,
+              "persistence": 0.44,
+              "lacunarity": 2.0
+            },
+            "material": { "reflectance": [0.055, 0.075, 0.095] }
+          }
+        ],
+        "tree_line": {
+          "enabled": true,
+          "layer": "intermediate_field",
+          "seed": 509,
+          "count": 260,
+          "lateral_range": [-0.98, 0.98],
+          "ridge_depth_offset": 18.0,
+          "depth_jitter": 12.0,
+          "height": [18.0, 42.0],
+          "crown_radius": [9.0, 19.0],
+          "evergreen_fraction": 0.30,
+          "evergreen_height": [32.0, 68.0],
+          "evergreen_crown_radius": [7.0, 15.0],
+          "crown_lobes": 4,
+          "cluster_count": 16,
+          "cluster_spread": 0.045,
+          "clustered_fraction": 0.90,
+          "reflectance_variants": [
+            [0.008, 0.018, 0.009],
+            [0.012, 0.026, 0.013],
+            [0.018, 0.036, 0.018]
+          ],
+          "evergreen_reflectance_variants": [
+            [0.006, 0.014, 0.008],
+            [0.009, 0.020, 0.011],
+            [0.012, 0.027, 0.014]
+          ]
+        }
       }
     },
 

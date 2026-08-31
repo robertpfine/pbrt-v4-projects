@@ -31,6 +31,11 @@ if REPOSITORY_ROOT not in sys.path:
     sys.path.insert(0, REPOSITORY_ROOT)
 
 from phyllotaxis import area_dome_points, dome_height, vogel_points
+from distant_hills import (
+    create_distant_hills,
+    create_horizon_tree_line,
+    flatten_triplets,
+)
 from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
 from terrain_surface_texture import generate_terrain_surface_maps
@@ -1332,6 +1337,110 @@ def write_terrain(lines, terrain, config, scene_root):
     ]
 
 
+def write_distant_hills(lines, config):
+    """Write independently designed receding-horizon terrain bands."""
+
+    hills = create_distant_hills(config)
+    if not hills:
+        return
+    lines += [
+        '# Distant hill terrain bands',
+        '',
+    ]
+    for index, hill in enumerate(hills):
+        points, normals, indices = hill.mesh()
+        reflectance = hill.reflectance
+        lines += [
+            f'# Distant hill layer {index + 1}: {hill.name}',
+            'AttributeBegin',
+            (
+                '    Material "diffuse"  "rgb reflectance" '
+                f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+            ),
+            '    Shape "trianglemesh"',
+            f'        "integer indices" [ {" ".join(str(value) for value in indices)} ]',
+            f'        "point3 P" [ {flatten_triplets(points)} ]',
+            f'        "normal N" [ {flatten_triplets(normals)} ]',
+            'AttributeEnd',
+            '',
+        ]
+
+    tree_line = config.get("tree_line", {})
+    trees = create_horizon_tree_line(config, hills)
+    if not trees:
+        return
+    reflectances = tree_line.get(
+        "reflectance_variants", [[0.08, 0.10, 0.08]]
+    )
+    evergreen_reflectances = tree_line.get(
+        "evergreen_reflectance_variants", reflectances
+    )
+    lines += [
+        '# Sparse distant tree line',
+        '',
+    ]
+    for variant, reflectance in enumerate(reflectances):
+        lines += [
+            f'ObjectBegin "distant_tree_crown_{variant}"',
+            (
+                '    Material "diffuse"  "rgb reflectance" '
+                f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+            ),
+            '    Shape "sphere"  "float radius" [ 1 ]',
+            'ObjectEnd',
+            '',
+        ]
+    for variant, reflectance in enumerate(evergreen_reflectances):
+        lines += [
+            f'ObjectBegin "distant_tree_evergreen_{variant}"',
+            (
+                '    Material "diffuse"  "rgb reflectance" '
+                f'[ {reflectance[0]} {reflectance[1]} {reflectance[2]} ]'
+            ),
+            '    Shape "sphere"  "float radius" [ 1 ]',
+            'ObjectEnd',
+            '',
+        ]
+    crown_lobes = max(1, int(tree_line.get("crown_lobes", 1)))
+    for tree_index, tree in enumerate(trees):
+        x, y, z = tree.position
+        radius = tree.crown_radius
+        height = tree.height
+        if tree.form == "evergreen":
+            lobes = [
+                (0.0, 0.24, 0.0, 1.00, 0.15, 1.00),
+                (0.0, 0.42, 0.0, 0.76, 0.14, 0.76),
+                (0.0, 0.59, 0.0, 0.52, 0.13, 0.52),
+                (0.0, 0.75, 0.0, 0.27, 0.12, 0.27),
+            ]
+            object_name = f'distant_tree_evergreen_{tree.variant}'
+        else:
+            handedness = -1.0 if tree_index % 2 else 1.0
+            lobes = [
+                (0.0, 0.50, 0.0, 1.00, 0.50, 1.00),
+                (-0.48, 0.39, 0.08, 0.72, 0.34, 0.78),
+                (0.47, 0.42, -0.10, 0.76, 0.36, 0.72),
+                (0.08 * handedness, 0.72, 0.04, 0.62, 0.30, 0.66),
+            ]
+            object_name = f'distant_tree_crown_{tree.variant}'
+        for offset_x, offset_y, offset_z, scale_x, scale_y, scale_z in lobes[:crown_lobes]:
+            lines += [
+                'AttributeBegin',
+                (
+                    f'    Translate {x + offset_x * radius:.9f} '
+                    f'{y + offset_y * height:.9f} '
+                    f'{z + offset_z * radius:.9f}'
+                ),
+                (
+                    f'    Scale {scale_x * radius:.9f} '
+                    f'{scale_y * height:.9f} {scale_z * radius:.9f}'
+                ),
+                f'    ObjectInstance "{object_name}"',
+                'AttributeEnd',
+            ]
+    lines.append('')
+
+
 def _write_detail_mesh(lines, points, indices, normals=None):
     point_values = " ".join(f"{x:.6f} {y:.6f} {z:.6f}" for x, y, z in points)
     index_values = " ".join(str(value) for value in indices)
@@ -2589,6 +2698,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []))
     write_terrain(lines, terrain, ground_config, scene_root)
+    write_distant_hills(lines, landscape_config.get("distant_hills", {}))
     write_terrain_details(
         lines,
         terrain,

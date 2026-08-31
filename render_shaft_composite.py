@@ -107,6 +107,8 @@ def archive_supporting_files(prefix, repository_root, scene_root):
     sources = {
         os.path.join(scene_root, "config.json"): prefix + "_config.json",
         os.path.join(scene_root, "build_scene.py"): prefix + "_build_scene.py",
+        os.path.join(repository_root, "distant_hills.py"):
+            prefix + "_distant_hills.py",
         os.path.join(repository_root, "render_pipeline.sh"):
             prefix + "_render_pipeline.sh",
         os.path.join(repository_root, "render_shaft_composite.py"):
