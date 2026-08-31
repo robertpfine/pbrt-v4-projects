@@ -545,44 +545,10 @@ class Inspector(QtWidgets.QWidget):
         form = self._page(
             "distant_hills",
             "Distant Hills",
-            "Real terrain bands create the receding horizon. Explicit "
-            "peaks control each silhouette; Perlin noise adds subordinate "
-            "irregularity and can be set to zero without removing the hills.",
+            "One continuous height-field surface creates a broad, low rise "
+            "beyond the meadow. Noise remains subordinate to the landform.",
         )
         self._check(form, "Enabled", HILLS_PATH + ("enabled",))
-        tree_line_path = HILLS_PATH + ("tree_line",)
-        tree_line_heading = QtWidgets.QLabel("Horizon tree line")
-        tree_line_heading.setObjectName("inspectorSubheading")
-        form.addRow(tree_line_heading)
-        self._check(form, "Tree line enabled", tree_line_path + ("enabled",))
-        tree_line_layer = QtWidgets.QLabel(
-            str(self.config.get(tree_line_path + ("layer",)))
-        )
-        form.addRow("Anchored ridge", tree_line_layer)
-        self._integer(form, "Tree silhouettes", tree_line_path + ("count",), 0, 100_000)
-        self._pair(form, "Tree height", tree_line_path + ("height",), 0.1, 10_000.0)
-        self._pair(
-            form,
-            "Crown radius",
-            tree_line_path + ("crown_radius",),
-            0.01,
-            10_000.0,
-        )
-        self._integer(
-            form,
-            "Irregular clusters",
-            tree_line_path + ("cluster_count",),
-            1,
-            10_000,
-        )
-        self._number(
-            form,
-            "Evergreen fraction",
-            tree_line_path + ("evergreen_fraction",),
-            0.0,
-            1.0,
-            3,
-        )
         layers = self.config.get(HILLS_PATH + ("layers",))
         layer_selector = QtWidgets.QComboBox()
         layer_selector.setObjectName("distant_hill_layer")

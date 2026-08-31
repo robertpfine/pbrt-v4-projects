@@ -133,7 +133,8 @@ class SceneConfigTests(unittest.TestCase):
             )
         )
         self.assertIn(
-            f"Distant hills: enabled, {enabled_layers} layers",
+            f"Distant hills: enabled, {enabled_layers} "
+            f"{'layer' if enabled_layers == 1 else 'layers'}",
             description,
         )
         self.assertIn("Sky background: enabled", description)

@@ -86,8 +86,8 @@
         "enabled": true,
         "type": "infinite",
         "color_mode": "rgb",
-        "color": [0.32, 0.40, 0.52],
-        "scale": 0.12
+        "color": [0.35, 0.60, 1.00],
+        "scale": 0.22
       },
       "clouds": {
         "enabled": false
@@ -428,173 +428,33 @@
         "enabled": true,
         "layers": [
           {
-            "name": "near_range",
-            "enabled": false,
-            "center": [-790.0, -1036.0],
-            "size": [3400.0, 600.0],
-            "rotation_degrees": -142.35,
-            "resolution": [241, 33],
-            "base_elevation": -110.0,
-            "ridge_base_height": 165.0,
-            "cross_section": {
-              "ridge_position": 0.36,
-              "front_power": 1.15,
-              "back_power": 0.90
-            },
-            "peaks": [
-              { "position": -0.72, "height": 110.0, "width": 0.16, "asymmetry": -0.30 },
-              { "position": -0.24, "height": 170.0, "width": 0.16, "asymmetry": 0.38 },
-              { "position": 0.27, "height": 135.0, "width": 0.19, "asymmetry": -0.42 },
-              { "position": 0.73, "height": 90.0, "width": 0.14, "asymmetry": 0.24 }
-            ],
-            "noise": {
-              "seed": 211,
-              "amplitude": 18.0,
-              "frequency": 0.010,
-              "octaves": 4,
-              "persistence": 0.50,
-              "lacunarity": 2.0
-            },
-            "material": { "reflectance": [0.115, 0.140, 0.075] }
-          },
-          {
-            "name": "middle_range",
-            "enabled": false,
-            "center": [-1004.0, -1313.0],
-            "size": [4000.0, 700.0],
-            "rotation_degrees": -142.35,
-            "resolution": [221, 29],
-            "base_elevation": -150.0,
-            "ridge_base_height": 185.0,
-            "cross_section": {
-              "ridge_position": 0.42,
-              "front_power": 1.05,
-              "back_power": 0.82
-            },
-            "peaks": [
-              { "position": -0.58, "height": 150.0, "width": 0.25, "asymmetry": 0.34 },
-              { "position": 0.05, "height": 205.0, "width": 0.28, "asymmetry": -0.28 },
-              { "position": 0.68, "height": 115.0, "width": 0.22, "asymmetry": 0.44 }
-            ],
-            "noise": {
-              "seed": 307,
-              "amplitude": 12.0,
-              "frequency": 0.007,
-              "octaves": 3,
-              "persistence": 0.48,
-              "lacunarity": 2.0
-            },
-            "material": { "reflectance": [0.160, 0.180, 0.120] }
-          },
-          {
-            "name": "intermediate_field",
+            "name": "broad_rise",
             "enabled": true,
-            "center": [-1248.0, -1630.0],
-            "size": [5200.0, 240.0],
+            "center": [-2200.0, -2900.0],
+            "size": [7200.0, 1800.0],
             "rotation_degrees": -142.35,
-            "resolution": [321, 9],
-            "base_elevation": -1.5,
-            "ridge_base_height": 6.0,
+            "resolution": [241, 65],
+            "base_elevation": -120.0,
+            "ridge_base_height": 35.0,
             "cross_section": {
-              "ridge_position": 0.50,
-              "front_power": 0.90,
-              "back_power": 0.90
+              "ridge_position": 0.56,
+              "front_power": 0.85,
+              "back_power": 0.85
             },
             "peaks": [
-              { "position": -0.82, "height": 1.0, "width": 0.18, "asymmetry": -0.20 },
-              { "position": -0.38, "height": 2.0, "width": 0.20, "asymmetry": 0.34 },
-              { "position": 0.02, "height": 1.4, "width": 0.27, "asymmetry": -0.18 },
-              { "position": 0.43, "height": 1.8, "width": 0.22, "asymmetry": 0.30 },
-              { "position": 0.82, "height": 1.0, "width": 0.17, "asymmetry": -0.24 }
-            ],
-            "noise": {
-              "seed": 401,
-              "amplitude": 0.35,
-              "frequency": 0.0030,
-              "octaves": 3,
-              "persistence": 0.46,
-              "lacunarity": 2.0
-            },
-            "material": { "reflectance": [0.055, 0.095, 0.050] }
-          },
-          {
-            "name": "distant_hills",
-            "enabled": true,
-            "center": [-2970.0, -3860.0],
-            "size": [9600.0, 260.0],
-            "rotation_degrees": -142.35,
-            "resolution": [361, 9],
-            "base_elevation": -100.0,
-            "ridge_base_height": 0.0,
-            "shading_normal_up_blend": 0.92,
-            "cross_section": {
-              "ridge_position": 0.62,
-              "front_power": 0.82,
-              "back_power": 0.76
-            },
-            "peaks": [],
-            "ridge_profile": [
-              { "position": -1.00, "height": 245.0 },
-              { "position": -0.90, "height": 252.0 },
-              { "position": -0.79, "height": 282.0 },
-              { "position": -0.70, "height": 305.0 },
-              { "position": -0.61, "height": 286.0 },
-              { "position": -0.52, "height": 263.0 },
-              { "position": -0.43, "height": 292.0 },
-              { "position": -0.34, "height": 315.0 },
-              { "position": -0.24, "height": 296.0 },
-              { "position": -0.13, "height": 268.0 },
-              { "position": -0.03, "height": 280.0 },
-              { "position": 0.08, "height": 258.0 },
-              { "position": 0.19, "height": 265.0 },
-              { "position": 0.30, "height": 287.0 },
-              { "position": 0.40, "height": 270.0 },
-              { "position": 0.52, "height": 291.0 },
-              { "position": 0.63, "height": 304.0 },
-              { "position": 0.73, "height": 283.0 },
-              { "position": 0.84, "height": 269.0 },
-              { "position": 0.93, "height": 278.0 },
-              { "position": 1.00, "height": 258.0 }
+              { "position": 0.22, "height": 165.0, "width": 0.48, "asymmetry": -0.18 }
             ],
             "noise": {
               "seed": 607,
-              "amplitude": 9.0,
-              "frequency": 0.0022,
-              "octaves": 4,
-              "persistence": 0.44,
+              "amplitude": 7.0,
+              "frequency": 0.0018,
+              "octaves": 3,
+              "persistence": 0.45,
               "lacunarity": 2.0
             },
-            "material": { "reflectance": [0.055, 0.075, 0.095] }
+            "material": { "reflectance": [0.10, 0.17, 0.045] }
           }
-        ],
-        "tree_line": {
-          "enabled": true,
-          "layer": "intermediate_field",
-          "seed": 509,
-          "count": 260,
-          "lateral_range": [-0.98, 0.98],
-          "ridge_depth_offset": 18.0,
-          "depth_jitter": 12.0,
-          "height": [18.0, 42.0],
-          "crown_radius": [9.0, 19.0],
-          "evergreen_fraction": 0.30,
-          "evergreen_height": [32.0, 68.0],
-          "evergreen_crown_radius": [7.0, 15.0],
-          "crown_lobes": 4,
-          "cluster_count": 16,
-          "cluster_spread": 0.045,
-          "clustered_fraction": 0.90,
-          "reflectance_variants": [
-            [0.008, 0.018, 0.009],
-            [0.012, 0.026, 0.013],
-            [0.018, 0.036, 0.018]
-          ],
-          "evergreen_reflectance_variants": [
-            [0.006, 0.014, 0.008],
-            [0.009, 0.020, 0.011],
-            [0.012, 0.027, 0.014]
-          ]
-        }
+        ]
       }
     },
 

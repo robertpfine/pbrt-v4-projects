@@ -478,6 +478,22 @@ Additional continuity requirements:
 8. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
+## 2026-08-31 simple distant-rise baseline
+
+Render `034256` is the artist-accepted baseline for the distant-hills restart.
+The former four-band configuration, authored ridge profile, intermediate field,
+and embedded horizon tree line have been removed from the live
+`scene.landscape.distant_hills` module. The replacement contains one enabled
+`broad_rise` height-field layer with one broad off-center peak and restrained
+subordinate noise. Its reflectance exactly matches the primary ground material
+at `[0.10, 0.17, 0.045]`. The clear infinite background is now sky blue with
+color `[0.35, 0.60, 1.00]` and scale `0.22`; fog remains disabled.
+
+The next experiment places two or three copies of the accepted recursive
+fractal tree from the fog and light-shaft studies near the meadow horizon. This
+is a bounded composition experiment, not a return to the rejected procedural
+horizon tree line and not an extension of the distant-hills module.
+
 ## Conversation preservation
 
 The source Codex event log for the multi-day session is stored outside the
