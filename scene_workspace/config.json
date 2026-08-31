@@ -920,16 +920,24 @@
         "foliage_reflectance": [0.020, 0.18, 0.035]
       },
       {
-        "enabled": false,
+        "enabled": true,
         "preset": "fractal_tree",
         "origin": [-315.5, 0.0, -134.2],
         "terrain_placement": {
-          "enabled": true,
+          "enabled": false,
           "height_offset": 0.0
         },
+        "instances": [
+          { "position": [-2000.0, -860.0, -8000.0], "rotation_y": -18.0, "scale": 1.0 },
+          { "position": [-1500.0, -910.0, -9000.0], "rotation_y": 24.0, "scale": 1.0 },
+          { "position": [-1200.0, -550.0, -10000.0], "rotation_y": -9.0, "scale": 1.0 },
+          { "position": [-12200.0, -580.0, -18000.0], "rotation_y": 17.0, "scale": 1.0 },
+          { "position": [-14700.0, -600.0, -19000.0], "rotation_y": -27.0, "scale": 1.0 },
+          { "position": [-18000.0, -720.0, -20000.0], "rotation_y": 8.0, "scale": 1.0 }
+        ],
         "debug_render": { "mode": "cylinders" },
         "seed": 23,
-        "scale": 1.0,
+        "scale": 2.5,
         "trunk_height": 170.0,
         "trunk_segments": 32,
         "base_radius": 10.5,

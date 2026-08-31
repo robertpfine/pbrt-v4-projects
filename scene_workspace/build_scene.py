@@ -2223,9 +2223,12 @@ def write_lsystem_trees(lines, trees, terrain=None):
         if not tree.get("enabled", True):
             continue
         preset = tree.get("preset", "christmas_tree")
-        origin = tuple(float(v) for v in tree.get("origin", [0, 0, 0]))
         placement = tree.get("terrain_placement", {})
-        if terrain is not None and placement.get("enabled", False):
+        instances = tree.get("instances", [])
+        origin = (0.0, 0.0, 0.0) if instances else tuple(
+            float(v) for v in tree.get("origin", [0, 0, 0])
+        )
+        if not instances and terrain is not None and placement.get("enabled", False):
             sample = terrain.sample(origin[0], origin[2])
             origin = (
                 origin[0],
@@ -2249,7 +2252,10 @@ def write_lsystem_trees(lines, trees, terrain=None):
         curve_mode = debug_render.get("mode", "cylinders") == "curves"
         curve_width = tree_scale * float(debug_render.get("width", 0.25))
         curve_color = debug_render.get("reflectance", [0.82, 0.42, 0.06])
+        object_name = f'lsystem_{preset}_{tree_index}'
         lines.append(f'# L-system {preset} {tree_index}')
+        if instances:
+            lines.append(f'ObjectBegin "{object_name}"')
         for segment in generated_segments:
             start = tuple(
                 tree_scale * segment.start[i] + origin[i] for i in range(3)
@@ -2271,6 +2277,28 @@ def write_lsystem_trees(lines, trees, terrain=None):
                     lines, start, end,
                     0.5 * tree_scale * (segment.radius0 + segment.radius1), color,
                 )
+        if instances:
+            lines += ['ObjectEnd', '']
+            for instance in instances:
+                position = tuple(float(v) for v in instance["position"])
+                if terrain is not None and placement.get("enabled", False):
+                    sample = terrain.sample(position[0], position[2])
+                    position = (
+                        position[0],
+                        sample.height + float(placement.get("height_offset", 0.0)),
+                        position[2],
+                    )
+                instance_scale = float(instance.get("scale", 1.0))
+                if instance_scale <= 0.0:
+                    raise ValueError("L-system instance scale must be positive")
+                lines += [
+                    'AttributeBegin',
+                    f'    Translate {position[0]:.9f} {position[1]:.9f} {position[2]:.9f}',
+                    f'    Rotate {float(instance.get("rotation_y", 0.0)):.9f} 0 1 0',
+                    f'    Scale {instance_scale:.9f} {instance_scale:.9f} {instance_scale:.9f}',
+                    f'    ObjectInstance "{object_name}"',
+                    'AttributeEnd',
+                ]
         lines.append('')
 
 

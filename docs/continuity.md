@@ -446,36 +446,41 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-Step 4 has three ordered elements:
+Step 4 began with the accepted simple distant-rise baseline and the subsequent
+tree-depth studies. The next session should proceed in this order:
 
-1. **Distant hills.** Replace the current experimental ridge-band implementation
-   with the simple continuous 3D height-field restart specified in the
-   2026-08-31 checkpoint above. Begin with one broad low off-center rise and no
-   prescribed visible skyline. Keep fog off. Separate horizon vegetation from
-   the landform before extending either system.
-2. **Clouds.** Implement bounded volumetric formations made from designed
-   envelopes, blended lobes, vertical profiles, and subordinate 3D edge
-   erosion. Keep cloud shape, optical properties, atmosphere, and renderer
-   backend conceptually separate.
-3. **Water.** Use the established `scene.landscape.water` boundary to develop
+1. **Clouds.** Get a simple cloud module working. Begin with bounded volumetric
+   formations made from designed envelopes, blended lobes, vertical profiles,
+   and subordinate 3D edge erosion. Keep cloud shape, optical properties,
+   atmosphere, and renderer backend conceptually separate.
+2. **Configuration rationalization.** Begin tackling the accumulated size,
+   repetition, naming, and organization of the single authoritative
+   `scene_workspace/config.json`. Preserve direct manual JSON editing and do
+   not create a second live scene configuration while considering clearer
+   source-object, instance, process, and scene-specific boundaries.
+3. **Qt workflow.** Reconsider the most functional use of the Qt GUI in light
+   of actual artistic work, especially the relationship among exact manual
+   editing, scene inspection, rendering, progress visibility, and visual
+   iteration. Do not infer that every JSON value needs a permanent control.
+4. **Water.** Use the established `scene.landscape.water` boundary to develop
    water bodies, wave formation, optical behavior, and the interaction between
    water and ground required for shore and ocean scenes. Waves are subordinate
    behavior within water, not a peer top-level module.
 
 Additional continuity requirements:
 
-4. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
+5. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
    homes of the accepted ground system and neutral infinite sky respectively.
    Do not create another scene JSON or change accepted rendered behavior.
-5. Continue extending the Python model and Qt inspector in response to artistic
+6. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
-6. Keep renderer implementations subordinate to artistic categories; in
+7. Keep renderer implementations subordinate to artistic categories; in
    particular, never generalize the specific PBRT `rgbgrid` medium into an
    atmosphere name.
-7. Preserve the accepted `053110` poppy baseline and the established grass,
+8. Preserve the accepted `053110` poppy baseline and the established grass,
    tree, terrain, and atmospheric work. Historical archive filenames remain
    unchanged and reproducible.
-8. Preserve readable and raw conversation archives in the gitignored
+9. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
 ## 2026-08-31 simple distant-rise baseline
@@ -493,6 +498,37 @@ The next experiment places two or three copies of the accepted recursive
 fractal tree from the fog and light-shaft studies near the meadow horizon. This
 is a bounded composition experiment, not a return to the rejected procedural
 horizon tree line and not an extension of the distant-hills module.
+
+## 2026-08-31 accepted tree-depth composition
+
+Render `054100` is the artist-accepted endpoint of the initial fractal-tree
+instancing and depth study. The live configuration matches its archived JSON
+exactly. Six copies of one reusable fractal-tree definition are written through
+PBRT object instancing; tree-level scale remains `2.5`, and every instance keeps
+an independent position, Y rotation, and optional scale.
+
+The accepted composition has three nearer trees grouped at the left at Z
+positions `-8000`, `-9000`, and `-10000`, plus three visibly separated trees
+near the middle at Z positions `-18000`, `-19000`, and `-20000`. Automatic
+terrain placement is disabled so the manually authored Y coordinates remain
+effective even though these trees lie beyond the finite meadow mesh.
+
+The artist particularly values the way the left crowns peak over the visible
+horizon while most of their trunks remain concealed. This implies a downslope
+beyond the crest without directly showing that landform and is an important
+depth cue to preserve. Do not "correct" the hidden trunks merely because the
+trees are not attached to visible geometry.
+
+Render `043645` is also intentionally preserved as an interesting exploratory
+result. It extended the flat ground to encompass trees as far away as Z
+`-20000`, creating broad horizontal ground layers. That extension was not the
+requested placement method and is not the live configuration, but the image
+should not be discarded.
+
+The instancing implementation lives in `write_lsystem_trees()` and preserves
+the prior single-origin behavior when an entry has no `instances` array. The
+focused instancing tests verify local reusable geometry, manual translations,
+per-instance scaling, and rejection of non-positive scales.
 
 ## Conversation preservation
 

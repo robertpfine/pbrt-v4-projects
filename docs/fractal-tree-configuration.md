@@ -79,6 +79,31 @@ Adds an `[x, y, z]` translation to every generated segment and leaf.
 The current `[0.0, -55.0, 0.0]` moves the complete tree 55 units downward. It
 does not alter growth, proportions, the seed, or branch directions.
 
+When a non-empty `instances` array is present, the reusable tree is generated
+at local origin instead. Each instance then supplies its own scene translation,
+rotation, and optional scale. The legacy single `origin` remains effective when
+there are no instances.
+
+### `instances`
+
+Optionally places multiple copies of one generated tree through PBRT object
+instancing:
+
+```json
+"instances": [
+  { "position": [-2000.0, -860.0, -8000.0], "rotation_y": -18.0, "scale": 1.0 }
+]
+```
+
+- `position` is the world-space `[x, y, z]` translation.
+- `rotation_y` rotates that copy around its local vertical axis.
+- `scale` is an additional positive uniform scale for that instance.
+
+The tree-level `scale` changes the reusable source geometry; instance `scale`
+is applied afterward. When `terrain_placement.enabled` is `true`, terrain
+sampling replaces each instance's configured Y value. Set it to `false` when Y
+must remain a deliberate manual depth-composition control.
+
 ### `debug_render.mode`
 
 Controls how non-leaf segments are written.
