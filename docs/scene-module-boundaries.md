@@ -32,9 +32,11 @@ ground material, surface treatment, and terrain-aware detail populations. The
 complete former `scene.terrain` object moved here without changing its values.
 
 `scene.landscape.distant_hills` is the explicit boundary for receding-horizon
-geometry. Its generator, three initial depth layers, validation, and Qt controls
-are implemented in Step 4.1. The module switch remains independent of the
-accepted ground system.
+geometry. Its generator and Qt controls remain independent of the accepted
+ground system. The retained configuration now contains one `broad_rise`
+height field; the complete module is disabled in accepted render `054517`.
+Grass and poppy definitions stay under ground details and may target the rise
+through their own `extension` blocks when the hill module is enabled.
 
 ### Agreed distant-hill formation
 
@@ -87,24 +89,30 @@ space colonization. This bounded migration does not make that decision.
 as the first entry in `scene.lights`. The scene builder combines it with the
 remaining artistic lights when writing PBRT, preserving light order and output.
 
-`scene.sky.clouds` is the explicit boundary for the future cloud system. It is
-disabled until the step-4 generator and controls are built.
+`scene.sky.clouds` is the explicit boundary for the implemented cloud system.
+It is enabled in the accepted `054517` scene with two bounded cumulus
+formations.
 
-### Agreed cloud-formation direction
+### Cloud-formation implementation
 
-Clouds will be bounded volumetric formation objects rather than surface meshes
-or sky textures. The initial cumulus form will combine an artist-designed
-envelope, smoothly blended ellipsoidal density lobes, a vertical profile with a
-relatively broad base and selected upward towers, and three-dimensional noise
-for edge erosion and internal variation. Noise refines rather than composes the
-macro form.
+Clouds are bounded volumetric formation objects rather than surface meshes or
+sky textures. The current cumulus form combines an artist-designed envelope,
+smoothly blended ellipsoidal density lobes, a vertical profile, three-dimensional
+Perlin fractal sums, and domain warping. Noise refines the macro form and creates
+the accepted mottled internal texture. Separate RGB absorption/scattering grids
+darken the cloud undersides.
 
 Shape parameters remain separate from optical properties such as density,
 scattering, absorption, and phase anisotropy. The artistic configuration names
-a cloud formation; the selected PBRT heterogeneous-volume representation stays
-a subordinate backend choice. Clouds remain discrete sky objects while fog is
-an atmosphere medium. Initial scene use should favor several distinct
-formations over obvious repetition of one instanced density field.
+each formation; PBRT heterogeneous media remain a subordinate backend choice.
+Clouds remain discrete sky objects while fog is an atmosphere medium. The live
+scene uses two independently sized cumulus formations. The artist selected the
+`025537` grids—`[120,72,48]` and `[128,80,52]`—over a subsequent four-times-
+denser test.
+
+The broad `mottled_veil` experiment remains implemented but is not active. The
+artist rejected its whole-sky use in `023731`, while retaining one soft
+horizontal fragment as a possible future horizon-cloud treatment.
 
 Atmosphere, lighting, and camera remain separate artistic categories. The
 current `scene.fog` structure is the existing atmosphere implementation and is

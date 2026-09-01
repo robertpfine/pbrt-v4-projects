@@ -12,6 +12,8 @@ import math
 import random
 from typing import Iterable
 
+from terrain_details import ScatterPoint
+
 
 @dataclass(frozen=True)
 class HillSample:
@@ -299,6 +301,122 @@ def create_distant_hills(config: dict) -> list[DistantHillLayer]:
     if not isinstance(layers, list):
         raise ValueError("distant_hills.layers must be an array")
     return [DistantHillLayer(layer) for layer in layers if layer.get("enabled", False)]
+
+
+def create_distant_hill_scatter(
+    hill: DistantHillLayer,
+    config: dict,
+) -> list[ScatterPoint]:
+    """Scatter one configured detail population over a distant hill surface."""
+
+    if not config.get("enabled", False):
+        return []
+    count = int(config.get("count", 0))
+    if count < 0:
+        raise ValueError("distant detail count cannot be negative")
+    if count == 0:
+        return []
+    lateral_range = config.get("lateral_range", [-1.0, 1.0])
+    depth_range = config.get("depth_range", [0.0, 1.0])
+    scale_range = config.get("scale", [1.0, 1.0])
+    for label, values in (
+        ("lateral_range", lateral_range),
+        ("depth_range", depth_range),
+        ("scale", scale_range),
+    ):
+        if len(values) != 2 or float(values[0]) > float(values[1]):
+            raise ValueError(f"distant detail {label} must be an ascending pair")
+    if not (-1.0 <= float(lateral_range[0]) <= float(lateral_range[1]) <= 1.0):
+        raise ValueError("distant detail lateral_range must remain in [-1, 1]")
+    if not (0.0 <= float(depth_range[0]) <= float(depth_range[1]) <= 1.0):
+        raise ValueError("distant detail depth_range must remain in [0, 1]")
+    if float(scale_range[0]) <= 0.0:
+        raise ValueError("distant detail scale must be positive")
+
+    seed = int(config.get("seed", 1))
+    rng = random.Random(seed)
+    variants = max(1, int(config.get("variants", 1)))
+    max_slope = float(config.get("max_slope_degrees", 90.0))
+    y_offset = float(config.get("y_offset", 0.04))
+    patch = config.get("patchiness", {})
+    patch_strength = max(0.0, min(1.0, float(patch.get("strength", 0.0))))
+    patch_frequency = float(patch.get("frequency", 0.01))
+    ridge_fade = config.get("ridge_fade", {})
+    fade_enabled = bool(ridge_fade.get("enabled", False))
+    fade_start = float(ridge_fade.get("start", depth_range[1]))
+    fade_end = float(ridge_fade.get("end", depth_range[1]))
+    fade_minimum = float(ridge_fade.get("minimum_density", 0.0))
+    if fade_enabled:
+        if not (
+            float(depth_range[0]) <= fade_start < fade_end <= float(depth_range[1])
+        ):
+            raise ValueError(
+                "distant detail ridge_fade must be ascending and inside depth_range"
+            )
+        if not 0.0 <= fade_minimum <= 1.0:
+            raise ValueError(
+                "distant detail ridge_fade minimum_density must remain in [0, 1]"
+            )
+    result = []
+    attempts = 0
+    max_attempts = max(100, count * 40)
+    while len(result) < count and attempts < max_attempts:
+        attempts += 1
+        normalized_x = rng.uniform(
+            float(lateral_range[0]), float(lateral_range[1])
+        )
+        normalized_depth = rng.uniform(
+            float(depth_range[0]), float(depth_range[1])
+        )
+        if fade_enabled and normalized_depth > fade_start:
+            fade_t = min(1.0, (normalized_depth - fade_start) / (fade_end - fade_start))
+            smooth_fade = fade_t * fade_t * (3.0 - 2.0 * fade_t)
+            acceptance = 1.0 - smooth_fade * (1.0 - fade_minimum)
+            if rng.random() > acceptance:
+                continue
+        local_x = 0.5 * hill.width * normalized_x
+        local_z = hill.depth * (normalized_depth - 0.5)
+        if patch_strength > 0.0:
+            field = 0.5 + hill._perlin(
+                local_x * patch_frequency,
+                local_z * patch_frequency,
+            )
+            acceptance = (1.0 - patch_strength) + patch_strength * max(
+                0.0, min(1.0, field)
+            )
+            if rng.random() > acceptance:
+                continue
+        sample = hill.sample_local(local_x, local_z)
+        slope = math.degrees(math.acos(max(-1.0, min(1.0, sample.normal[1]))))
+        if slope > max_slope:
+            continue
+        world_x, world_z = hill.local_to_world(local_x, local_z)
+        result.append(ScatterPoint(
+            position=(world_x, sample.height + y_offset, world_z),
+            normal=sample.normal,
+            rotation=rng.uniform(0.0, 360.0),
+            scale=rng.uniform(float(scale_range[0]), float(scale_range[1])),
+            aspect=(
+                rng.uniform(0.82, 1.18),
+                rng.uniform(0.78, 1.18),
+                rng.uniform(0.82, 1.18),
+            ),
+            variant=rng.randrange(variants),
+        ))
+    if len(result) < count:
+        raise ValueError(
+            f"distant detail accepted only {len(result)} of {count} instances"
+        )
+    return result
+
+
+def create_distant_hill_grass(
+    hill: DistantHillLayer,
+    config: dict,
+) -> list[ScatterPoint]:
+    """Backward-compatible grass-specific name for distant-hill scattering."""
+
+    return create_distant_hill_scatter(hill, config)
 
 
 def create_horizon_tree_line(

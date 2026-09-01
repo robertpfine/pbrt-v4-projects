@@ -4,7 +4,12 @@ from copy import deepcopy
 from pathlib import Path
 import unittest
 
-from distant_hills import DistantHillLayer, create_distant_hills
+from distant_hills import (
+    DistantHillLayer,
+    create_distant_hill_grass,
+    create_distant_hill_scatter,
+    create_distant_hills,
+)
 
 
 class DistantHillTests(unittest.TestCase):
@@ -71,6 +76,50 @@ class DistantHillTests(unittest.TestCase):
 
     def test_horizon_vegetation_is_not_embedded_in_hills(self):
         self.assertNotIn("tree_line", self.module_config)
+
+    def test_grass_extension_follows_hill_surface_deterministically(self):
+        hill = DistantHillLayer(self.module_config["layers"][0])
+        config = {
+            "enabled": True,
+            "count": 30,
+            "seed": 19,
+            "lateral_range": [-0.5, 0.5],
+            "depth_range": [0.0, 0.62],
+            "ridge_fade": {
+                "enabled": True,
+                "start": 0.44,
+                "end": 0.56,
+                "minimum_density": 0.0,
+            },
+            "scale": [0.5, 0.9],
+            "variants": 3,
+            "max_slope_degrees": 90.0,
+            "y_offset": 0.05,
+        }
+        first = create_distant_hill_grass(hill, config)
+        second = create_distant_hill_grass(hill, config)
+        self.assertEqual(first, second)
+        self.assertEqual(len(first), 30)
+        self.assertTrue(all(0 <= point.variant < 3 for point in first))
+        self.assertTrue(all(0.5 <= point.scale <= 0.9 for point in first))
+
+    def test_generic_detail_extension_uses_the_same_hill_surface_scatter(self):
+        hill = DistantHillLayer(self.module_config["layers"][0])
+        config = {
+            "enabled": True,
+            "count": 12,
+            "seed": 23,
+            "lateral_range": [-0.4, 0.4],
+            "depth_range": [0.0, 0.5],
+            "scale": [9.0, 26.0],
+            "variants": 7,
+            "max_slope_degrees": 90.0,
+            "y_offset": 0.05,
+        }
+        points = create_distant_hill_scatter(hill, config)
+        self.assertEqual(len(points), 12)
+        self.assertTrue(all(0 <= point.variant < 7 for point in points))
+        self.assertTrue(all(9.0 <= point.scale <= 26.0 for point in points))
 
 
 if __name__ == "__main__":

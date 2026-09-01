@@ -58,6 +58,19 @@ class CameraFrustumScatterTests(unittest.TestCase):
         frame = _camera_frame(self.camera, self.film)
         self.assertTrue(_point_inside_camera_frustum((10.0, 0.0, 0.0), frame))
 
+    def test_bottom_margin_accepts_roots_below_the_visible_frame(self):
+        frame = _camera_frame(self.camera, self.film)
+        eye, forward, _right, up, _half_width, half_height = frame
+        depth = 20.0
+        point = tuple(
+            eye[index]
+            + depth * forward[index]
+            - 1.10 * depth * half_height * up[index]
+            for index in range(3)
+        )
+        self.assertFalse(_point_inside_camera_frustum(point, frame))
+        self.assertTrue(_point_inside_camera_frustum(point, frame, 0.08))
+
     def test_object_anchor_not_root_controls_visible_instance_count(self):
         anchor = (0.0, 3.0, 0.0)
         points = scatter_points(

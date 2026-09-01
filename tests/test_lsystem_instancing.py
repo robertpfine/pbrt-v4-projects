@@ -1,5 +1,7 @@
 from unittest import mock
+from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 from fractal_tree import Segment
@@ -16,8 +18,75 @@ except ModuleNotFoundError:
     sys.modules["terrain_surface_texture"] = mock.Mock(
         generate_terrain_surface_maps=lambda *_args, **_kwargs: None
     )
+    sys.modules["vista_surface_texture"] = mock.Mock(
+        generate_vista_surface_mottle=lambda *_args, **_kwargs: None
+    )
 
-from scene_workspace.build_scene import write_lsystem_trees
+from scene_workspace.build_scene import write_geometry, write_lsystem_trees
+
+
+class GeometryMaterialTests(unittest.TestCase):
+    def test_diffuse_scale_multiplies_reflectance(self):
+        geometry = [{
+            "enabled": True,
+            "label": "vista_plane",
+            "material": {
+                "type": "diffuse",
+                "reflectance": [0.35, 0.60, 1.00],
+                "scale": 0.22,
+            },
+            "shape": {"type": "disk", "radius": 1.0},
+        }]
+        lines = []
+
+        write_geometry(lines, geometry)
+
+        self.assertIn(
+            '    Material "diffuse"  "rgb reflectance" [ 0.077 0.132 0.22 ]',
+            lines,
+        )
+
+    def test_diffuse_scale_cannot_be_negative(self):
+        geometry = [{
+            "enabled": True,
+            "material": {
+                "type": "diffuse",
+                "reflectance": [0.35, 0.60, 1.00],
+                "scale": -1.0,
+            },
+            "shape": {"type": "disk", "radius": 1.0},
+        }]
+
+        with self.assertRaisesRegex(ValueError, "scale cannot be negative"):
+            write_geometry([], geometry)
+
+    def test_bilinear_surface_mottle_uses_generated_texture_and_uvs(self):
+        geometry = [{
+            "enabled": True,
+            "label": "vista_plane",
+            "material": {
+                "type": "diffuse",
+                "reflectance": [0.35, 0.60, 1.00],
+                "scale": 0.22,
+                "surface_mottle": {"enabled": True},
+            },
+            "shape": {
+                "type": "bilinearmesh",
+                "indices": [0, 1, 2, 3],
+                "points": [0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1],
+            },
+        }]
+        with tempfile.TemporaryDirectory() as directory, mock.patch(
+            "scene_workspace.build_scene.generate_vista_surface_mottle",
+            return_value=Path(directory) / "mottle.png",
+        ):
+            lines = []
+            write_geometry(lines, geometry, directory)
+
+        output = "\n".join(lines)
+        self.assertIn('Texture "vista_plane_surface_mottle"', output)
+        self.assertIn('"texture reflectance" [ "vista_plane_surface_mottle" ]', output)
+        self.assertIn('"point2 uv"', output)
 
 
 class LSystemInstancingTests(unittest.TestCase):

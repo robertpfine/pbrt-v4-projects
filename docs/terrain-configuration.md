@@ -274,6 +274,13 @@ points project inside the full camera frame. No additional inset is applied.
 This is a camera-frustum constraint, not an occlusion test: terrain and other
 geometry may still hide an accepted instance.
 
+`camera_frustum.bottom_margin` optionally admits placement references below the
+bottom of the visible frame. The value is a fraction of full image height. It
+is useful for upward-growing grass: roots just below the image can still
+contribute blades inside the image, preventing a screen-aligned grass cutoff.
+The accepted `054517` state uses `0.08` for grass. Poppies continue to use their
+main flower as the visibility reference instead.
+
 ### `details.surface`
 
 This layer enriches the terrain mesh itself rather than adding objects.
@@ -359,6 +366,12 @@ useful for pasture treatments: a high-count, weakly patchy, short base stratum
 provides nearly continuous coverage, while a lower-count, taller stratum adds
 irregular tufts and seed-stalk-like accents. If `layers` is absent, the original
 single-layer grass configuration remains valid.
+
+An optional `extension` places the same grass system on a named distant hill.
+The normalized lateral/depth ranges, patchiness, scale, slope limit, and
+`ridge_fade` are configured beside the foreground grass rather than hidden in
+the hill definition. Poppies expose the same extension concept. These
+extensions are dormant when the distant-hills module is disabled.
 
 ### Ground litter
 

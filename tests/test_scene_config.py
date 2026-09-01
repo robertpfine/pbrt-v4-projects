@@ -132,13 +132,18 @@ class SceneConfigTests(unittest.TestCase):
                 "scene.landscape.distant_hills.layers",
             )
         )
+        hill_status = (
+            "enabled"
+            if config.get("scene.landscape.distant_hills.enabled")
+            else "disabled"
+        )
         self.assertIn(
-            f"Distant hills: enabled, {enabled_layers} "
+            f"Distant hills: {hill_status}, {enabled_layers} "
             f"{'layer' if enabled_layers == 1 else 'layers'}",
             description,
         )
         self.assertIn("Sky background: enabled", description)
-        self.assertIn("Clouds: disabled", description)
+        self.assertIn("Clouds: enabled", description)
 
     def test_current_scene_uses_explicit_landscape_and_sky_boundaries(self):
         root = Path(__file__).resolve().parents[1]

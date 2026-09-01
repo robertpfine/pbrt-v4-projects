@@ -22,13 +22,12 @@ silhouette, surface irregularity, and color.
   terrain.
 - `material.reflectance`: RGB surface reflectance for the layer.
 
-The present composition keeps two prospective hill ranges disabled, uses
-`intermediate_field` as the pale horizontal depth interval carrying the tree
-line, and places `distant_hills` substantially behind it. The distant hills use
-low irregular relief, restrained small-scale noise, and cool blue-gray-green
-reflectance to establish atmospheric perspective before scene-wide haze is
-introduced. The layers overlap in depth so the base of each distant band is
-hidden by the terrain in front of it.
+The retained configuration currently contains one `broad_rise` height field.
+The whole module is disabled in the artist-accepted `054517` composition, so
+the meadow meets the mottled vista plane directly. The complete rise definition
+remains available for reversible comparisons; setting the module-level
+`enabled` value to `true` restores the hill and its targeted vegetation
+extensions.
 
 ## Designed ridge peaks
 
@@ -44,10 +43,10 @@ The peak contributions blend into one continuous ridge. With noise amplitude
 set to zero, these values still produce the complete hill silhouette.
 
 For a composition requiring a specifically authored horizon,
-`ridge_profile` replaces additive peaks with ordered `{position, height}`
+`ridge_profile` can replace additive peaks with ordered `{position, height}`
 control points. Smooth interpolation preserves every authored summit and
-valley without averaging them into a flat line. The active distant-hill layer
-uses this mode to follow the low, broken, unequal rhythm of the Monet reference.
+valley without averaging them into a flat line. The retained `broad_rise` uses
+one broad, off-center peak instead of a ridge profile.
 
 ## Front-to-back form
 
@@ -71,9 +70,26 @@ Noise is multiplied by the cross-section envelope, keeping both band edges at
 the configured base elevation. `amplitude: 0` removes irregularity without
 removing or flattening the explicitly designed ridge.
 
+## Ground-detail extensions
+
+Grass and poppies remain owned by their discoverable ground-detail blocks. An
+optional `extension` inside either block targets one named distant-hill layer:
+
+- `target_distant_hill` selects the receiving layer.
+- `count`, `seed`, `scale`, `max_slope_degrees`, `y_offset`, and `patchiness`
+  control the secondary population.
+- `lateral_range` and `depth_range` select normalized areas of the hill.
+- `ridge_fade` gradually reduces density before the crest, avoiding a hard
+  vegetation outline against the sky.
+
+The retained grass extension contains 2,500,000 tufts and the poppy extension
+contains 2,500 smaller plants. Both target `broad_rise`, and both become
+inactive automatically while the distant-hills module is disabled. Render
+`053150` verifies poppies on both the foreground meadow and `broad_rise`.
+
 ## Horizon tree line
 
-`tree_line` is an optional subordinate detail anchored to one named active hill
+`tree_line` is an optional, currently unused subordinate detail anchored to one named active hill
 layer. It does not alter the ridge mesh. The configured count is distributed
 across `lateral_range`, mostly in irregular clusters, and placed just behind
 the ridge using `ridge_depth_offset` and `depth_jitter`.
@@ -94,3 +110,12 @@ placement, band size, ridge and slope form, peak position/height/width/
 asymmetry, noise amplitude/frequency, layer reflectance, and the horizon tree
 line's enable/count/size controls. Manual edits to the same JSON remain equally
 valid.
+
+## Current visual checkpoint
+
+Render `054517` is the artist-accepted hill-disabled comparison. Its archived
+JSON matches the live configuration, and its PBRT file contains no distant-hill,
+distant-grass, or distant-poppy blocks. Render `054050` is not a valid
+comparison: an older in-flight builder generated hill geometry and later copied
+newer JSON into the archive bundle. Do not use `054050` as reproducibility
+evidence.

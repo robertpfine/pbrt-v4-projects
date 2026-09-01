@@ -31,7 +31,10 @@ if REPOSITORY_ROOT not in sys.path:
     sys.path.insert(0, REPOSITORY_ROOT)
 
 from phyllotaxis import area_dome_points, dome_height, vogel_points
+from clouds import create_clouds
 from distant_hills import (
+    create_distant_hill_grass,
+    create_distant_hill_scatter,
     create_distant_hills,
     create_horizon_tree_line,
     flatten_triplets,
@@ -39,6 +42,7 @@ from distant_hills import (
 from fractal_tree import fractal_tree
 from lsystem import christmas_tree, live_oak
 from terrain_surface_texture import generate_terrain_surface_maps
+from vista_surface_texture import generate_vista_surface_mottle
 from terrain import create_terrain
 from terrain_details import alignment_rotation, scatter_points, spatial_direction_offset
 
@@ -313,6 +317,107 @@ def write_fog_boundary(lines, fog):
         'AttributeEnd',
         '',
     ]
+
+
+def _cloud_medium_name(index, formation):
+    safe_name = "".join(
+        character if character.isalnum() or character == "_" else "_"
+        for character in formation.name
+    )
+    return f"cloud_{index}_{safe_name}"
+
+
+def write_cloud_media(lines, cloud_config):
+    """Declare bounded heterogeneous media for enabled sky formations."""
+
+    formations = create_clouds(cloud_config)
+    for index, formation in enumerate(formations):
+        nx, ny, nz = formation.resolution
+        optical = formation.optical
+        sigma_a = optical.get("sigma_a", [0.00015, 0.00015, 0.00015])
+        sigma_s = optical.get("sigma_s", [0.006, 0.006, 0.006])
+        if len(sigma_a) != 3 or len(sigma_s) != 3:
+            raise ValueError(f"{formation.name}: cloud sigma values require RGB triples")
+        medium_name = _cloud_medium_name(index, formation)
+        lines += [
+            f'# Cloud medium: {formation.name}',
+            f'MakeNamedMedium "{medium_name}"',
+        ]
+        if formation.underside.get("enabled", False):
+            sigma_a_grid, sigma_s_grid = formation.optical_grids()
+            lines += [
+                '    "string type" [ "rgbgrid" ]',
+                f'    "integer nx" [ {nx} ] "integer ny" [ {ny} ] "integer nz" [ {nz} ]',
+                (
+                    '    "point3 p0" [ '
+                    f'{formation.bounds_min[0]} {formation.bounds_min[1]} {formation.bounds_min[2]} ]'
+                ),
+                (
+                    '    "point3 p1" [ '
+                    f'{formation.bounds_max[0]} {formation.bounds_max[1]} {formation.bounds_max[2]} ]'
+                ),
+                '    "rgb sigma_a" [',
+                fmt_floats(sigma_a_grid, per_line=12),
+                '    ]',
+                '    "rgb sigma_s" [',
+                fmt_floats(sigma_s_grid, per_line=12),
+                '    ]',
+            ]
+        else:
+            density = formation.density_grid()
+            lines += [
+                '    "string type" [ "uniformgrid" ]',
+                f'    "integer nx" [ {nx} ] "integer ny" [ {ny} ] "integer nz" [ {nz} ]',
+                (
+                    '    "point3 p0" [ '
+                    f'{formation.bounds_min[0]} {formation.bounds_min[1]} {formation.bounds_min[2]} ]'
+                ),
+                (
+                    '    "point3 p1" [ '
+                    f'{formation.bounds_max[0]} {formation.bounds_max[1]} {formation.bounds_max[2]} ]'
+                ),
+                '    "float density" [',
+                fmt_floats(density, per_line=12),
+                '    ]',
+                f'    "rgb sigma_a" [ {sigma_a[0]} {sigma_a[1]} {sigma_a[2]} ]',
+                f'    "rgb sigma_s" [ {sigma_s[0]} {sigma_s[1]} {sigma_s[2]} ]',
+            ]
+        lines += [
+            f'    "float g" [ {float(optical.get("g", 0.2))} ]',
+            '',
+        ]
+    return formations
+
+
+def write_cloud_boundaries(lines, formations):
+    """Write invisible boxes that bind the generated cloud media."""
+
+    indices = (
+        "0 2 1  0 3 2 "
+        "5 7 4  5 6 7 "
+        "4 3 0  4 7 3 "
+        "1 6 5  1 2 6 "
+        "4 1 5  4 0 1 "
+        "3 6 2  3 7 6"
+    )
+    for index, formation in enumerate(formations):
+        x0, y0, z0 = formation.bounds_min
+        x1, y1, z1 = formation.bounds_max
+        points = (
+            x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0,
+            x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1,
+        )
+        lines += [
+            f'# Cloud boundary: {formation.name}',
+            'AttributeBegin',
+            '    Material "interface"',
+            f'    MediumInterface "{_cloud_medium_name(index, formation)}" ""',
+            '    Shape "trianglemesh"',
+            f'        "integer indices" [ {indices} ]',
+            f'        "point3 P" [ {" ".join(str(value) for value in points)} ]',
+            'AttributeEnd',
+            '',
+        ]
 
 
 def write_medium(cfg, scene_root):
@@ -710,7 +815,7 @@ def write_sun_aperture(lines, aperture, lights):
     ]
 
 
-def write_geometry(lines, geometry):
+def write_geometry(lines, geometry, scene_root=None):
     """
     Write all enabled geometry objects as AttributeBegin/AttributeEnd blocks.
     Must appear after WorldBegin.
@@ -744,9 +849,42 @@ def write_geometry(lines, geometry):
         
         # --- Material ---
         mat = obj["material"]
+        surface_mottle_enabled = False
         if mat["type"] == "diffuse":
-            r = mat["reflectance"]
-            lines.append(f'    Material "diffuse"  "rgb reflectance" [ {r[0]} {r[1]} {r[2]} ]')
+            reflectance_scale = float(mat.get("scale", 1.0))
+            if reflectance_scale < 0.0:
+                raise ValueError("diffuse material scale cannot be negative")
+            r = [float(value) * reflectance_scale for value in mat["reflectance"]]
+            surface_mottle = mat.get("surface_mottle", {})
+            surface_mottle_enabled = surface_mottle.get("enabled", False)
+            if surface_mottle_enabled:
+                if scene_root is None:
+                    raise ValueError("surface_mottle requires a scene root")
+                label = str(obj.get("label", "geometry"))
+                identifier = "".join(
+                    character if character.isalnum() or character == "_" else "_"
+                    for character in label
+                )
+                texture_name = f"{identifier}_surface_mottle"
+                texture_path = os.path.join(
+                    scene_root,
+                    "scene_files",
+                    "textures",
+                    f"{texture_name}.png",
+                )
+                generate_vista_surface_mottle(surface_mottle, r, texture_path)
+                texture_relative = os.path.relpath(texture_path, scene_root)
+                lines += [
+                    f'    Texture "{texture_name}" "spectrum" "imagemap"',
+                    f'        "string filename" [ "{texture_relative}" ]',
+                    '        "string encoding" [ "sRGB" ]',
+                    '        "string wrap" [ "repeat" ]',
+                    '        "string filter" [ "ewa" ]',
+                    '    Material "diffuse"',
+                    f'        "texture reflectance" [ "{texture_name}" ]',
+                ]
+            else:
+                lines.append(f'    Material "diffuse"  "rgb reflectance" [ {r[0]} {r[1]} {r[2]} ]')
         elif mat["type"] == "conductor":
             r = mat["reflectance"]
             roughness = mat.get("roughness", 0.0)
@@ -787,6 +925,15 @@ def write_geometry(lines, geometry):
                 f'        "integer indices" [ {idx} ]',
                 f'        "point3 P"        [ {pts} ]',
             ]
+            uv = shp.get("uv")
+            if uv is None and surface_mottle_enabled:
+                uv = [0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0]
+            if uv is not None:
+                lines.append(
+                    '        "point2 uv"       [ '
+                    + " ".join(str(value) for value in uv)
+                    + " ]"
+                )
 
         elif shp["type"] == "box":
             x0, x1 = shp["x_min"], shp["x_max"]
@@ -1337,7 +1484,7 @@ def write_terrain(lines, terrain, config, scene_root):
     ]
 
 
-def write_distant_hills(lines, config):
+def write_distant_hills(lines, config, grass_config=None, poppy_config=None):
     """Write independently designed receding-horizon terrain bands."""
 
     hills = create_distant_hills(config)
@@ -1364,6 +1511,96 @@ def write_distant_hills(lines, config):
             'AttributeEnd',
             '',
         ]
+
+    grass_config = grass_config or {}
+    extension = grass_config.get("extension", {})
+    if extension.get("enabled", False):
+        target_name = str(extension.get("target_distant_hill", ""))
+        target = next((hill for hill in hills if hill.name == target_name), None)
+        if target is None:
+            raise ValueError(
+                f"grass extension references inactive distant hill {target_name!r}"
+            )
+        style = {
+            key: value
+            for key, value in grass_config.items()
+            if key not in ("camera_frustum", "extension", "layers", "region")
+        }
+        style.update(extension)
+        colors = style.get("reflectance_variants", [[0.08, 0.22, 0.035]])
+        variants = max(1, int(style.get("variants", len(colors))))
+        for variant in range(variants):
+            points, indices = _grass_mesh(variant, style)
+            color = colors[variant % len(colors)]
+            lines += [
+                f'ObjectBegin "distant_grass_{variant}"',
+                (
+                    '    Material "diffuse" "rgb reflectance" '
+                    f'[ {color[0]} {color[1]} {color[2]} ]'
+                ),
+            ]
+            _write_detail_mesh(lines, points, indices)
+            lines += ['ObjectEnd', '']
+        grass_points = create_distant_hill_grass(target, style)
+        lines.append(
+            f'# Distant grass on {target.name}: {len(grass_points)} instances'
+        )
+        for point in grass_points:
+            angle, axis = alignment_rotation(point.normal)
+            sx = point.scale * point.aspect[0]
+            sy = point.scale * point.aspect[1]
+            sz = point.scale * point.aspect[2]
+            lines += [
+                'AttributeBegin',
+                (
+                    f'    Translate {point.position[0]:.7f} '
+                    f'{point.position[1]:.7f} {point.position[2]:.7f}'
+                ),
+                f'    Rotate {angle:.7f} {axis[0]:.7f} {axis[1]:.7f} {axis[2]:.7f}',
+                f'    Rotate {point.rotation:.7f} 0 1 0',
+                f'    Scale {sx:.7f} {sy:.7f} {sz:.7f}',
+                f'    ObjectInstance "distant_grass_{point.variant}"',
+                'AttributeEnd',
+            ]
+        lines.append('')
+
+    poppy_config = poppy_config or {}
+    extension = poppy_config.get("extension", {})
+    if extension.get("enabled", False):
+        target_name = str(extension.get("target_distant_hill", ""))
+        target = next((hill for hill in hills if hill.name == target_name), None)
+        if target is None:
+            raise ValueError(
+                f"poppy extension references inactive distant hill {target_name!r}"
+            )
+        style = {
+            key: value
+            for key, value in poppy_config.items()
+            if key not in ("camera_frustum", "extension", "region")
+        }
+        style.update(extension)
+        poppy_points = create_distant_hill_scatter(target, style)
+        lines.append(
+            f'# Distant poppies on {target.name}: {len(poppy_points)} instances'
+        )
+        for point in poppy_points:
+            angle, axis = alignment_rotation(point.normal)
+            sx = point.scale * point.aspect[0]
+            sy = point.scale * point.aspect[1]
+            sz = point.scale * point.aspect[2]
+            lines += [
+                'AttributeBegin',
+                (
+                    f'    Translate {point.position[0]:.7f} '
+                    f'{point.position[1]:.7f} {point.position[2]:.7f}'
+                ),
+                f'    Rotate {angle:.7f} {axis[0]:.7f} {axis[1]:.7f} {axis[2]:.7f}',
+                f'    Rotate {point.rotation:.7f} 0 1 0',
+                f'    Scale {sx:.7f} {sy:.7f} {sz:.7f}',
+                f'    ObjectInstance "terrain_poppies_{point.variant}"',
+                'AttributeEnd',
+            ]
+        lines.append('')
 
     tree_line = config.get("tree_line", {})
     trees = create_horizon_tree_line(config, hills)
@@ -2710,29 +2947,36 @@ def write_scene(cfg, scene_root, medium_rel_path):
     # --- World section ---
     lines += ["WorldBegin", ""]
     write_fog_boundary(lines, scene.get("fog"))
+    sky_config = scene.get("sky", {})
+    cloud_formations = write_cloud_media(lines, sky_config.get("clouds", {}))
     
     if medium_rel_path is not None:
         write_medium_include(lines, medium_rel_path)
     landscape_config = scene.get("landscape", {})
     ground_config = landscape_config.get("ground", {})
     terrain = create_terrain(ground_config)
-    sky_config = scene.get("sky", {})
     lights = []
     background = sky_config.get("background")
     if background:
         lights.append(background)
     lights.extend(scene.get("lights", []))
     write_lights(lines, lights)
+    write_cloud_boundaries(lines, cloud_formations)
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
-    write_geometry(lines, scene.get("geometry", []))
+    write_geometry(lines, scene.get("geometry", []), scene_root)
     write_terrain(lines, terrain, ground_config, scene_root)
-    write_distant_hills(lines, landscape_config.get("distant_hills", {}))
     write_terrain_details(
         lines,
         terrain,
         ground_config,
         camera=scene.get("camera"),
         film=scene.get("film"),
+    )
+    write_distant_hills(
+        lines,
+        landscape_config.get("distant_hills", {}),
+        ground_config.get("details", {}).get("grass", {}),
+        ground_config.get("details", {}).get("poppies", {}),
     )
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
     write_lsystem_trees(lines, scene.get("lsystem_trees", []), terrain)
