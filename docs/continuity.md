@@ -1,6 +1,6 @@
 # PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-08-31
+Last updated: 2026-09-01
 
 ## Purpose
 
@@ -20,6 +20,7 @@ and PBRT progress.
 - Active branch: `pbrt-v4-art-studio`
 - Remote: `https://github.com/robertpfine/pbrt-v4-projects.git`
 - Current visual-system checkpoints:
+  - `5ae191a` (`Checkpoint accepted poppy field scene systems`)
   - `573f8b8` (`Add configurable pasture terrain and grass tropism`)
   - `4fa4e9c` (`Add spatial grass tropism and cloud shaft controls`)
   - `95d8b44` (`Add PBRT-v4 Art Studio proof of concept`)
@@ -446,45 +447,116 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-Step 4 began with the accepted simple distant-rise baseline and the subsequent
-tree-depth studies. The next session should proceed in this order:
+The artist paused after accepting render `054517`. Resume from that exact state
+and do not automatically restore the disabled `broad_rise`. The next session
+should proceed in this order:
 
-1. **Configuration rationalization.** Begin tackling the accumulated size,
-   repetition, naming, and organization of the single authoritative
-   `scene_workspace/config.json`. Preserve direct manual JSON editing and do
-   not create a second live scene configuration. Begin from the artist-approved
-   landform-first workflow: choose a landform, then decide its relief,
-   appearance, and contents. Also consider clearer source-object, instance,
-   process, and scene-specific boundaries.
-2. **Qt workflow.** Reconsider the most functional use of the Qt GUI in light
-   of actual artistic work, especially the relationship among exact manual
-   editing, scene inspection, rendering, progress visibility, and visual
-   iteration. Do not infer that every JSON value needs a permanent control.
-3. **Clouds.** Get a simple cloud module working after establishing the relevant
-   configuration foundation. Begin with bounded volumetric formations made
-   from designed envelopes, blended lobes, vertical profiles, and subordinate
-   3D edge erosion. Keep cloud shape, optical properties, atmosphere, and
-   renderer backend conceptually separate.
-4. **Water.** Use the established `scene.landscape.water` boundary to develop
-   water bodies, wave formation, optical behavior, and the interaction between
-   water and ground required for shore and ocean scenes. Waves are subordinate
-   behavior within water, not a peer top-level module.
+1. **Evaluate the accepted hill-disabled composition.** `054517` is the live
+   visual checkpoint. The retained hill, grass extension, and poppy extension
+   are reversible alternatives, not active scene content. Close scrutiny shows
+   that grass placement also needs off-screen buffers at the left and right
+   frustum borders, analogous to the existing bottom margin; make that bounded
+   correction when work resumes rather than changing `054517` during handoff.
+2. **Fix render-input snapshotting.** `051939` and `054050` exposed that the
+   current pipeline can build from configuration/source already loaded in one
+   process and later archive files edited while that render was running. Take
+   immutable snapshots of the JSON and relevant generator sources at pipeline
+   start, build from the JSON snapshot, and archive those same snapshots.
+3. **Configuration rationalization.** Tackle accumulated size, repetition,
+   naming, and organization in the single authoritative
+   `scene_workspace/config.json`. Preserve direct manual editing, do not create
+   a second live scene configuration, and reorganize holistically rather than
+   moving individual blocks during artistic work. Begin from the landform-first
+   principle: choose a landform, then decide its relief, appearance, and
+   contents.
+4. **Qt workflow.** Reconsider the GUI around actual artistic use: exact manual
+   editing, discoverable scene inspection, rendering, progress visibility, and
+   comparison of accepted images. Do not infer that every JSON value needs a
+   permanent control.
+5. **Cloud refinement and water.** The first cloud module now works and should
+   be refined only in response to new artistic direction. Water remains the
+   next unimplemented first-class landscape system.
 
 Additional continuity requirements:
 
-5. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
+6. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
    homes of the accepted ground system and neutral infinite sky respectively.
    Do not create another scene JSON or change accepted rendered behavior.
-6. Continue extending the Python model and Qt inspector in response to artistic
+7. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
-7. Keep renderer implementations subordinate to artistic categories; in
+8. Keep renderer implementations subordinate to artistic categories; in
    particular, never generalize the specific PBRT `rgbgrid` medium into an
    atmosphere name.
-8. Preserve the accepted `053110` poppy baseline and the established grass,
+9. Preserve the accepted `053110` poppy baseline and the established grass,
    tree, terrain, and atmospheric work. Historical archive filenames remain
    unchanged and reproducible.
-9. Preserve readable and raw conversation archives in the gitignored
+10. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
+
+## 2026-09-01 poppy-field, cloud, vista, and grass checkpoint
+
+Render `054517` is the artist-accepted endpoint of the current poppy-field
+session. The artist described it as “really nice” and asked to stop for several
+hours. The live `scene_workspace/config.json` matches its archived JSON exactly
+at SHA-256
+`2bfac63237035c811174a4fe265df3c81ae639ca70e86e0d6af1cb05312163f1`.
+The archived PBRT contains no distant-hill, distant-grass, or distant-poppy
+blocks.
+
+The accepted composition currently uses:
+
+- camera eye `[290,165,365]`, target `[5,155,-5]`, and FOV `50`;
+- the flat meadow landform at `[-400,-700]`, size `[3000,2800]`;
+- 3,400,000 seven-blade foreground grass tufts with blade height `[8,12]`;
+- the artist's stronger manual grass shaping: lean `[0.10,0.48]`, bend
+  `[-0.255,0.255]`, bend exponent `3.45`, tropism direction `465`, strength
+  `[3,10]`, eight field octaves, and tuft angle jitter `38`;
+- `camera_frustum.bottom_margin: 0.08` for grass, allowing off-screen roots to
+  carry blades through the bottom of the image instead of making a hard edge;
+- 3,500 foreground poppies, framed by their primary flowers, with their former
+  far-depth fade disabled so they continue to the meadow horizon;
+- three left-side recursive-fractal tree instances at Z `-8000`, `-9000`, and
+  `-10000`; the three small middle-horizon trees were removed;
+- the enabled mottled vista plane and the two enabled cumulus volumes;
+- the complete `broad_rise` distant-hill configuration retained but the module
+  switch set to `false`.
+
+Although `054517` is accepted, close inspection reveals subtle left- and
+right-edge grass boundaries because only the bottom frustum currently has an
+off-screen placement margin. The next grass-placement adjustment should add
+horizontal side buffers so growth continues beyond both image borders. This is
+recorded for the return session and is not applied to the checkpoint itself.
+
+The ground-detail architecture now permits `grass.extension` and
+`poppies.extension` to scatter their own reusable objects directly on a named
+distant-hill height field. The retained inactive values target `broad_rise`:
+2,500,000 smaller grass tufts and 2,500 smaller poppies, both fading before the
+crest. Render `053150` is the first verified hill-on image containing foreground
+and hill poppies. The artist then requested the hill-disabled comparison and
+preferred `054517`.
+
+The simple cloud module is implemented in `clouds.py` as bounded PBRT media with
+designed lobes, 3D Perlin fractal sums, domain warp, density modulation, and a
+darker underside through separate absorption/scattering grids. The artist chose
+the `025537` resolution balance—left `[120,72,48]`, right `[128,80,52]`—after a
+four-times-denser test. Render `023731` is rejected as a whole-sky cloud design,
+but its soft horizontal fragment remains a useful future horizon-cloud idea.
+
+The large plane under `scene.geometry[0]` is enabled as `vista_plane`. Its base
+diffuse color `[0.35,0.60,1.00]` is scaled by `0.22`, and
+`vista_surface_texture.py` generates a deterministic 2048-square clustered
+mottle intended to suggest distant habitation. Renders `033404` and `034523`
+established this direction; the artist called `034523` great. The plane's
+current placement inside the generic geometry array is an acknowledged example
+of why the future configuration refactor must be holistic and landform-first.
+
+Do not use renders `051939` or `054050` as reproducibility checkpoints. In both
+cases an older in-flight builder generated PBRT from already-loaded state, then
+the pipeline copied newer live JSON/source files into the timestamped archive.
+`054050` therefore claims the hill is disabled in JSON while its PBRT still
+contains `broad_rise`, 2,500,000 distant grass instances, and 2,500 distant
+poppies. `054517` was explicitly checked for matching JSON and PBRT content and
+is the valid accepted bundle.
 
 ## 2026-08-31 simple distant-rise baseline
 
