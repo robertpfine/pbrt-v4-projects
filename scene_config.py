@@ -517,6 +517,11 @@ class SceneConfig:
         grass = require(GROUND_PATH + ("details", "grass"), dict)
         if grass is not None:
             validate_depth_fade("grass", grass.get("camera_frustum", {}))
+            surface = grass.get("surface", {})
+            if not isinstance(surface, dict):
+                errors.append("grass.surface must be an object")
+            elif surface.get("type", "diffuse") not in {"diffuse", "coateddiffuse"}:
+                errors.append("grass.surface.type must be diffuse or coateddiffuse")
             layers = grass.get("layers", [])
             if not isinstance(layers, list) or not layers:
                 errors.append("grass.layers must contain at least one layer")

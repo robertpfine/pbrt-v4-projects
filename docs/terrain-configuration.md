@@ -360,6 +360,12 @@ each blade as an independent scene object. The current exclusion radius keeps
 the immediate trunk contact readable, while high patchiness creates bare soil
 between colonies.
 
+`surface.type` selects the blade material. The default `diffuse` retains the
+established matte grass. `coateddiffuse` adds a thin dielectric layer controlled
+by `roughness`, `eta`, and `thickness`; a low-roughness layer with `eta: 1.33`
+provides a restrained approximation of morning dew while preserving the grass
+colors in `reflectance_variants`.
+
 An optional `layers` array creates multiple grass strata from the same reusable
 blade cluster. Values in each layer override the shared grass controls. This is
 useful for pasture treatments: a high-count, weakly patchy, short base stratum

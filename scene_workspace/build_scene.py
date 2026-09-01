@@ -255,8 +255,24 @@ def write_fog_medium(cfg, lines):
         seed = int(noise.get("seed", 19))
         base_density = float(noise.get("base_density", 0.65))
         contrast = float(noise.get("contrast", 0.90))
+        height_falloff = noise.get("height_falloff", {})
+        falloff_enabled = bool(height_falloff.get("enabled", False))
+        full_density_height = float(
+            height_falloff.get("full_density_height", bounds_min[1])
+        )
+        zero_density_height = float(
+            height_falloff.get("zero_density_height", bounds_max[1])
+        )
+        falloff_exponent = float(height_falloff.get("exponent", 1.0))
         if nx < 2 or ny < 2 or nz < 2:
             raise ValueError("fog noise resolution values must be at least 2")
+        if falloff_enabled and zero_density_height <= full_density_height:
+            raise ValueError(
+                "fog height_falloff zero_density_height must exceed "
+                "full_density_height"
+            )
+        if falloff_exponent <= 0.0:
+            raise ValueError("fog height_falloff exponent must be positive")
         density = []
         for z_index in range(nz):
             z = bounds_min[2] + (bounds_max[2] - bounds_min[2]) * z_index / (nz - 1)
@@ -272,7 +288,23 @@ def write_fog_medium(cfg, lines):
                         repeatx=1024, repeaty=1024, repeatz=1024,
                         base=seed,
                     )
-                    density.append(max(0.0, base_density + contrast * value))
+                    local_density = max(0.0, base_density + contrast * value)
+                    if falloff_enabled:
+                        height_fraction = min(
+                            1.0,
+                            max(
+                                0.0,
+                                (y - full_density_height)
+                                / (zero_density_height - full_density_height),
+                            ),
+                        )
+                        smooth_height = (
+                            height_fraction
+                            * height_fraction
+                            * (3.0 - 2.0 * height_fraction)
+                        )
+                        local_density *= (1.0 - smooth_height) ** falloff_exponent
+                    density.append(local_density)
         lines += [
             '    "string type" [ "uniformgrid" ]',
             f'    "integer nx" [ {nx} ] "integer ny" [ {ny} ] "integer nz" [ {nz} ]',
@@ -389,7 +421,7 @@ def write_cloud_media(lines, cloud_config):
     return formations
 
 
-def write_cloud_boundaries(lines, formations):
+def write_cloud_boundaries(lines, formations, exterior_medium=""):
     """Write invisible boxes that bind the generated cloud media."""
 
     indices = (
@@ -411,7 +443,10 @@ def write_cloud_boundaries(lines, formations):
             f'# Cloud boundary: {formation.name}',
             'AttributeBegin',
             '    Material "interface"',
-            f'    MediumInterface "{_cloud_medium_name(index, formation)}" ""',
+            (
+                f'    MediumInterface "{_cloud_medium_name(index, formation)}" '
+                f'"{exterior_medium}"'
+            ),
             '    Shape "trianglemesh"',
             f'        "integer indices" [ {indices} ]',
             f'        "point3 P" [ {" ".join(str(value) for value in points)} ]',
@@ -2297,9 +2332,32 @@ def write_terrain_details(lines, terrain, config, camera=None, film=None):
             color = colors[variant % len(colors)]
             lines.append(f'ObjectBegin "terrain_{name}_{variant}"')
             if name != "poppies":
-                lines.append(
-                    f'    Material "diffuse" "rgb reflectance" [ {color[0]} {color[1]} {color[2]} ]'
-                )
+                surface = layer.get("surface", {})
+                surface_type = surface.get("type", "diffuse")
+                if surface_type == "coateddiffuse":
+                    roughness = float(surface.get("roughness", 0.15))
+                    eta = float(surface.get("eta", 1.33))
+                    thickness = float(surface.get("thickness", 0.002))
+                    if roughness < 0.0 or eta <= 0.0 or thickness < 0.0:
+                        raise ValueError(
+                            "coated terrain-detail surface values must be nonnegative "
+                            "and eta must be positive"
+                        )
+                    lines.append(
+                        f'    Material "coateddiffuse" '
+                        f'"rgb reflectance" [ {color[0]} {color[1]} {color[2]} ] '
+                        f'"float roughness" [ {roughness} ] '
+                        f'"float eta" [ {eta} ] '
+                        f'"float thickness" [ {thickness} ]'
+                    )
+                elif surface_type == "diffuse":
+                    lines.append(
+                        f'    Material "diffuse" "rgb reflectance" [ {color[0]} {color[1]} {color[2]} ]'
+                    )
+                else:
+                    raise ValueError(
+                        f"unsupported terrain-detail surface type {surface_type!r}"
+                    )
             if name == "rocks":
                 lines.append('    Shape "sphere" "float radius" [ 1 ]')
             elif name == "litter":
@@ -2961,7 +3019,12 @@ def write_scene(cfg, scene_root, medium_rel_path):
         lights.append(background)
     lights.extend(scene.get("lights", []))
     write_lights(lines, lights)
-    write_cloud_boundaries(lines, cloud_formations)
+    fog_enabled = bool(scene.get("fog", {}).get("enabled", False))
+    write_cloud_boundaries(
+        lines,
+        cloud_formations,
+        exterior_medium="fog" if fog_enabled else "",
+    )
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
     write_geometry(lines, scene.get("geometry", []), scene_root)
     write_terrain(lines, terrain, ground_config, scene_root)

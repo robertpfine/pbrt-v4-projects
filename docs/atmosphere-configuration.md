@@ -25,7 +25,13 @@ PBRT-v4. It is configured under `scene.fog` and written by
     "persistence": 0.50,
     "lacunarity": 2.0,
     "base_density": 0.55,
-    "contrast": 1.20
+    "contrast": 1.20,
+    "height_falloff": {
+      "enabled": true,
+      "full_density_height": 4.0,
+      "zero_density_height": 75.0,
+      "exponent": 1.8
+    }
   }
 }
 ```
@@ -162,6 +168,14 @@ density = max(0, base_density + contrast * perlin)
 Higher contrast produces stronger separation between clear and dense regions.
 Values that drive the expression below zero create genuinely empty voxels.
 
+### `noise.height_falloff`
+
+The optional height falloff turns a heterogeneous volume into a low mist layer.
+Density remains unchanged below `full_density_height`, decreases smoothly above
+it, and reaches zero at `zero_density_height`. `exponent` controls how strongly
+the mist remains concentrated near the ground; larger values clear the upper
+part of the layer more quickly.
+
 ## Lighting interaction
 
 Fog appearance cannot be judged from density alone. Important interacting
@@ -190,13 +204,11 @@ lower resolution or reduced foliage can provide faster feedback.
 
 ## Current limitations
 
-- Perlin variation is available, but there is no finite-height ground-fog
-  falloff yet.
-- There is no vertical density falloff.
-- There is no procedural density noise or drifting mist structure.
+- The height falloff is world-space rather than terrain-following.
+- The noise field is static and does not yet model drifting mist.
 - Fog color is neutral; color comes from incident illumination and absorption.
 - The boundary is spherical rather than terrain-following.
 - Clouds are not part of this system.
 
-Future atmosphere modes should preserve a finite boundary while adding height
-falloff, bounded fog layers, and heterogeneous density fields.
+Future atmosphere modes should preserve the finite boundary while adding
+terrain-following density and animated drifting mist.

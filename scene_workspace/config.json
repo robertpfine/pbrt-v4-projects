@@ -24,7 +24,7 @@
   },
 
   "scene": {
-    "name":             "untitled_landscape",
+    "name":             "Poppy Field at Sunrise",
     "master_file":      "scene_files/scene.pbrt",
     "generated_medium": "scene_files/volumes/rgbgrid.pbrt",
     "output_filename":  "working_scene.png",
@@ -48,30 +48,36 @@
     "integrator": {
       "enabled": true,
       "type": "volpath",
-      "max_depth": 80
+      "max_depth": 200
     },
 
     "fog": {
-      "enabled": false,
+      "enabled": true,
       "sigma_a": 0.000003,
-      "sigma_s": 0.00014,
-      "g": 0.55,
+      "sigma_s": 0.00024,
+      "g": 0.35,
       "camera_inside": true,
-      "boundary_center": [0.0, 200.0, -500.0],
-      "boundary_radius": 5200.0,
+      "boundary_center": [-1600.0, 500.0, -1900.0],
+      "boundary_radius": 6500.0,
       "noise": {
-        "enabled": false,
+        "enabled": true,
         "type": "perlin",
-        "seed": 19,
-        "resolution": [48, 36, 48],
-        "bounds_min": [-700.0, -500.0, -700.0],
-        "bounds_max": [700.0, 700.0, 700.0],
-        "frequency": 0.006,
+        "seed": 29,
+        "resolution": [72, 24, 96],
+        "bounds_min": [-2200.0, -25.0, -4500.0],
+        "bounds_max": [1400.0, 85.0, 900.0],
+        "frequency": 0.0015,
         "octaves": 3,
         "persistence": 0.50,
         "lacunarity": 2.0,
-        "base_density": 0.55,
-        "contrast": 1.20
+        "base_density": 0.28,
+        "contrast": 0.60,
+        "height_falloff": {
+          "enabled": true,
+          "full_density_height": 4.0,
+          "zero_density_height": 90.0,
+          "exponent": 1.4
+        }
       }
     },
 
@@ -87,7 +93,7 @@
         "type": "infinite",
         "color_mode": "rgb",
         "color": [0.35, 0.60, 1.00],
-        "scale": 0.22
+        "scale": 0.055
       },
       "clouds": {
         "enabled": true,
@@ -182,11 +188,11 @@
         "enabled": true,
         "label": "morning_sun",
         "type": "distant",
-        "from": [35.0, 14.0, 45.0],
+        "from": [97.9, 9.8, -18.3],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
-        "temperature": 4600,
-        "scale": 9.0
+        "temperature": 4000,
+        "scale": 6.0
       },
       {
         "enabled": false,
@@ -352,6 +358,12 @@
               [0.075, 0.22, 0.030],
               [0.12, 0.20, 0.035]
             ],
+            "surface": {
+              "type": "coateddiffuse",
+              "roughness": 0.07,
+              "eta": 1.33,
+              "thickness": 0.003
+            },
             "layers": [
               {
                 "count": 3400000,
@@ -361,9 +373,9 @@
               }
             ],
             "extension": {
-              "enabled": true,
+              "enabled": false,
               "target_distant_hill": "broad_rise",
-              "count": 2500000,
+              "count": 250000,
               "seed": 409,
               "lateral_range": [-1.0, 1.0],
               "depth_range": [0.0, 0.56],
@@ -565,7 +577,7 @@
         "label": "vista_plane",
         "material": {
           "type": "diffuse",
-          "reflectance": [0.35, 0.60, 1.00],
+          "reflectance": [0.25, 0.27, 0.17],
           "scale": 0.22,
           "surface_mottle": {
             "enabled": true,
