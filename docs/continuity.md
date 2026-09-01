@@ -447,16 +447,18 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-The artist paused after accepting render `054517`. Resume from that exact state
-and do not automatically restore the disabled `broad_rise`. The next session
-should proceed in this order:
+The active artist-accepted visual checkpoint is render `091401`, the June 21
+5:00 AM sunrise-mist study. Preserve `054517` as its accepted clear-atmosphere
+predecessor and do not automatically restore the disabled `broad_rise`. The
+next session should proceed in this order:
 
-1. **Evaluate the accepted hill-disabled composition.** `054517` is the live
-   visual checkpoint. The retained hill, grass extension, and poppy extension
-   are reversible alternatives, not active scene content. Close scrutiny shows
-   that grass placement also needs off-screen buffers at the left and right
-   frustum borders, analogous to the existing bottom margin; make that bounded
-   correction when work resumes rather than changing `054517` during handoff.
+1. **Evaluate the accepted sunrise atmosphere.** `091401` is the live visual
+   checkpoint. Its warm cloud illumination, dark dew-coated field, and low
+   horizon mist are accepted together. The retained hill, grass extension, and
+   poppy extension remain reversible inactive alternatives. Grass placement
+   still needs off-screen buffers at the left and right frustum borders,
+   analogous to the existing bottom margin; preserve the accepted composition
+   while making that bounded correction.
 2. **Fix render-input snapshotting.** `051939` and `054050` exposed that the
    current pipeline can build from configuration/source already loaded in one
    process and later archive files edited while that render was running. Take
@@ -492,6 +494,63 @@ Additional continuity requirements:
    unchanged and reproducible.
 10. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
+
+## 2026-09-01 accepted 5:00 AM sunrise-mist checkpoint
+
+Render `091401` is the artist-accepted visual checkpoint for the first
+time-based atmosphere study. The artist described it as “really nice” and
+explicitly requested that it be preserved. Implementation checkpoint `626bdbc`
+contains the live scene, fog-height falloff, dew material support, nested-medium
+correction, tests, and focused documentation.
+
+The artistic assumptions are a due-south view at 43 degrees north latitude on
+June 21, with the artist specifying sunrise at 4:19 AM and the rendered scene at
+5:00 AM. The current scene uses:
+
+- a distant sun at `[97.9,9.8,-18.3]`, corresponding approximately to 5.6
+  degrees elevation and 63 degrees azimuth from north;
+- 4000 K direct sunlight at scale `6.0`, giving both cumulus volumes restrained
+  warm sunrise illumination;
+- the uniform infinite sky at scale `0.055`, reduced from the earlier `0.22`
+  clear-sky state;
+- heterogeneous residual fog with `sigma_s: 0.00024`, `sigma_a: 0.000003`, and
+  `g: 0.35`;
+- a `[72,24,96]` Perlin fog grid with base density `0.28`, contrast `0.60`, and
+  a smooth world-height fade from full density at Y `4` to zero at Y `90` with
+  exponent `1.4`;
+- a thin `coateddiffuse` grass surface with roughness `0.07`, eta `1.33`, and
+  thickness `0.003` as the first restrained dew approximation;
+- all 3,400,000 foreground grass tufts and 3,500 poppies from the accepted
+  meadow composition;
+- the vista plane's revised muted olive-gray base reflectance
+  `[0.25,0.27,0.17]`; its existing mottle coverage, contrast, and mottle colors
+  were not changed.
+
+Enabling the fog first exposed a nested-medium error in diagnostic render
+`090336`: a bright rectangular cloud-boundary artifact crossed the right cloud.
+Cloud boundaries had returned rays to vacuum even while enclosed by the fog
+volume. The builder now writes each cloud with `fog` as its exterior medium
+when atmosphere is enabled, and the enlarged finite fog sphere contains both
+cloud formations. `091401` verifies that the rectangle is gone. Do not treat
+`090336` as an accepted image.
+
+The archived `091401` JSON and the configuration captured in implementation
+checkpoint `626bdbc` match exactly at SHA-256
+`d291a591c05ee01a232158565469f45689170fe480831db8f30df16826d88ee5`.
+The archived and live scene builder match at SHA-256
+`b9bc0e3fd62110b6cbc8153b9e946a49af503a95b7d288f527ad23c1c61bff9a`.
+The accepted PNG hash is
+`890ab886c2a57c4cff3e4e24647628c1bea8d4ff2c9677d215fac7f2012cf8ab`.
+All 52 repository tests pass with five dependency-aware skips in the Qt virtual
+environment; the three atmosphere tests also pass under the production Python
+environment used by the renderer.
+
+After accepting `091401`, the artist manually changed the live film resolution
+from `2000 x 1450` to `8000 x 5800` in preparation for possible forward work.
+That unrendered resolution change is intentionally not part of the accepted
+visual checkpoint and remains an uncommitted working-tree modification. Do not
+erase it, and do not claim that it reproduces `091401` without restoring the
+archived or committed resolution.
 
 ## 2026-09-01 poppy-field, cloud, vista, and grass checkpoint
 
