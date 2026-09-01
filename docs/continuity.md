@@ -447,18 +447,20 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
-The active artist-accepted visual checkpoint is render `091401`, the June 21
-5:00 AM sunrise-mist study. Preserve `054517` as its accepted clear-atmosphere
-predecessor and do not automatically restore the disabled `broad_rise`. The
-next session should proceed in this order:
+The active artist-accepted high-resolution master is render `093054`, with
+`091401` retained as its accepted development-resolution checkpoint and
+`054517` as the accepted clear-atmosphere predecessor. Do not automatically
+restore the disabled `broad_rise`. The next session should proceed in this
+order:
 
-1. **Evaluate the accepted sunrise atmosphere.** `091401` is the live visual
-   checkpoint. Its warm cloud illumination, dark dew-coated field, and low
-   horizon mist are accepted together. The retained hill, grass extension, and
-   poppy extension remain reversible inactive alternatives. Grass placement
-   still needs off-screen buffers at the left and right frustum borders,
-   analogous to the existing bottom margin; preserve the accepted composition
-   while making that bounded correction.
+1. **Preserve the accepted sunrise master.** `093054` is the active visual
+   master at `8000 x 5800`, 512 samples per pixel, and integrator depth `200`.
+   Its warm cloud illumination, dark dew-coated field, and low horizon mist are
+   accepted together. The retained hill, grass extension, and poppy extension
+   remain reversible inactive alternatives. Grass placement still needs
+   off-screen buffers at the left and right frustum borders, analogous to the
+   existing bottom margin; preserve the accepted composition while making that
+   bounded correction.
 2. **Fix render-input snapshotting.** `051939` and `054050` exposed that the
    current pipeline can build from configuration/source already loaded in one
    process and later archive files edited while that render was running. Take
@@ -495,13 +497,48 @@ Additional continuity requirements:
 10. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
+## 2026-09-01 accepted 093054 high-resolution master
+
+Render `Poppy_Field_at_Sunrise_20260901_093054.png` is the artist-accepted
+high-resolution master of the 5:00 AM sunrise-mist composition. The artist
+described it as “absolutely stunning” and explicitly requested preservation.
+Configuration checkpoint `395fe09` records its `8000 x 5800` film resolution.
+
+The master retains the accepted 091401 atmosphere and composition while adding
+the artist's manual production settings:
+
+- scene name `Poppy Field at Sunrise`, which produces the descriptive archive
+  stem rather than `untitled_landscape`;
+- film resolution `8000 x 5800`—46.4 million pixels and exactly 16 times the
+  pixel count of the `2000 x 1450` development render;
+- Halton sampling at 512 samples per pixel;
+- volumetric path depth `200` rather than the earlier development value `80`.
+
+The master was inspected locally through a temporary downsampled viewing copy;
+the original 78,408,119-byte PNG was not modified. Its archived JSON and the
+live/committed configuration match exactly at SHA-256
+`24017f437111007f354e9c0d14ec32a1b2c54b1d0c09989fb86512e31fce3fde`.
+The archived and live builder match at SHA-256
+`b9bc0e3fd62110b6cbc8153b9e946a49af503a95b7d288f527ad23c1c61bff9a`.
+The accepted master PNG hash is
+`692472e5dd534c5e646ff2135f046bf54bdeea1a2e3c7bdde1c65b4ac6848c85`,
+and its PBRT hash is
+`3d8d41ffac449aac5a821757936a5dfffff067e0671d831a11395343d0ce70b2`.
+The archived PBRT independently confirms resolution `8000 x 5800`, integrator
+depth `200`, and both cloud volumes returning to the surrounding `fog` medium.
+
+Keep `091401` as the faster accepted development-resolution comparison. The
+live configuration now intentionally remains at the high-resolution production
+settings; lower it manually for exploratory renders rather than assuming the
+master should be overwritten.
+
 ## 2026-09-01 accepted 5:00 AM sunrise-mist checkpoint
 
 Render `091401` is the artist-accepted visual checkpoint for the first
 time-based atmosphere study. The artist described it as “really nice” and
 explicitly requested that it be preserved. Implementation checkpoint `626bdbc`
-contains the live scene, fog-height falloff, dew material support, nested-medium
-correction, tests, and focused documentation.
+contains the fog-height falloff, dew material support, nested-medium correction,
+tests, and focused documentation.
 
 The artistic assumptions are a due-south view at 43 degrees north latitude on
 June 21, with the artist specifying sunrise at 4:19 AM and the rendered scene at
@@ -534,8 +571,7 @@ when atmosphere is enabled, and the enlarged finite fog sphere contains both
 cloud formations. `091401` verifies that the rectangle is gone. Do not treat
 `090336` as an accepted image.
 
-The archived `091401` JSON and the configuration captured in implementation
-checkpoint `626bdbc` match exactly at SHA-256
+The exact archived `091401` JSON is preserved at SHA-256
 `d291a591c05ee01a232158565469f45689170fe480831db8f30df16826d88ee5`.
 The archived and live scene builder match at SHA-256
 `b9bc0e3fd62110b6cbc8153b9e946a49af503a95b7d288f527ad23c1c61bff9a`.
@@ -545,12 +581,13 @@ All 52 repository tests pass with five dependency-aware skips in the Qt virtual
 environment; the three atmosphere tests also pass under the production Python
 environment used by the renderer.
 
-After accepting `091401`, the artist manually changed the live film resolution
-from `2000 x 1450` to `8000 x 5800` in preparation for possible forward work.
-That unrendered resolution change is intentionally not part of the accepted
-visual checkpoint and remains an uncommitted working-tree modification. Do not
-erase it, and do not claim that it reproduces `091401` without restoring the
-archived or committed resolution.
+During the approval window for implementation commit `626bdbc`, the artist's
+post-render scene-name change to `Poppy Field at Sunrise` and integrator-depth
+change from `80` to `200` entered the staged configuration. Therefore
+`626bdbc` is the implementation checkpoint but is not a byte-identical config
+checkpoint for `091401`; use the archived 091401 JSON for exact reproduction.
+The later accepted `093054` master intentionally incorporates those settings
+plus the `8000 x 5800` film resolution.
 
 ## 2026-09-01 poppy-field, cloud, vista, and grass checkpoint
 
