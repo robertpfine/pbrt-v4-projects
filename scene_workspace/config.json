@@ -83,8 +83,8 @@
 
     "film": {
       "enabled": true,
-      "x_resolution": 2000,
-      "y_resolution": 1450
+      "x_resolution": 8000,
+      "y_resolution": 5800
     },
 
     "sky": {
