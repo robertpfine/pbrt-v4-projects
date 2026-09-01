@@ -449,19 +449,22 @@ A GitHub push alone does not complete continuity delivery.
 Step 4 began with the accepted simple distant-rise baseline and the subsequent
 tree-depth studies. The next session should proceed in this order:
 
-1. **Clouds.** Get a simple cloud module working. Begin with bounded volumetric
-   formations made from designed envelopes, blended lobes, vertical profiles,
-   and subordinate 3D edge erosion. Keep cloud shape, optical properties,
-   atmosphere, and renderer backend conceptually separate.
-2. **Configuration rationalization.** Begin tackling the accumulated size,
+1. **Configuration rationalization.** Begin tackling the accumulated size,
    repetition, naming, and organization of the single authoritative
    `scene_workspace/config.json`. Preserve direct manual JSON editing and do
-   not create a second live scene configuration while considering clearer
-   source-object, instance, process, and scene-specific boundaries.
-3. **Qt workflow.** Reconsider the most functional use of the Qt GUI in light
+   not create a second live scene configuration. Begin from the artist-approved
+   landform-first workflow: choose a landform, then decide its relief,
+   appearance, and contents. Also consider clearer source-object, instance,
+   process, and scene-specific boundaries.
+2. **Qt workflow.** Reconsider the most functional use of the Qt GUI in light
    of actual artistic work, especially the relationship among exact manual
    editing, scene inspection, rendering, progress visibility, and visual
    iteration. Do not infer that every JSON value needs a permanent control.
+3. **Clouds.** Get a simple cloud module working after establishing the relevant
+   configuration foundation. Begin with bounded volumetric formations made
+   from designed envelopes, blended lobes, vertical profiles, and subordinate
+   3D edge erosion. Keep cloud shape, optical properties, atmosphere, and
+   renderer backend conceptually separate.
 4. **Water.** Use the established `scene.landscape.water` boundary to develop
    water bodies, wave formation, optical behavior, and the interaction between
    water and ground required for shore and ocean scenes. Waves are subordinate
@@ -529,6 +532,23 @@ The instancing implementation lives in `write_lsystem_trees()` and preserves
 the prior single-origin behavior when an entry has no `instances` array. The
 focused instancing tests verify local reusable geometry, manual translations,
 per-instance scaling, and rejection of non-positive scales.
+
+## Artist-approved landform workflow principle
+
+The refactored configuration must follow the artist's landform-first working
+model. The artist first chooses a landform; in the simplest case it is a plane.
+After that plane exists, the artist decides whether it remains flat or becomes
+hilly, assigns its color and surface treatment, and chooses what belongs on it,
+such as grass and poppies.
+
+This principle is critical and persistent. The underlying plane must not be
+hidden as unrelated renderer scaffolding while its relief, material, and
+contents are scattered across conceptually disconnected configuration areas.
+Manual editing must make the relationship easy to discover. Multiple scene
+elements—including the current poppy meadow, broad rise, and a possible
+detail-free vista plane beyond the ridge—may all be understood as landforms.
+They can have different controls; this principle does not yet dictate the final
+JSON nesting or require a universal landform schema.
 
 ## Conversation preservation
 

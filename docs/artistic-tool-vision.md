@@ -155,6 +155,26 @@ first decision will probably be to choose a landform type. The scene should grow
 from that decision rather than beginning as a preassembled composition chosen
 by the system.
 
+### Landform-first artistic workflow
+
+The artist-approved workflow begins by choosing a landform. In the simplest
+case, that landform is a plane. Once the plane exists, the artist decides what
+should be on it and what character it should acquire. Those later decisions
+include whether it remains flat or becomes hilly, its color and surface
+treatment, and contents such as grass and poppies.
+
+This ordering is a key principle for the refactored configuration and future
+interface. The plane is not merely renderer scaffolding hidden elsewhere from
+the terrain placed on it. It is the chosen landform that receives its relief,
+appearance, and contents through subsequent artistic decisions. The
+configuration should make that relationship easy to find and edit manually.
+
+Multiple landforms may be present in one scene. For example, the current poppy
+meadow, broad rise, and a future vista plane can each be understood as a
+landform with its own placement, form, appearance, and possible contents. This
+principle does not by itself prescribe the final JSON nesting or require every
+landform to expose identical controls.
+
 Once a landform is selected, the system should supply a neutral sky and a
 workable default camera. These are technical starting conditions that make the
 new scene renderable, not a named template or a preselected artistic direction.
