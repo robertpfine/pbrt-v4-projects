@@ -469,6 +469,43 @@ class SceneConfig:
             elif not isinstance(clouds.get("enabled", False), bool):
                 errors.append("sky.clouds.enabled must be boolean")
 
+        rain = self.get(("scene", "rain"), None)
+        if rain is not None:
+            if not isinstance(rain, dict):
+                errors.append("rain must be an object")
+            elif not isinstance(rain.get("enabled", False), bool):
+                errors.append("rain.enabled must be boolean")
+            else:
+                curtains = rain.get("curtains", [])
+                if not isinstance(curtains, list):
+                    errors.append("rain.curtains must be an array")
+                else:
+                    for index, curtain in enumerate(curtains):
+                        prefix = f"rain.curtains.{index}"
+                        if not isinstance(curtain, dict):
+                            errors.append(f"{prefix} must be an object")
+                            continue
+                        if not isinstance(curtain.get("enabled", True), bool):
+                            errors.append(f"{prefix}.enabled must be boolean")
+                        for field in ("center", "size", "resolution"):
+                            value = curtain.get(field)
+                            if not isinstance(value, list) or len(value) != 3:
+                                errors.append(f"{prefix}.{field} must contain three values")
+                        size = curtain.get("size", [])
+                        if len(size) == 3 and not all(
+                            isinstance(value, (int, float)) and value > 0
+                            for value in size
+                        ):
+                            errors.append(f"{prefix}.size values must be positive")
+                        resolution = curtain.get("resolution", [])
+                        if len(resolution) == 3 and not all(
+                            isinstance(value, int) and value >= 2
+                            for value in resolution
+                        ):
+                            errors.append(
+                                f"{prefix}.resolution values must be integers at least 2"
+                            )
+
         camera = require(("scene", "camera"), dict)
         if camera is not None:
             look_at = camera.get("look_at", {})
@@ -545,6 +582,7 @@ class SceneConfig:
         distant_hills = self.get(HILLS_PATH)
         water = self.get(("scene", "landscape", "water"))
         sky = self.get(SKY_PATH)
+        rain = self.get(("scene", "rain"), {})
         grass_count = sum(
             int(layer.get("count", 0)) for layer in grass.get("layers", [])
         )
@@ -565,6 +603,8 @@ class SceneConfig:
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
             f"Clouds: {'enabled' if sky['clouds'].get('enabled') else 'disabled'}",
             f"Fog: {'enabled' if self.get(('scene', 'fog', 'enabled'), False) else 'disabled'}",
+            f"Rain: {'enabled' if rain.get('enabled', False) else 'disabled'}, "
+            f"{sum(bool(item.get('enabled', True)) for item in rain.get('curtains', []))} curtains",
         ))
 
     def save(self) -> None:

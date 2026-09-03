@@ -6,6 +6,8 @@ artistic boundaries without changing the accepted rendered scene:
 
 ```text
 scene
+├── fog
+├── rain
 ├── landscape
 │   ├── ground
 │   │   ├── active_landform
@@ -117,6 +119,16 @@ horizontal fragment as a possible future horizon-cloud treatment.
 Atmosphere, lighting, and camera remain separate artistic categories. The
 current `scene.fog` structure is the existing atmosphere implementation and is
 outside this bounded landscape/sky migration.
+
+## Atmosphere and weather
+
+`scene.fog` owns the broad atmospheric medium. `scene.rain` owns discrete,
+bounded rain curtains and sits directly beside fog in the live JSON rather than
+being hidden inside cloud controls. A curtain may visually connect a cloud to
+the landscape, but it remains an independently placeable weather volume. The
+first implementation uses vertically coherent 3D fractal noise and soft fades
+on all six faces; its manual controls are documented in
+[`rain-configuration.md`](rain-configuration.md).
 
 ## Compatibility rule
 

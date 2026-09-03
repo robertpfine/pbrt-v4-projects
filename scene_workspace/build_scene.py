@@ -32,6 +32,7 @@ if REPOSITORY_ROOT not in sys.path:
 
 from phyllotaxis import area_dome_points, dome_height, vogel_points
 from clouds import create_clouds
+from rain import create_rain_curtains
 from distant_hills import (
     create_distant_hill_grass,
     create_distant_hill_scatter,
@@ -445,6 +446,81 @@ def write_cloud_boundaries(lines, formations, exterior_medium=""):
             '    Material "interface"',
             (
                 f'    MediumInterface "{_cloud_medium_name(index, formation)}" '
+                f'"{exterior_medium}"'
+            ),
+            '    Shape "trianglemesh"',
+            f'        "integer indices" [ {indices} ]',
+            f'        "point3 P" [ {" ".join(str(value) for value in points)} ]',
+            'AttributeEnd',
+            '',
+        ]
+
+
+def _rain_medium_name(index, curtain):
+    safe_name = "".join(
+        character if character.isalnum() or character == "_" else "_"
+        for character in curtain.name
+    )
+    return f"rain_{index}_{safe_name}"
+
+
+def write_rain_media(lines, rain_config):
+    """Declare bounded, vertically streaked rain-curtain media."""
+
+    curtains = create_rain_curtains(rain_config)
+    for index, curtain in enumerate(curtains):
+        nx, ny, nz = curtain.resolution
+        optical = curtain.optical
+        sigma_a = optical["sigma_a"]
+        sigma_s = optical["sigma_s"]
+        lines += [
+            f'# Rain-curtain medium: {curtain.name}',
+            f'MakeNamedMedium "{_rain_medium_name(index, curtain)}"',
+            '    "string type" [ "uniformgrid" ]',
+            f'    "integer nx" [ {nx} ] "integer ny" [ {ny} ] "integer nz" [ {nz} ]',
+            (
+                '    "point3 p0" [ '
+                f'{curtain.bounds_min[0]} {curtain.bounds_min[1]} {curtain.bounds_min[2]} ]'
+            ),
+            (
+                '    "point3 p1" [ '
+                f'{curtain.bounds_max[0]} {curtain.bounds_max[1]} {curtain.bounds_max[2]} ]'
+            ),
+            '    "float density" [',
+            fmt_floats(curtain.density_grid(), per_line=12),
+            '    ]',
+            f'    "rgb sigma_a" [ {sigma_a[0]} {sigma_a[1]} {sigma_a[2]} ]',
+            f'    "rgb sigma_s" [ {sigma_s[0]} {sigma_s[1]} {sigma_s[2]} ]',
+            f'    "float g" [ {optical["g"]} ]',
+            '',
+        ]
+    return curtains
+
+
+def write_rain_boundaries(lines, curtains, exterior_medium=""):
+    """Write invisible boxes that bind the rain-curtain media."""
+
+    indices = (
+        "0 2 1  0 3 2 "
+        "5 7 4  5 6 7 "
+        "4 3 0  4 7 3 "
+        "1 6 5  1 2 6 "
+        "4 1 5  4 0 1 "
+        "3 6 2  3 7 6"
+    )
+    for index, curtain in enumerate(curtains):
+        x0, y0, z0 = curtain.bounds_min
+        x1, y1, z1 = curtain.bounds_max
+        points = (
+            x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0,
+            x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1,
+        )
+        lines += [
+            f'# Rain-curtain boundary: {curtain.name}',
+            'AttributeBegin',
+            '    Material "interface"',
+            (
+                f'    MediumInterface "{_rain_medium_name(index, curtain)}" '
                 f'"{exterior_medium}"'
             ),
             '    Shape "trianglemesh"',
@@ -3007,6 +3083,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_fog_boundary(lines, scene.get("fog"))
     sky_config = scene.get("sky", {})
     cloud_formations = write_cloud_media(lines, sky_config.get("clouds", {}))
+    rain_curtains = write_rain_media(lines, scene.get("rain", {}))
     
     if medium_rel_path is not None:
         write_medium_include(lines, medium_rel_path)
@@ -3023,6 +3100,11 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_cloud_boundaries(
         lines,
         cloud_formations,
+        exterior_medium="fog" if fog_enabled else "",
+    )
+    write_rain_boundaries(
+        lines,
+        rain_curtains,
         exterior_medium="fog" if fog_enabled else "",
     )
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)

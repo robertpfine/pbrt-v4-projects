@@ -110,6 +110,7 @@ cp "$SCENE_PATH"                    "${FINAL_BASE}.pbrt"
 cp "$CONFIG_FILE"                   "${FINAL_BASE}_config.json"
 cp "${SCENE_ROOT}/build_scene.py" "${FINAL_BASE}_build_scene.py" 2>/dev/null || true
 cp "${REPO_ROOT}/clouds.py" "${FINAL_BASE}_clouds.py" 2>/dev/null || true
+cp "${REPO_ROOT}/rain.py" "${FINAL_BASE}_rain.py" 2>/dev/null || true
 cp "${REPO_ROOT}/distant_hills.py" "${FINAL_BASE}_distant_hills.py" 2>/dev/null || true
 cp "${REPO_ROOT}/vista_surface_texture.py" "${FINAL_BASE}_vista_surface_texture.py" 2>/dev/null || true
 cp "${REPO_ROOT}/render_pipeline.sh" "${FINAL_BASE}_render_pipeline.sh" 2>/dev/null || true
@@ -127,6 +128,7 @@ if [ "$RUN_SYNC" = "true" ]; then
         --include "${ARCHIVE_STEM}_${TS}_config.json" \
         --include "${ARCHIVE_STEM}_${TS}_build_scene.py" \
         --include "${ARCHIVE_STEM}_${TS}_clouds.py" \
+        --include "${ARCHIVE_STEM}_${TS}_rain.py" \
         --include "${ARCHIVE_STEM}_${TS}_distant_hills.py" \
         --include "${ARCHIVE_STEM}_${TS}_vista_surface_texture.py" \
         --include "${ARCHIVE_STEM}_${TS}_render_pipeline.sh" \

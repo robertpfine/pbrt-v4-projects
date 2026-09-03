@@ -108,6 +108,58 @@ class CloudFormationTests(unittest.TestCase):
         self.assertTrue(any(value > 0.0 for value in density))
         self.assertEqual(density, veil.density_grid())
 
+    def test_formation_can_override_shared_cloud_controls(self):
+        config = dict(self.config)
+        config["appearance"] = {
+            "density": 0.25,
+            "underside": {"enabled": False},
+        }
+        config["fractal_noise"] = {"coverage": 0.72}
+        cloud = CloudFormation(config, self.module_config)
+        self.assertEqual(cloud.optical["density_scale"], 0.25)
+        self.assertFalse(cloud.underside["enabled"])
+        self.assertEqual(cloud.fractal_noise["coverage"], 0.72)
+        self.assertEqual(
+            cloud.fractal_noise["frequency"],
+            self.module_config["fractal_noise"]["frequency"],
+        )
+
+    def test_depth_profile_retains_near_density_and_reduces_far_density(self):
+        config = dict(self.config)
+        config["depth_profile"] = {
+            "enabled": True,
+            "full_density_until_z": -10.0,
+            "falloff_distance": 10.0,
+            "far_density_scale": 0.04,
+        }
+        cloud = CloudFormation(config, self.module_config)
+        self.assertEqual(cloud._depth_profile_weight(0.0), 1.0)
+        self.assertEqual(cloud._depth_profile_weight(-10.0), 1.0)
+        self.assertAlmostEqual(
+            cloud._depth_profile_weight(-20.0), math.exp(-1.0)
+        )
+        self.assertAlmostEqual(cloud._depth_profile_weight(-50.0), 0.04)
+        self.assertAlmostEqual(cloud._depth_profile_weight(-80.0), 0.04)
+
+    def test_depth_slope_lowers_only_the_far_end_of_the_deck(self):
+        config = dict(self.config)
+        config["center"] = [0.0, 10.0, -10.0]
+        config["size"] = [10.0, 4.0, 20.0]
+        config["depth_slope"] = {
+            "enabled": True,
+            "far_y_offset": -3.0,
+        }
+        cloud = CloudFormation(config, self.module_config)
+        self.assertEqual(cloud.base_bounds_min, (-5.0, 8.0, -20.0))
+        self.assertEqual(cloud.base_bounds_max, (5.0, 12.0, 0.0))
+        self.assertEqual(cloud.bounds_min, (-5.0, 5.0, -20.0))
+        self.assertEqual(cloud.bounds_max, (5.0, 12.0, 0.0))
+        self.assertEqual(cloud._depth_slope_offset(0.0), 0.0)
+        self.assertEqual(cloud._depth_slope_offset(-10.0), -1.5)
+        self.assertEqual(cloud._depth_slope_offset(-20.0), -3.0)
+        near_optical = cloud.optical_coefficients(0.5, 9.0, 0.0)
+        far_optical = cloud.optical_coefficients(0.5, 6.0, -20.0)
+        self.assertEqual(near_optical, far_optical)
 
 if __name__ == "__main__":
     unittest.main()

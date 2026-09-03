@@ -67,19 +67,49 @@ class CloudFormation:
         self.name = str(config.get("name", "cloud"))
         self.center = tuple(float(v) for v in config["center"])
         self.size = tuple(float(v) for v in config["size"])
-        self.bounds_min = tuple(
+        self.depth_slope = {
+            **module_config.get("depth_slope", {}),
+            **config.get("depth_slope", {}),
+        }
+        self.base_bounds_min = tuple(
             self.center[axis] - 0.5 * self.size[axis] for axis in range(3)
         )
-        self.bounds_max = tuple(
+        self.base_bounds_max = tuple(
             self.center[axis] + 0.5 * self.size[axis] for axis in range(3)
         )
+        far_y_offset = (
+            float(self.depth_slope.get("far_y_offset", 0.0))
+            if self.depth_slope.get("enabled", False)
+            else 0.0
+        )
+        bounds_min = list(self.base_bounds_min)
+        bounds_max = list(self.base_bounds_max)
+        bounds_min[1] += min(0.0, far_y_offset)
+        bounds_max[1] += max(0.0, far_y_offset)
+        self.bounds_min = tuple(bounds_min)
+        self.bounds_max = tuple(bounds_max)
         self.resolution = tuple(int(v) for v in config.get("resolution", [40, 24, 32]))
         self.form = str(config.get("form", "lobed"))
         self.lobes = tuple(config.get("lobes", ()))
-        self.vertical_profile = module_config.get("shape", {})
-        self.fractal_noise = module_config.get("fractal_noise", {})
-        appearance = module_config.get("appearance", {})
-        self.underside = appearance.get("underside", {})
+        self.vertical_profile = {
+            **module_config.get("shape", {}),
+            **config.get("shape", {}),
+        }
+        self.fractal_noise = {
+            **module_config.get("fractal_noise", {}),
+            **config.get("fractal_noise", {}),
+        }
+        self.depth_profile = {
+            **module_config.get("depth_profile", {}),
+            **config.get("depth_profile", {}),
+        }
+        module_appearance = module_config.get("appearance", {})
+        local_appearance = config.get("appearance", {})
+        appearance = {**module_appearance, **local_appearance}
+        self.underside = {
+            **module_appearance.get("underside", {}),
+            **local_appearance.get("underside", {}),
+        }
         self.optical = {
             "density_scale": appearance.get("density", 1.0),
             "sigma_s": appearance.get("scattering", [0.006, 0.006, 0.006]),
@@ -108,11 +138,53 @@ class CloudFormation:
                 raise ValueError(
                     f"{self.name}: lobe {index} requires center_offset and positive radii"
                 )
+        if self.depth_profile.get("enabled", False):
+            full_density_z = float(self.depth_profile["full_density_until_z"])
+            falloff_distance = float(self.depth_profile["falloff_distance"])
+            far_density_scale = float(
+                self.depth_profile.get("far_density_scale", 0.0)
+            )
+            if falloff_distance <= 0.0:
+                raise ValueError(
+                    f"{self.name}: depth_profile.falloff_distance must be positive"
+                )
+            if not 0.0 <= far_density_scale <= 1.0:
+                raise ValueError(
+                    f"{self.name}: depth_profile.far_density_scale must be "
+                    "between 0 and 1"
+                )
+
+    def _depth_profile_weight(self, z):
+        """Reduce far optical density without truncating the cloud deck."""
+
+        if not self.depth_profile.get("enabled", False):
+            return 1.0
+        full_density_z = float(self.depth_profile["full_density_until_z"])
+        falloff_distance = float(self.depth_profile["falloff_distance"])
+        far_density_scale = float(
+            self.depth_profile.get("far_density_scale", 0.0)
+        )
+        distance_beyond_full_density = max(0.0, full_density_z - z)
+        return max(
+            far_density_scale,
+            math.exp(-distance_beyond_full_density / falloff_distance),
+        )
+
+    def _depth_slope_offset(self, z):
+        """Return the vertical displacement of the deck at world Z."""
+
+        if not self.depth_slope.get("enabled", False):
+            return 0.0
+        near_z = self.base_bounds_max[2]
+        far_z = self.base_bounds_min[2]
+        depth_fraction = _clamp((near_z - z) / max(near_z - far_z, 1e-9))
+        return depth_fraction * float(self.depth_slope.get("far_y_offset", 0.0))
 
     def _mottled_veil_density(self, x, y, z):
         """Density for a broad cloud veil that continues beyond the frame."""
 
         fractal = self.fractal_noise
+        reference_y = y - self._depth_slope_offset(z)
         frequency = _frequency3(fractal.get("frequency", [0.0006, 0.0014, 0.001]))
         seed = int(fractal.get("seed", 1))
         octaves = float(fractal.get("octaves", 2.0))
@@ -120,7 +192,7 @@ class CloudFormation:
         frequency_jump = float(fractal.get("frequency_jump", 2.0))
         primary = _fractal_sum3(
             x * frequency[0],
-            y * frequency[1],
+            reference_y * frequency[1],
             z * frequency[2],
             seed,
             octaves,
@@ -130,7 +202,7 @@ class CloudFormation:
         detail_scale = float(fractal.get("detail_frequency_scale", 2.7))
         detail = _fractal_sum3(
             x * frequency[0] * detail_scale,
-            y * frequency[1] * detail_scale,
+            reference_y * frequency[1] * detail_scale,
             z * frequency[2] * detail_scale,
             seed + 401,
             octaves,
@@ -150,15 +222,20 @@ class CloudFormation:
                 f"{self.name}: fractal_noise.edge_fade_fraction requires three values"
             )
         edge_weight = 1.0
-        for axis, coordinate in enumerate((x, y, z)):
-            extent = self.bounds_max[axis] - self.bounds_min[axis]
-            normalized = (coordinate - self.bounds_min[axis]) / extent
+        for axis, coordinate in enumerate((x, reference_y, z)):
+            extent = self.base_bounds_max[axis] - self.base_bounds_min[axis]
+            normalized = (coordinate - self.base_bounds_min[axis]) / extent
             fade = max(float(edge_fade[axis]), 1e-6)
             edge_weight *= _smoothstep(normalized / fade)
             edge_weight *= _smoothstep((1.0 - normalized) / fade)
 
         density_scale = float(self.optical.get("density_scale", 1.0))
-        return _clamp(density_scale * mottle * edge_weight, 0.0, density_scale)
+        depth_weight = self._depth_profile_weight(z)
+        return _clamp(
+            density_scale * mottle * edge_weight * depth_weight,
+            0.0,
+            density_scale,
+        )
 
     def _envelope(self, x, y, z):
         union = 0.0
@@ -272,7 +349,7 @@ class CloudFormation:
         )
         return _clamp(density, 0.0, density_scale)
 
-    def optical_coefficients(self, density, y):
+    def optical_coefficients(self, density, y, z=None):
         """Return spatial absorption and scattering for one cloud sample."""
 
         sigma_a = tuple(float(value) for value in self.optical["sigma_a"])
@@ -285,9 +362,10 @@ class CloudFormation:
 
         height_fraction = float(self.underside.get("height_fraction", 0.42))
         transition = max(float(self.underside.get("transition", 0.20)), 1e-6)
+        reference_y = y - self._depth_slope_offset(z) if z is not None else y
         normalized_y = (
-            (y - self.bounds_min[1])
-            / max(self.bounds_max[1] - self.bounds_min[1], 1e-9)
+            (reference_y - self.base_bounds_min[1])
+            / max(self.base_bounds_max[1] - self.base_bounds_min[1], 1e-9)
         )
         transition_start = height_fraction - 0.5 * transition
         underside_weight = 1.0 - _smoothstep(
@@ -314,13 +392,18 @@ class CloudFormation:
         sigma_a_grid = []
         sigma_s_grid = []
         offset = 0
-        for _iz in range(nz):
+        for iz in range(nz):
+            z = self.bounds_min[2] + (
+                (self.bounds_max[2] - self.bounds_min[2]) * iz / (nz - 1)
+            )
             for iy in range(ny):
                 y = self.bounds_min[1] + (
                     (self.bounds_max[1] - self.bounds_min[1]) * iy / (ny - 1)
                 )
                 for _ix in range(nx):
-                    sigma_a, sigma_s = self.optical_coefficients(density[offset], y)
+                    sigma_a, sigma_s = self.optical_coefficients(
+                        density[offset], y, z
+                    )
                     sigma_a_grid.extend(sigma_a)
                     sigma_s_grid.extend(sigma_s)
                     offset += 1

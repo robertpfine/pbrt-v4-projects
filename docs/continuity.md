@@ -1,6 +1,6 @@
 # PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-09-01
+Last updated: 2026-09-03
 
 ## Purpose
 
@@ -370,9 +370,11 @@ include:
 - `docs/artistic-tool-vision.md`
 - `docs/qt-proof-of-concept-specification.md`
 - `docs/scene-module-boundaries.md`
+- `docs/config-schema-new-scene.md`
 - `docs/fractal-tree-configuration.md`
 - `docs/terrain-configuration.md`
 - `docs/atmosphere-configuration.md`
+- `docs/rain-configuration.md`
 - `docs/lighting-configuration.md`
 - `docs/shaft-compositing.md`
 
@@ -431,6 +433,15 @@ A GitHub push alone does not complete continuity delivery.
 ## Working preferences and safeguards
 
 - Show render progress in a visible terminal.
+- Launch that visible terminal with `./run_render_terminal.sh`. This repository
+  wrapper is the canonical interactive render entry point from Codex/VS Code:
+  it removes the Snap-injected GTK/GIO runtime variables that otherwise make a
+  raw `gnome-terminal` launch fail with a GLIBC symbol error, preserves the
+  desktop and CUDA environment, runs `./render_pipeline.sh`, and keeps the
+  terminal open when the pipeline exits. Do not substitute a raw
+  `gnome-terminal` command and do not use XTerm; XTerm is too small for the
+  artist's progress view. Before invoking the wrapper, verify that no builder,
+  PBRT process, or render pipeline is already active, and launch exactly one.
 - Keep the terminal open after completion; assume the user will close it.
 - Use one approval only for the desktop terminal launch. Monitor logs and files
   with sandboxed read-only commands so the user is not asked repeatedly.
@@ -453,7 +464,13 @@ The active artist-accepted high-resolution master is render `093054`, with
 restore the disabled `broad_rise`. The next session should proceed in this
 order:
 
-1. **Preserve the accepted sunrise master.** `093054` is the active visual
+1. **Resume the new-scene schema review.** The standalone, non-runnable design
+   document is `docs/config-schema-new-scene.md`. Issues 1 through 9 are
+   resolved. Resume with Issue 10, concerning astronomical context versus
+   explicit sun direction, then address the four remaining issues: neutral
+   new-scene camera/sky values, multi-pass render controls, archive destinations
+   versus mandatory immutable snapshots, and the exact migration sequence.
+2. **Preserve the accepted sunrise master.** `093054` is the active visual
    master at `8000 x 5800`, 512 samples per pixel, and integrator depth `200`.
    Its warm cloud illumination, dark dew-coated field, and low horizon mist are
    accepted together. The retained hill, grass extension, and poppy extension
@@ -461,41 +478,144 @@ order:
    off-screen buffers at the left and right frustum borders, analogous to the
    existing bottom margin; preserve the accepted composition while making that
    bounded correction.
-2. **Fix render-input snapshotting.** `051939` and `054050` exposed that the
+3. **Fix render-input snapshotting.** `051939` and `054050` exposed that the
    current pipeline can build from configuration/source already loaded in one
    process and later archive files edited while that render was running. Take
    immutable snapshots of the JSON and relevant generator sources at pipeline
    start, build from the JSON snapshot, and archive those same snapshots.
-3. **Configuration rationalization.** Tackle accumulated size, repetition,
+4. **Migrate only after the prototype schema is approved.** Tackle accumulated
+   size, repetition,
    naming, and organization in the single authoritative
    `scene_workspace/config.json`. Preserve direct manual editing, do not create
-   a second live scene configuration, and reorganize holistically rather than
-   moving individual blocks during artistic work. Begin from the landform-first
-   principle: choose a landform, then decide its relief, appearance, and
-   contents.
-4. **Qt workflow.** Reconsider the GUI around actual artistic use: exact manual
+   a second live scene configuration, and refactor the working file in tested,
+   usable stages rather than building a disconnected replacement. Move one
+   complete artistic object at a time without keeping duplicate live values;
+   update its builder, GUI, validation, and compatibility reader together.
+   Preserve the artist's earlier C++ configuration mental model: camera and
+   render controls are immediately discoverable, and each visible object's
+   geometry, placement, material, color, and surface objects remain
+   adjacent. Begin from the landform-first principle: choose a landform, then
+   decide its relief, appearance, and surface objects.
+5. **Overcast and rain remain exploratory.** The live configuration is no
+   longer the accepted sunrise master. It contains an unaccepted overcast deck
+   extension and disabled rain-curtain experiment. Do not render or tune that
+   state automatically on return; see the dated checkpoint section below.
+6. **Qt workflow.** Reconsider the GUI around actual artistic use: exact manual
    editing, discoverable scene inspection, rendering, progress visibility, and
    comparison of accepted images. Do not infer that every JSON value needs a
    permanent control.
-5. **Cloud refinement and water.** The first cloud module now works and should
-   be refined only in response to new artistic direction. Water remains the
-   next unimplemented first-class landscape system.
+7. **Compiled cloud-grid accelerator.** A targeted standalone C++ density-grid
+   generator is a priority; do not rewrite the Python application. Establish a
+   deterministic CPU implementation first, test it against small Python grids,
+   add multithreading and streamed PBRT output, then retain that interface for a
+   CUDA backend. Keep the Python implementation as a reference/fallback and add
+   caching for unchanged cloud grids. This helper must remain separate from the
+   PBRT-v4/CUDA renderer build unless the artist explicitly authorizes renderer
+   build work.
 
 Additional continuity requirements:
 
-6. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
+8. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
    homes of the accepted ground system and neutral infinite sky respectively.
    Do not create another scene JSON or change accepted rendered behavior.
-7. Continue extending the Python model and Qt inspector in response to artistic
+9. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
-8. Keep renderer implementations subordinate to artistic categories; in
+10. Keep renderer implementations subordinate to artistic categories; in
    particular, never generalize the specific PBRT `rgbgrid` medium into an
    atmosphere name.
-9. Preserve the accepted `053110` poppy baseline and the established grass,
+11. Preserve the accepted `053110` poppy baseline and the established grass,
    tree, terrain, and atmospheric work. Historical archive filenames remain
    unchanged and reproducible.
-10. Preserve readable and raw conversation archives in the gitignored
+12. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
+
+## 2026-09-03 schema and overcast-work checkpoint
+
+The artist and assistant began the separate architectural draft
+`docs/config-schema-new-scene.md`. It documents only
+`scene_description.mode: "new"`; it is not a runnable configuration and does
+not replace the one authoritative live `scene_workspace/config.json`. The live
+file has not yet migrated to this proposal.
+
+The approved first four configuration sections are `file_names`, `file_paths`,
+`camera_settings`, and `render_settings`, followed by `scene_description`.
+Within a new scene, multiple independently enabled landforms are supported.
+Each landform owns its placement, geometry patches, shared topography, one
+material, one configurable surface-texture system, and a flat
+`surface_objects` collection. The discarded word `contents` was too vague.
+
+The following schema decisions are approved:
+
+- `primitive` retains its conventional graphics meaning. Constituent landform
+  surfaces are `patches`; a `plane` is an Art Studio mesh generator rather than
+  a claimed native PBRT-v4 plane shape.
+- One landform may contain multiple patches, but its topography is one shared
+  elevation system evaluated across them. Different elevation or material
+  behavior normally means a separate landform.
+- A rectangular plane patch is sufficient initially. Triangle, trapezoid, and
+  other polygonal footprints may be added to the plane generator over time.
+- There is no generic landform `boundary` block. Geometry extent, population
+  regions, texture edge effects, and future inter-landform transitions remain
+  separate responsibilities.
+- Surface means material plus texture. Each landform has one material. Its
+  surface texture may combine multiple named noise patterns, but topographic
+  noise remains distinct because it changes actual elevation.
+- `scene_description.objects` contains independently placed geometry such as a
+  surreal sphere. Direct `pbrt_shape` selection remains distinct from an Art
+  Studio `generator`.
+- `construction` defines one generated form and `population` places copies by
+  `scatter` or `explicit` methods. This applies to grass: construction defines
+  one tuft and population count specifies tufts, not blades.
+- Every current generator and population control—including bend, angles,
+  tropism, frustum, and variation settings—will move intact during prototype
+  migration without field-by-field review. Detailed internal rationalization
+  follows after the hierarchy works.
+- Permanent taxonomy within `surface_objects` is deferred to `2gen`. Mountains,
+  cliffs, and large rock formations are landforms or landform features;
+  discrete boulders and stones may be surface objects.
+- Water is a visible disabled `Yes_PH` module beside landforms, objects, sky,
+  and atmosphere. No speculative water controls are added yet.
+- Every cloud under `sky.clouds` becomes self-contained: placement and bounds,
+  density-field construction, and medium optical controls. Existing values
+  move intact; shared cloud defaults do not survive the migration.
+- Atmosphere retains fog, haze, mist, and rain categories. Fog and rain are
+  implemented systems whose controls move intact. Haze and mist remain empty
+  placeholders until developed. Clouds remain exclusively under sky.
+
+Issue 10 is proposed but not yet approved. The recommendation is a
+`scene_context` holding date, local time, time zone, latitude, longitude, and
+world north. A sun-direction source would explicitly select either
+`astronomical` or `explicit`; color temperature, sun scale, and infinite-sky
+color/scale remain artistic controls. The remaining Issues 11–14 are the exact
+neutral camera/sky initialization values, multi-pass render controls, archive
+and mandatory snapshot boundaries, and migration order.
+
+The rain-curtain implementation in `rain.py` is present and disabled in the
+live configuration. It uses vertically coherent 3D fractal noise, bounded
+heterogeneous media, and explicit optics and placement. No rain render has been
+accepted. The render pipeline archives `rain.py` with reproducibility bundles.
+
+The overcast experiment remains unresolved. `022819` was the artist's preferred
+comparison among the early overcast studies, not a final accepted master.
+Completed renders `155247` and `160043` verified that the ordinary PBRT progress
+display and render process still work at cloud grid resolution `[160,40,120]`.
+Render `160043` extended the deck from depth `11000` to `21000`, but still
+showed a visible horizon gap/split rather than filling the sky.
+
+The live config now contains the later unaccepted corrective experiment:
+overcast-deck center `[-15000,850,-10000]`, size `[50000,800,26000]`, resolution
+`[160,40,120]`, and a depth slope lowering its far end by `300`. The associated
+render was canceled after impractical progress behavior. No render is active at
+this checkpoint. The current generated `scene.pbrt` and live config must not be
+mistaken for an accepted visual state. Use archived input bundles when
+reproducing `093054`, `091401`, `054517`, `022819`, `155247`, or `160043`.
+
+Checkpoint validation passes. The repository-local Qt environment runs all 59
+discovered tests successfully with five NumPy/Pillow-dependent tests skipped;
+those three atmosphere and two vista-texture tests pass separately under the
+production Python environment. The live JSON parses successfully, both render
+shell entry points pass `bash -n`, and no builder, PBRT process, or render
+pipeline is active.
 
 ## 2026-09-01 accepted 093054 high-resolution master
 
@@ -711,7 +831,8 @@ such as grass and poppies.
 
 This principle is critical and persistent. The underlying plane must not be
 hidden as unrelated renderer scaffolding while its relief, material, and
-contents are scattered across conceptually disconnected configuration areas.
+surface objects are scattered across conceptually disconnected configuration
+areas.
 Manual editing must make the relationship easy to discover. Multiple scene
 elements—including the current poppy meadow, broad rise, and a possible
 detail-free vista plane beyond the ridge—may all be understood as landforms.
