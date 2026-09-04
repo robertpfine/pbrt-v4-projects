@@ -1426,6 +1426,44 @@ cmp result                 identical
 The retained proof workspace is `/tmp/pbrt-sky-stage7.GJcx7S`. The complete
 `.venv` suite runs 139 tests (130 passed, nine skips), system Python passes all
 124 non-GUI tests, live validation reports zero errors, and pipeline syntax is
-clean. No production render was launched. Stage 7.2 migrates the two cloud
+clean. No production render was launched. Stage 7.2 migrates the three cloud
 formations and copies their actually used shared construction/medium values
 into each cloud.
+
+## Stage 7.2 — self-contained sky clouds
+
+Status: implementation and validation complete from pushed sky checkpoint
+`33111c6`
+
+All three retained formations moved in stable order from the temporary shared
+cloud module into `scene_description.sky.clouds[]`: disabled `left_cumulus`,
+disabled `right_cumulus`, and enabled `overcast_cloud_deck`. Each cloud now
+owns its name, enabled state, placement, dimensions, resolved density generator
+and resolution, shape, noise, depth slope/profile, lobes, and complete medium
+optics/underside controls. Shared appearance, shape, and fractal-noise sources
+no longer exist. The execution-only C++/Python selection moved separately to
+`sky.cloud_grid_builder`.
+
+`configured_cloud_module()` adapts these self-contained entries to the tested
+cloud generator and normalized C++ contract without reintroducing live shared
+defaults. For every formation—including the two disabled alternatives—the
+new configuration produces a normalized contract exactly equal to its
+pre-migration contract. Snapshot executable freezing, validation, description,
+builder routing, and the Qt cloud selector use the new paths.
+
+```text
+cloud order       ['left_cumulus', 'right_cumulus', 'overcast_cloud_deck']
+enabled clouds    ['overcast_cloud_deck']
+grid builder preserved       True
+all normalized jobs equal    True
+pre-migration size           117,462,947 bytes
+Stage 7.2 size               117,462,947 bytes
+both SHA-256                 c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result                   identical
+```
+
+The retained proof workspace is `/tmp/pbrt-clouds-stage7.NBGFcc`. The complete
+`.venv` suite runs 140 tests (131 passed, nine skips); system Python passes all
+125 non-GUI tests. Live validation and pipeline syntax are clean. No production
+render was launched. Stage 7 is complete; Stage 8 begins atmosphere, including
+absorbing the retained `fog_volume` boundary into the fog object.

@@ -1,10 +1,44 @@
 import math
 import unittest
 
-from clouds import CloudFormation, create_clouds
+from clouds import CloudFormation, configured_cloud_module, create_clouds
 
 
 class CloudFormationTests(unittest.TestCase):
+    def test_self_contained_cloud_adapter_preserves_explicit_values(self):
+        sky = {
+            "cloud_grid_builder": {"backend": "python"},
+            "clouds": [{
+                "name": "deck",
+                "enabled": True,
+                "placement": {"position": [1, 2, 3]},
+                "dimensions": [4, 5, 6],
+                "density_field": {
+                    "generator": "mottled_veil",
+                    "resolution": [7, 8, 9],
+                    "shape": {"bottom_fade": 1},
+                    "noise": {"seed": 12},
+                    "depth_slope": {"enabled": False},
+                    "depth_profile": {"enabled": False},
+                    "lobes": [],
+                },
+                "medium": {
+                    "type": "uniformgrid",
+                    "density_scale": 0.9,
+                    "scattering": [0.1, 0.2, 0.3],
+                    "absorption": [0.01, 0.02, 0.03],
+                    "anisotropy": 0.4,
+                    "underside": {"enabled": False},
+                },
+            }],
+        }
+        module = configured_cloud_module(sky)
+        formation = module["formations"][0]
+        self.assertEqual(module["grid_builder"], {"backend": "python"})
+        self.assertEqual(formation["center"], [1, 2, 3])
+        self.assertEqual(formation["form"], "mottled_veil")
+        self.assertEqual(formation["appearance"]["density"], 0.9)
+
     def setUp(self):
         self.config = {
             "name": "test_cloud",

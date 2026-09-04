@@ -151,7 +151,8 @@ class SceneConfigTests(unittest.TestCase):
           "aperture": { "enabled": false, "light": "shaft_sun" }
         }
       },
-      "clouds": { "enabled": false }
+      "cloud_grid_builder": {},
+      "clouds": []
     }
   },
   "scene": {
@@ -491,7 +492,9 @@ class SceneConfigTests(unittest.TestCase):
         self.assertNotIn("sky", data)
         self.assertNotIn("lights", data)
         sky = config["scene_description"]["sky"]
-        self.assertEqual(set(sky), {"background", "sun", "clouds"})
+        self.assertEqual(
+            set(sky), {"background", "sun", "cloud_grid_builder", "clouds"}
+        )
         self.assertEqual(sky["background"]["type"], "infinite")
         self.assertFalse(sky["sun"]["use_astronomical_direction"])
         flat = next(

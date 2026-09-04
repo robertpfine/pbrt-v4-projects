@@ -36,7 +36,7 @@ if REPOSITORY_ROOT not in sys.path:
     sys.path.insert(0, REPOSITORY_ROOT)
 
 from phyllotaxis import area_dome_points, dome_height, vogel_points
-from clouds import create_clouds
+from clouds import configured_cloud_module, create_clouds
 from cloud_grid_contract import (
     normalized_cloud_job,
     run_compiled_builder,
@@ -3350,7 +3350,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_fog_boundary(lines, scene.get("fog"))
     sky_config = scene_description.get("sky", {})
     cloud_formations = write_cloud_media(
-        lines, sky_config.get("clouds", {}), scene_root, scene_files_root
+        lines, configured_cloud_module(sky_config), scene_root, scene_files_root
     )
     rain_curtains = write_rain_media(lines, scene.get("rain", {}))
     

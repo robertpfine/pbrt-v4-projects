@@ -1809,88 +1809,65 @@
         ],
         "scale": 0.16
       },
-      "clouds": {
-        "enabled": true,
-        "grid_builder": {
-          "backend": "cpp",
-          "executable": "build/cloud_grid_builder/cloud_grid_builder",
-          "threads": 0,
-          "fallback_to_python": true
-        },
-        "appearance": {
-          "density": 0.9,
-          "scattering": [
-            0.0028,
-            0.003,
-            0.0032
-          ],
-          "absorption": [
-            0.00045,
-            0.0005,
-            0.00055
-          ],
-          "anisotropy": 0.25,
-          "underside": {
-            "enabled": true,
-            "height_fraction": 0.5,
-            "transition": 0.25,
-            "scattering_scale": 0.45,
-            "absorption_scale": 3.2
-          }
-        },
-        "shape": {
-          "bottom_fade": 120.0,
-          "top_fade": 180.0
-        },
-        "fractal_noise": {
-          "seed": 823,
-          "frequency": [
-            0.00045,
-            0.0012,
-            0.00055
-          ],
-          "octaves": 3,
-          "roughness": 0.55,
-          "frequency_jump": 2.0,
-          "coverage": 0.34,
-          "softness": 0.22,
-          "broad_strength": 1.0,
-          "detail_strength": 0.35,
-          "detail_frequency_scale": 2.7,
-          "edge_fade_fraction": [
-            0.08,
-            0.15,
-            0.1
-          ],
-          "domain_warp": {
-            "enabled": false,
-            "frequency": 0.001,
-            "strength": [
-              0.0,
-              0.0,
-              0.0
-            ]
-          }
-        },
-        "formations": [
-          {
-            "name": "left_cumulus",
-            "enabled": false,
-            "center": [
+      "clouds": [
+        {
+          "name": "left_cumulus",
+          "enabled": false,
+          "placement": {
+            "position": [
               -500.0,
               720.0,
               -2200.0
-            ],
-            "size": [
-              1800.0,
-              900.0,
-              1200.0
-            ],
+            ]
+          },
+          "dimensions": [
+            1800.0,
+            900.0,
+            1200.0
+          ],
+          "density_field": {
+            "generator": "lobed",
             "resolution": [
               120,
               72,
               48
             ],
+            "shape": {
+              "bottom_fade": 120.0,
+              "top_fade": 180.0
+            },
+            "noise": {
+              "seed": 823,
+              "frequency": [
+                0.00045,
+                0.0012,
+                0.00055
+              ],
+              "octaves": 3,
+              "roughness": 0.55,
+              "frequency_jump": 2.0,
+              "coverage": 0.34,
+              "softness": 0.22,
+              "broad_strength": 1.0,
+              "detail_strength": 0.35,
+              "detail_frequency_scale": 2.7,
+              "edge_fade_fraction": [
+                0.08,
+                0.15,
+                0.1
+              ],
+              "domain_warp": {
+                "enabled": false,
+                "frequency": 0.001,
+                "strength": [
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              }
+            },
+            "depth_slope": {},
+            "depth_profile": {},
             "lobes": [
               {
                 "center_offset": [
@@ -1942,24 +1919,87 @@
               }
             ]
           },
-          {
-            "name": "right_cumulus",
-            "enabled": false,
-            "center": [
+          "medium": {
+            "type": "rgbgrid",
+            "density_scale": 0.9,
+            "scattering": [
+              0.0028,
+              0.003,
+              0.0032
+            ],
+            "absorption": [
+              0.00045,
+              0.0005,
+              0.00055
+            ],
+            "anisotropy": 0.25,
+            "underside": {
+              "enabled": true,
+              "height_fraction": 0.5,
+              "transition": 0.25,
+              "scattering_scale": 0.45,
+              "absorption_scale": 3.2
+            }
+          }
+        },
+        {
+          "name": "right_cumulus",
+          "enabled": false,
+          "placement": {
+            "position": [
               -4500.0,
               900.0,
               -4200.0
-            ],
-            "size": [
-              2400.0,
-              1100.0,
-              1600.0
-            ],
+            ]
+          },
+          "dimensions": [
+            2400.0,
+            1100.0,
+            1600.0
+          ],
+          "density_field": {
+            "generator": "lobed",
             "resolution": [
               128,
               80,
               52
             ],
+            "shape": {
+              "bottom_fade": 120.0,
+              "top_fade": 180.0
+            },
+            "noise": {
+              "seed": 823,
+              "frequency": [
+                0.00045,
+                0.0012,
+                0.00055
+              ],
+              "octaves": 3,
+              "roughness": 0.55,
+              "frequency_jump": 2.0,
+              "coverage": 0.34,
+              "softness": 0.22,
+              "broad_strength": 1.0,
+              "detail_strength": 0.35,
+              "detail_frequency_scale": 2.7,
+              "edge_fade_fraction": [
+                0.08,
+                0.15,
+                0.1
+              ],
+              "domain_warp": {
+                "enabled": false,
+                "frequency": 0.001,
+                "strength": [
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              }
+            },
+            "depth_slope": {},
+            "depth_profile": {},
             "lobes": [
               {
                 "center_offset": [
@@ -2011,32 +2051,116 @@
               }
             ]
           },
-          {
-            "name": "overcast_cloud_deck",
-            "enabled": true,
-            "form": "mottled_veil",
-            "center": [
+          "medium": {
+            "type": "rgbgrid",
+            "density_scale": 0.9,
+            "scattering": [
+              0.0028,
+              0.003,
+              0.0032
+            ],
+            "absorption": [
+              0.00045,
+              0.0005,
+              0.00055
+            ],
+            "anisotropy": 0.25,
+            "underside": {
+              "enabled": true,
+              "height_fraction": 0.5,
+              "transition": 0.25,
+              "scattering_scale": 0.45,
+              "absorption_scale": 3.2
+            }
+          }
+        },
+        {
+          "name": "overcast_cloud_deck",
+          "enabled": true,
+          "placement": {
+            "position": [
               -15000.0,
               850.0,
               -10000.0
-            ],
-            "size": [
-              50000.0,
-              800.0,
-              26000.0
-            ],
+            ]
+          },
+          "dimensions": [
+            50000.0,
+            800.0,
+            26000.0
+          ],
+          "density_field": {
+            "generator": "mottled_veil",
             "resolution": [
               160,
               40,
               120
             ],
+            "shape": {
+              "bottom_fade": 120.0,
+              "top_fade": 180.0
+            },
+            "noise": {
+              "seed": 823,
+              "frequency": [
+                0.00045,
+                0.0012,
+                0.00055
+              ],
+              "octaves": 3,
+              "roughness": 0.55,
+              "frequency_jump": 2.0,
+              "coverage": 0.34,
+              "softness": 0.22,
+              "broad_strength": 1.0,
+              "detail_strength": 0.35,
+              "detail_frequency_scale": 2.7,
+              "edge_fade_fraction": [
+                0.08,
+                0.15,
+                0.1
+              ],
+              "domain_warp": {
+                "enabled": false,
+                "frequency": 0.001,
+                "strength": [
+                  0.0,
+                  0.0,
+                  0.0
+                ]
+              }
+            },
             "depth_slope": {
               "enabled": true,
               "far_y_offset": -300.0
+            },
+            "depth_profile": {},
+            "lobes": []
+          },
+          "medium": {
+            "type": "rgbgrid",
+            "density_scale": 0.9,
+            "scattering": [
+              0.0028,
+              0.003,
+              0.0032
+            ],
+            "absorption": [
+              0.00045,
+              0.0005,
+              0.00055
+            ],
+            "anisotropy": 0.25,
+            "underside": {
+              "enabled": true,
+              "height_fraction": 0.5,
+              "transition": 0.25,
+              "scattering_scale": 0.45,
+              "absorption_scale": 3.2
             }
           }
-        ]
-      },
+        }
+      ],
       "sun": {
         "enabled": true,
         "type": "distant",
@@ -2099,6 +2223,12 @@
             ]
           }
         }
+      },
+      "cloud_grid_builder": {
+        "backend": "cpp",
+        "executable": "build/cloud_grid_builder/cloud_grid_builder",
+        "threads": 0,
+        "fallback_to_python": true
       }
     }
   },

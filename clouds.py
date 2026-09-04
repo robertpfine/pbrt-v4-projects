@@ -435,3 +435,37 @@ def create_clouds(config):
         for item in formations
         if item.get("enabled", True)
     ]
+
+
+def configured_cloud_module(sky):
+    """Adapt self-contained sky clouds to the established cloud generator."""
+
+    formations = []
+    for cloud in sky.get("clouds", []):
+        density = cloud.get("density_field", {})
+        medium = cloud.get("medium", {})
+        formations.append({
+            "name": cloud.get("name", "cloud"),
+            "enabled": cloud.get("enabled", False),
+            "center": cloud.get("placement", {}).get("position", [0, 0, 0]),
+            "size": cloud.get("dimensions", []),
+            "resolution": density.get("resolution", []),
+            "form": density.get("generator", "lobed"),
+            "shape": density.get("shape", {}),
+            "fractal_noise": density.get("noise", {}),
+            "depth_slope": density.get("depth_slope", {}),
+            "depth_profile": density.get("depth_profile", {}),
+            "lobes": density.get("lobes", []),
+            "appearance": {
+                "density": medium.get("density_scale", 1.0),
+                "scattering": medium.get("scattering", [0.006] * 3),
+                "absorption": medium.get("absorption", [0.00015] * 3),
+                "anisotropy": medium.get("anisotropy", 0.2),
+                "underside": medium.get("underside", {}),
+            },
+        })
+    return {
+        "enabled": True,
+        "grid_builder": sky.get("cloud_grid_builder", {}),
+        "formations": formations,
+    }

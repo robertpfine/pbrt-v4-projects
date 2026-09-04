@@ -1554,10 +1554,59 @@ class SceneConfig:
                         errors.append(f"sky.sun.{field} must contain three values")
                 if not isinstance(sun.get("light_shafts"), dict):
                     errors.append("sky.sun.light_shafts must be an object")
-            if not isinstance(clouds, dict):
-                errors.append("sky requires a clouds module")
-            elif not isinstance(clouds.get("enabled", False), bool):
-                errors.append("sky.clouds.enabled must be boolean")
+            if not isinstance(sky.get("cloud_grid_builder"), dict):
+                errors.append("sky.cloud_grid_builder must be an object")
+            if not isinstance(clouds, list):
+                errors.append("sky.clouds must be an array")
+            else:
+                cloud_names = []
+                for index, cloud in enumerate(clouds):
+                    prefix = f"sky.clouds.{index}"
+                    if not isinstance(cloud, dict):
+                        errors.append(f"{prefix} must be an object")
+                        continue
+                    name = cloud.get("name")
+                    if not isinstance(name, str) or not name.strip():
+                        errors.append(f"{prefix}.name must be non-empty")
+                    else:
+                        cloud_names.append(name)
+                    if not isinstance(cloud.get("enabled"), bool):
+                        errors.append(f"{prefix}.enabled must be boolean")
+                    position = cloud.get("placement", {}).get("position")
+                    dimensions = cloud.get("dimensions")
+                    if not isinstance(position, list) or len(position) != 3:
+                        errors.append(f"{prefix}.placement.position requires 3 values")
+                    if (
+                        not isinstance(dimensions, list)
+                        or len(dimensions) != 3
+                        or not all(
+                            isinstance(value, (int, float)) and value > 0
+                            for value in dimensions
+                        )
+                    ):
+                        errors.append(f"{prefix}.dimensions requires 3 positive values")
+                    density = cloud.get("density_field")
+                    if not isinstance(density, dict):
+                        errors.append(f"{prefix}.density_field must be an object")
+                    else:
+                        if density.get("generator") not in {"lobed", "mottled_veil"}:
+                            errors.append(f"{prefix}.density_field.generator is unsupported")
+                        resolution = density.get("resolution")
+                        if (
+                            not isinstance(resolution, list)
+                            or len(resolution) != 3
+                            or not all(isinstance(value, int) and value >= 2 for value in resolution)
+                        ):
+                            errors.append(f"{prefix}.density_field.resolution is invalid")
+                        for field in ("shape", "noise", "depth_slope", "depth_profile", "lobes"):
+                            expected = list if field == "lobes" else dict
+                            if not isinstance(density.get(field), expected):
+                                errors.append(f"{prefix}.density_field.{field} is invalid")
+                    medium = cloud.get("medium")
+                    if not isinstance(medium, dict) or medium.get("type") not in {"uniformgrid", "rgbgrid"}:
+                        errors.append(f"{prefix}.medium is invalid")
+                if len(cloud_names) != len(set(cloud_names)):
+                    errors.append("sky cloud names must be unique")
 
         rain = self.get(("scene", "rain"), None)
         if rain is not None:
@@ -1831,7 +1880,7 @@ class SceneConfig:
             f"Distant hills: {'enabled' if hill_layer_count else 'disabled'}, "
             f"{hill_layer_count} {'layer' if hill_layer_count == 1 else 'layers'}",
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
-            f"Clouds: {'enabled' if sky['clouds'].get('enabled') else 'disabled'}",
+            f"Clouds: {'enabled' if any(cloud.get('enabled') for cloud in sky['clouds']) else 'disabled'}",
             f"Fog: {'enabled' if self.get(('scene', 'fog', 'enabled'), False) else 'disabled'}",
             f"Rain: {'enabled' if rain.get('enabled', False) else 'disabled'}, "
             f"{sum(bool(item.get('enabled', True)) for item in rain.get('curtains', []))} curtains",

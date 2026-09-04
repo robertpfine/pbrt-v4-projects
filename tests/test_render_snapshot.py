@@ -78,7 +78,8 @@ def scene_description(name="Original Scene"):
                     "aperture": {"enabled": False, "light": "shaft_sun"},
                 },
             },
-            "clouds": {"enabled": False},
+            "cloud_grid_builder": {},
+            "clouds": [],
         },
     }
 
@@ -422,7 +423,7 @@ class RenderSnapshotTests(unittest.TestCase):
         shutil.copy2(Path("cloud_grid_contract.py"), self.root / "cloud_grid_contract.py")
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene_description"]["name"] = "Compiled Scene"
-        config["scene_description"]["sky"]["clouds"]["grid_builder"] = {
+        config["scene_description"]["sky"]["cloud_grid_builder"] = {
             "backend": "cpp",
             "executable": "build/cloud_grid_builder/cloud_grid_builder",
             "fallback_to_python": False,
@@ -465,7 +466,7 @@ class RenderSnapshotTests(unittest.TestCase):
 
     def test_snapshot_allows_missing_compiled_builder_with_explicit_fallback(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene_description"]["sky"]["clouds"]["grid_builder"] = {
+        config["scene_description"]["sky"]["cloud_grid_builder"] = {
             "backend": "cpp",
             "executable": "build/cloud_grid_builder/missing",
             "fallback_to_python": True,

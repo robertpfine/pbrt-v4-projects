@@ -809,6 +809,18 @@ SHA-256 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
 All 139 `.venv` tests pass with nine skips; all 124 system-Python non-GUI tests
 pass. No PBRT render was launched.
 
+Stage 7.2 cloud migration is complete in the working implementation. Disabled
+`left_cumulus`, disabled `right_cumulus`, and enabled `overcast_cloud_deck` are
+now ordered self-contained entries in `scene_description.sky.clouds[]`. Each
+owns its resolved placement, density construction, and complete medium; only
+the execution policy remains at `sky.cloud_grid_builder`. All three normalized
+C++ jobs exactly match their pre-migration equivalents. The archived `020525`
+proof remains byte-identical at 117,462,947 bytes and SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+All 140 `.venv` tests pass with nine skips, and all 125 system-Python non-GUI
+tests pass. No PBRT render was launched. Stage 7 is complete; Stage 8 atmosphere
+is next.
+
 ## 2026-09-03 schema and overcast-work checkpoint
 
 The artist and assistant began the separate architectural draft

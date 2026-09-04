@@ -387,13 +387,7 @@ class Inspector(QtWidgets.QWidget):
         )
         self._build_distant_hills_page()
         self._build_sky_page()
-        self._module_boundary(
-            "clouds",
-            "Clouds",
-            SKY_PATH + ("clouds",),
-            "The configuration boundary is established and disabled. Generator "
-            "and artistic controls are the next implementation step.",
-        )
+        self._build_clouds_page()
         self._build_atmosphere_page()
         self._build_lighting_page()
         self._build_camera_page()
@@ -1047,6 +1041,43 @@ class Inspector(QtWidgets.QWidget):
         self._check(form, "Enabled", base + ("enabled",))
         self._vector(form, "Color", base + ("color",))
         self._number(form, "Intensity", base + ("scale",), 0.0, 1_000_000.0, 4)
+
+    def _build_clouds_page(self) -> None:
+        form = self._page(
+            "clouds",
+            "Clouds",
+            "Each cloud owns its placement, density construction, and medium.",
+        )
+        clouds = self.config.get(SKY_PATH + ("clouds",))
+        selector = QtWidgets.QComboBox()
+        for cloud in clouds:
+            selector.addItem(cloud.get("name", "unnamed cloud"))
+        enabled = QtWidgets.QCheckBox()
+        generator = QtWidgets.QLabel()
+        form.addRow("Cloud", selector)
+        form.addRow("Enabled", enabled)
+        form.addRow("Density generator", generator)
+
+        def path() -> tuple[str | int, ...]:
+            return SKY_PATH + ("clouds", max(0, selector.currentIndex()))
+
+        def refresh() -> None:
+            if not clouds:
+                enabled.setEnabled(False)
+                generator.setText("none")
+                return
+            cloud = self.config.get(path())
+            self._blocked(enabled, cloud.get("enabled", False))
+            generator.setText(str(cloud.get("density_field", {}).get("generator")))
+
+        selector.currentIndexChanged.connect(lambda _index: refresh())
+        enabled.toggled.connect(
+            lambda value: self._set(path() + ("enabled",), value)
+            if clouds
+            else None
+        )
+        self.refreshers.append(refresh)
+        refresh()
 
     def _build_atmosphere_page(self) -> None:
         form = self._page(

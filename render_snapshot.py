@@ -216,8 +216,22 @@ def configured_scene_name(config: dict) -> str:
         or not isinstance(sun.get("light_shafts"), dict)
     ):
         raise RenderSnapshotError("scene_description.sky.sun is invalid")
-    if not isinstance(sky.get("clouds"), dict):
-        raise RenderSnapshotError("scene_description.sky.clouds must be an object")
+    clouds = sky.get("clouds")
+    if not isinstance(sky.get("cloud_grid_builder"), dict):
+        raise RenderSnapshotError("scene_description.sky.cloud_grid_builder is invalid")
+    if not isinstance(clouds, list):
+        raise RenderSnapshotError("scene_description.sky.clouds must be an array")
+    for index, cloud in enumerate(clouds):
+        if (
+            not isinstance(cloud, dict)
+            or not isinstance(cloud.get("name"), str)
+            or not isinstance(cloud.get("enabled"), bool)
+            or not isinstance(cloud.get("density_field"), dict)
+            or not isinstance(cloud.get("medium"), dict)
+        ):
+            raise RenderSnapshotError(
+                f"scene_description.sky.clouds.{index} is invalid"
+            )
     grass_objects = [
         item
         for landform in landforms
@@ -649,8 +663,7 @@ def create_snapshot(
         cloud_grid = (
             config.get("scene_description", {})
             .get("sky", {})
-            .get("clouds", {})
-            .get("grid_builder", {})
+            .get("cloud_grid_builder", {})
         )
         if cloud_grid.get("backend") == "cpp":
             executable_relative = Path(
