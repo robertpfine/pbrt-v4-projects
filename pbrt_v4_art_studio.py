@@ -24,7 +24,6 @@ except ImportError as error:  # pragma: no cover - exercised before Qt starts
     ) from error
 
 from scene_config import (
-    HILLS_PATH,
     LANDFORMS_PATH,
     SKY_PATH,
     SceneConfig,
@@ -688,8 +687,14 @@ class Inspector(QtWidgets.QWidget):
             "One continuous height-field surface creates a broad, low rise "
             "beyond the meadow. Noise remains subordinate to the landform.",
         )
-        self._check(form, "Enabled", HILLS_PATH + ("enabled",))
-        layers = self.config.get(HILLS_PATH + ("layers",))
+        landforms = self.config.get(LANDFORMS_PATH)
+        ridge_indices = [
+            index
+            for index, landform in enumerate(landforms)
+            if landform.get("topography", {}).get("generator")
+            == "distant_ridge"
+        ]
+        layers = [landforms[index] for index in ridge_indices]
         layer_selector = QtWidgets.QComboBox()
         layer_selector.setObjectName("distant_hill_layer")
         for layer in layers:
@@ -775,7 +780,22 @@ class Inspector(QtWidgets.QWidget):
         form.addRow("Peak asymmetry", peak_asymmetry)
 
         def layer_path(*parts: str | int) -> tuple[str | int, ...]:
-            return HILLS_PATH + ("layers", layer_selector.currentIndex()) + parts
+            root = LANDFORMS_PATH + (
+                ridge_indices[layer_selector.currentIndex()],
+            )
+            if parts[0] == "enabled":
+                return root + parts
+            if parts[0] == "center":
+                return root + ("placement", "position")
+            if parts[0] == "size":
+                return root + ("geometry", "patches", 0, "dimensions")
+            if parts[0] == "rotation_degrees":
+                return root + ("placement", "rotation_degrees")
+            if parts[0] == "base_elevation":
+                return root + ("placement", "position")
+            if parts[0] == "material":
+                return root + ("surface",) + parts
+            return root + ("topography", "parameters") + parts
 
         def peak_path(field: str) -> tuple[str | int, ...]:
             return layer_path("peaks", peak_selector.currentIndex(), field)
@@ -783,7 +803,20 @@ class Inspector(QtWidgets.QWidget):
         def set_pair(field: str, index: int, value: float) -> None:
             path = layer_path(field)
             values = list(self.config.get(path))
-            values[index] = value
+            target_index = (0, 2)[index] if field == "center" else index
+            values[target_index] = value
+            self._set(path, values)
+
+        def set_rotation(value: float) -> None:
+            path = layer_path("rotation_degrees")
+            values = list(self.config.get(path))
+            values[1] = value
+            self._set(path, values)
+
+        def set_base_elevation(value: float) -> None:
+            path = layer_path("base_elevation")
+            values = list(self.config.get(path))
+            values[1] = value
             self._set(path, values)
 
         def set_reflectance(index: int, value: float) -> None:
@@ -805,12 +838,16 @@ class Inspector(QtWidgets.QWidget):
         def refresh_values() -> None:
             populate_peaks()
             self._blocked(layer_enabled, self.config.get(layer_path("enabled")))
+            position = self.config.get(layer_path("center"))
             for index, widget in enumerate(center):
-                self._blocked(widget, float(self.config.get(layer_path("center"))[index]))
+                self._blocked(widget, float(position[(0, 2)[index]]))
             for index, widget in enumerate(size):
                 self._blocked(widget, float(self.config.get(layer_path("size"))[index]))
-            self._blocked(rotation, float(self.config.get(layer_path("rotation_degrees"))))
-            self._blocked(base_elevation, float(self.config.get(layer_path("base_elevation"))))
+            self._blocked(
+                rotation,
+                float(self.config.get(layer_path("rotation_degrees"))[1]),
+            )
+            self._blocked(base_elevation, float(position[1]))
             self._blocked(ridge_height, float(self.config.get(layer_path("ridge_base_height"))))
             self._blocked(
                 ridge_position,
@@ -859,10 +896,10 @@ class Inspector(QtWidgets.QWidget):
                 lambda value, i=index: set_pair("size", i, value)
             )
         rotation.valueChanged.connect(
-            lambda value: self._set(layer_path("rotation_degrees"), value)
+            set_rotation
         )
         base_elevation.valueChanged.connect(
-            lambda value: self._set(layer_path("base_elevation"), value)
+            set_base_elevation
         )
         ridge_height.valueChanged.connect(
             lambda value: self._set(layer_path("ridge_base_height"), value)

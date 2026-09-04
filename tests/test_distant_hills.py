@@ -6,6 +6,7 @@ import unittest
 
 from distant_hills import (
     DistantHillLayer,
+    configured_distant_hills,
     create_distant_hill_grass,
     create_distant_hill_scatter,
     create_distant_hills,
@@ -16,9 +17,17 @@ class DistantHillTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         root = Path(__file__).resolve().parents[1]
-        cls.module_config = json.loads(
+        config = json.loads(
             (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
-        )["scene"]["landscape"]["distant_hills"]
+        )
+        cls.ridge_landform = next(
+            landform
+            for landform in config["scene_description"]["landforms"]
+            if landform.get("topography", {}).get("generator") == "distant_ridge"
+        )
+        cls.module_config = configured_distant_hills(
+            config["scene_description"]["landforms"]
+        )
 
     def test_disabled_module_creates_no_geometry(self):
         config = dict(self.module_config)
@@ -28,10 +37,22 @@ class DistantHillTests(unittest.TestCase):
     def test_enabled_module_builds_one_broad_rise(self):
         config = deepcopy(self.module_config)
         config["enabled"] = True
+        config["layers"][0]["enabled"] = True
         layers = create_distant_hills(config)
         self.assertEqual(len(layers), 1)
         self.assertEqual(layers[0].name, "broad_rise")
         self.assertGreater(layers[0].depth, 1000.0)
+
+    def test_landform_adapter_preserves_the_broad_rise_inputs(self):
+        config = configured_distant_hills([self.ridge_landform])
+        layer = config["layers"][0]
+        self.assertFalse(config["enabled"])
+        self.assertEqual(layer["name"], "broad_rise")
+        self.assertEqual(layer["center"], [-2200.0, -2900.0])
+        self.assertEqual(layer["size"], [7200.0, 1800.0])
+        self.assertEqual(layer["rotation_degrees"], -142.35)
+        self.assertEqual(layer["base_elevation"], -120.0)
+        self.assertEqual(layer["material"]["reflectance"], [0.10, 0.17, 0.045])
 
     def test_explicit_peaks_define_silhouette_without_noise(self):
         config = dict(self.module_config["layers"][0])

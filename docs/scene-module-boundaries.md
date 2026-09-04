@@ -19,8 +19,7 @@ scene (temporary migration root)
 ├── fog
 ├── rain
 ├── landscape
-│   ├── water
-│   └── distant_hills
+│   └── water
 └── sky
     ├── background
     └── clouds
@@ -39,12 +38,12 @@ to `flat_landform.surface_objects[]`, in order: grass, poppies, litter, rocks,
 and undergrowth. The emptied `scene.landscape.ground` wrapper is removed rather
 than retained as a compatibility shell.
 
-`scene.landscape.distant_hills` is the explicit boundary for receding-horizon
-geometry. Its generator and Qt controls remain independent of the accepted
-ground system. The retained configuration now contains one `broad_rise`
-height field; the complete module is disabled in accepted render `054517`.
+Receding-horizon geometry is now represented by independent landforms using
+`topography.generator: "distant_ridge"`. Its generator and Qt controls remain
+independent of the accepted foreground terrain. The retained configuration now
+contains one disabled `broad_rise` landform, matching accepted render `054517`.
 Grass and poppy definitions stay on `flat_landform` and may target the rise
-through their own `population.extension` blocks when the hill module is enabled.
+through their own `population.extension` blocks when the landform is enabled.
 
 ### Agreed distant-hill formation
 

@@ -508,6 +508,61 @@
           }
         },
         "surface_objects": []
+      },
+      {
+        "name": "broad_rise",
+        "enabled": false,
+        "placement": {
+          "position": [-2200.0, -120.0, -2900.0],
+          "rotation_degrees": [0.0, -142.35, 0.0]
+        },
+        "geometry": {
+          "patches": [
+            {
+              "name": "main_patch",
+              "enabled": true,
+              "generator": "plane",
+              "dimensions": [7200.0, 1800.0],
+              "subdivisions": [241, 65],
+              "local_position": [0.0, 0.0, 0.0],
+              "local_rotation_degrees": [0.0, 0.0, 0.0]
+            }
+          ]
+        },
+        "topography": {
+          "enabled": true,
+          "generator": "distant_ridge",
+          "parameters": {
+            "ridge_base_height": 35.0,
+            "cross_section": {
+              "ridge_position": 0.56,
+              "front_power": 0.85,
+              "back_power": 0.85
+            },
+            "peaks": [
+              { "position": 0.22, "height": 165.0, "width": 0.48, "asymmetry": -0.18 }
+            ],
+            "noise": {
+              "seed": 607,
+              "amplitude": 7.0,
+              "frequency": 0.0018,
+              "octaves": 3,
+              "persistence": 0.45,
+              "lacunarity": 2.0
+            }
+          }
+        },
+        "surface": {
+          "material": {
+            "type": "diffuse",
+            "reflectance": [0.10, 0.17, 0.045],
+            "reflectance_scale": 1.0
+          },
+          "texture": {
+            "enabled": false
+          }
+        },
+        "surface_objects": []
       }
     ]
   },
@@ -734,38 +789,6 @@
     "landscape": {
       "water": {
         "enabled": false
-      },
-      "distant_hills": {
-        "enabled": false,
-        "layers": [
-          {
-            "name": "broad_rise",
-            "enabled": true,
-            "center": [-2200.0, -2900.0],
-            "size": [7200.0, 1800.0],
-            "rotation_degrees": -142.35,
-            "resolution": [241, 65],
-            "base_elevation": -120.0,
-            "ridge_base_height": 35.0,
-            "cross_section": {
-              "ridge_position": 0.56,
-              "front_power": 0.85,
-              "back_power": 0.85
-            },
-            "peaks": [
-              { "position": 0.22, "height": 165.0, "width": 0.48, "asymmetry": -0.18 }
-            ],
-            "noise": {
-              "seed": 607,
-              "amplitude": 7.0,
-              "frequency": 0.0018,
-              "octaves": 3,
-              "persistence": 0.45,
-              "lacunarity": 2.0
-            },
-            "material": { "reflectance": [0.10, 0.17, 0.045] }
-          }
-        ]
       }
     },
 

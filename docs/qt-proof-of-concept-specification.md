@@ -177,22 +177,21 @@ A Python configuration model will mediate between that file and Qt. It will:
 Manual editing of `config.json` remains valid. The Python model does not create
 a second scene configuration.
 
-The initial shell preceded any complete JSON refactor. Desktop use then
-identified a bounded structural need, implemented behind the Python
-configuration model:
+The initial shell preceded the complete JSON refactor. The active migration now
+routes the implemented inspector boundaries through:
 
 ```text
-scene.landscape.ground
+scene_description.landforms
 scene.landscape.water
-scene.landscape.distant_hills
 scene.sky.background
 scene.sky.clouds
 ```
 
-The ground and neutral infinite-sky values migrated without changing PBRT
-output. Distant hills now have a three-layer generator and focused inspector;
-clouds retain a disabled module boundary for their next implementation step.
-This is not a complete object/process refactor; see
+Foreground terrain, its surface objects, the vista plane, and the retained
+`broad_rise` distant ridge are now independent landforms. The focused distant
+hill inspector edits the `distant_ridge` landform directly. Clouds and water
+remain at temporary boundaries until their migration stages. This is not yet a
+complete object/process refactor; see
 [`scene-module-boundaries.md`](scene-module-boundaries.md).
 
 ## Implemented entry points

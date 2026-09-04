@@ -7,6 +7,7 @@ still produces a complete, intentional hill form.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 import math
 import random
@@ -290,6 +291,68 @@ class DistantHillLayer:
                 upper = lower + self.nx
                 indices.extend((lower, upper, lower + 1, lower + 1, upper, upper + 1))
         return points, normals, indices
+
+
+def configured_distant_hills(landforms: list[dict]) -> dict:
+    """Adapt distant-ridge landforms to the established hill generator."""
+
+    layers = []
+    for landform in landforms:
+        topography = landform.get("topography", {})
+        if topography.get("generator") != "distant_ridge":
+            continue
+        patches = [
+            patch
+            for patch in landform.get("geometry", {}).get("patches", [])
+            if patch.get("enabled", False) and patch.get("generator") == "plane"
+        ]
+        if len(patches) != 1:
+            raise ValueError(
+                f"distant ridge {landform.get('name')!r} requires exactly one "
+                "enabled plane patch"
+            )
+        patch = patches[0]
+        placement = landform.get("placement", {})
+        position = placement.get("position", [0.0, 0.0, 0.0])
+        rotation = placement.get("rotation_degrees", [0.0, 0.0, 0.0])
+        local_position = patch.get("local_position", [0.0, 0.0, 0.0])
+        local_rotation = patch.get(
+            "local_rotation_degrees", [0.0, 0.0, 0.0]
+        )
+        if any(float(rotation[index]) != 0.0 for index in (0, 2)) or any(
+            float(value) != 0.0 for value in local_rotation
+        ):
+            raise ValueError(
+                "distant ridges currently support only landform Y rotation"
+            )
+        parameters = deepcopy(topography.get("parameters", {}))
+        material = landform.get("surface", {}).get("material", {})
+        reflectance_scale = float(material.get("reflectance_scale", 1.0))
+        reflectance = [
+            float(value) * reflectance_scale
+            for value in material.get("reflectance", [0.12, 0.16, 0.09])
+        ]
+        layers.append({
+            "name": landform.get("name", "distant_ridge"),
+            "enabled": (
+                landform.get("enabled", False)
+                and topography.get("enabled", False)
+            ),
+            "center": [
+                float(position[0]) + float(local_position[0]),
+                float(position[2]) + float(local_position[2]),
+            ],
+            "size": patch["dimensions"],
+            "rotation_degrees": rotation[1],
+            "resolution": patch["subdivisions"],
+            "base_elevation": float(position[1]) + float(local_position[1]),
+            **parameters,
+            "material": {"reflectance": reflectance},
+        })
+    return {
+        "enabled": any(layer["enabled"] for layer in layers),
+        "layers": layers,
+    }
 
 
 def create_distant_hills(config: dict) -> list[DistantHillLayer]:

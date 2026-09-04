@@ -139,8 +139,7 @@ class SceneConfigTests(unittest.TestCase):
   },
   "scene": {
     "landscape": {
-      "water": { "enabled": false },
-      "distant_hills": { "enabled": false }
+      "water": { "enabled": false }
     },
     "sky": {
       "background": { "enabled": true, "type": "infinite" },
@@ -318,22 +317,7 @@ class SceneConfigTests(unittest.TestCase):
         self.assertIn("Landform: flat_landform", description)
         self.assertIn("Poppies:", description)
         self.assertIn("Water: disabled", description)
-        enabled_layers = sum(
-            layer.get("enabled", False)
-            for layer in config.get(
-                "scene.landscape.distant_hills.layers",
-            )
-        )
-        hill_status = (
-            "enabled"
-            if config.get("scene.landscape.distant_hills.enabled")
-            else "disabled"
-        )
-        self.assertIn(
-            f"Distant hills: {hill_status}, {enabled_layers} "
-            f"{'layer' if enabled_layers == 1 else 'layers'}",
-            description,
-        )
+        self.assertIn("Distant hills: disabled, 0 layers", description)
         self.assertIn("Sky background: enabled", description)
         self.assertIn("Clouds: enabled", description)
 
@@ -472,7 +456,11 @@ class SceneConfigTests(unittest.TestCase):
             ],
             ["flat_landform", "vista_plane"],
         )
-        vista = config["scene_description"]["landforms"][-1]
+        vista = next(
+            landform
+            for landform in config["scene_description"]["landforms"]
+            if landform["name"] == "vista_plane"
+        )
         self.assertFalse(vista["topography"]["enabled"])
         self.assertEqual(
             vista["surface"]["texture"]["generator"],
@@ -484,7 +472,7 @@ class SceneConfigTests(unittest.TestCase):
         self.assertNotIn("ground", data["landscape"])
         self.assertEqual(
             set(data["landscape"]),
-            {"water", "distant_hills"},
+            {"water"},
         )
         self.assertEqual(set(data["sky"]), {"background", "clouds"})
         self.assertEqual(data["sky"]["background"]["type"], "infinite")
@@ -500,6 +488,22 @@ class SceneConfigTests(unittest.TestCase):
             self.assertIn(
                 "obsolete scene.geometry vista_plane must be removed after "
                 "vista landform migration",
+                SceneConfig(path).validate(),
+            )
+
+    def test_obsolete_distant_hills_wrapper_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["landscape"]["distant_hills"] = {
+                "enabled": False,
+                "layers": [],
+            }
+            path.write_text(json.dumps(data), encoding="utf-8")
+
+            self.assertIn(
+                "obsolete scene.landscape.distant_hills must be removed "
+                "after distant-ridge migration",
                 SceneConfig(path).validate(),
             )
 

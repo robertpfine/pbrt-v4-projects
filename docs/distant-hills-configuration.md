@@ -1,37 +1,38 @@
 # Distant Hills Configuration
 
-The distant-hill system lives at `scene.landscape.distant_hills` in the one
-authoritative `scene_workspace/config.json`. It generates real world-space
-triangle meshes with front slopes, designed ridges, and rear slopes.
+Each distant hill is an independent entry in `scene_description.landforms` in
+the one authoritative `scene_workspace/config.json`, selected by
+`topography.generator: "distant_ridge"`. It generates a real world-space
+triangle mesh with front slopes, a designed ridge, and a rear slope.
 
 ## Module and layers
 
-`enabled` switches the entire system. `layers` contains independently
-editable depth layers. Each layer has its own placement,
-silhouette, surface irregularity, and color.
+Each landform's `enabled` value switches that ridge independently. Separate
+landform entries provide independently editable depth layers, each with its own
+placement, silhouette, surface irregularity, and color.
 
-- `center`: world-space `[x, z]` center of the terrain band.
-- `size`: band `[width, depth]` before rotation.
-- `rotation_degrees`: rotation of the band in the ground plane.
-- `resolution`: mesh vertices across the width and depth.
-- `base_elevation`: height at the concealed front and rear edges.
-- `ridge_base_height`: continuous relief beneath all designed peaks.
+- `placement.position`: world-space center and base elevation.
+- `placement.rotation_degrees[1]`: rotation in the ground plane.
+- `geometry.patches[0].dimensions`: band `[width, depth]` before rotation.
+- `geometry.patches[0].subdivisions`: mesh vertices across width and depth.
+- `topography.parameters.ridge_base_height`: continuous relief beneath all
+  designed peaks.
 - `shading_normal_up_blend`: optional distant-layer lighting softener. Values
   near `1` suppress harsh grazing-angle contrast while retaining the geometric
   silhouette; it is used for strongly atmospheric far ranges, not foreground
   terrain.
-- `material.reflectance`: RGB surface reflectance for the layer.
+- `surface.material.reflectance`: RGB surface reflectance for the layer.
 
 The retained configuration currently contains one `broad_rise` height field.
-The whole module is disabled in the artist-accepted `054517` composition, so
+The landform is disabled in the artist-accepted `054517` composition, so
 the meadow meets the mottled vista plane directly. The complete rise definition
-remains available for reversible comparisons; setting the module-level
-`enabled` value to `true` restores the hill and its targeted vegetation
+remains available for reversible comparisons; setting the landform's `enabled`
+value to `true` restores the hill and its targeted vegetation
 extensions.
 
 ## Designed ridge peaks
 
-`peaks` is the primary silhouette control. Every peak contains:
+`topography.parameters.peaks` is the primary silhouette control. Every peak contains:
 
 - `position`: lateral position across the range, normally from `-1` to `1`.
 - `height`: relief added above `ridge_base_height`.
@@ -50,14 +51,14 @@ one broad, off-center peak instead of a ridge profile.
 
 ## Front-to-back form
 
-`cross_section.ridge_position` locates the ridge between the front edge (`0`)
+`topography.parameters.cross_section.ridge_position` locates the ridge between the front edge (`0`)
 and rear edge (`1`). `front_power` and `back_power` independently shape the two
 slopes. This gives each band physical depth rather than making it a vertical
 backdrop.
 
 ## Perlin irregularity
 
-The `noise` object supplies deterministic gradient-Perlin fBm:
+The `topography.parameters.noise` object supplies deterministic gradient-Perlin fBm:
 
 - `seed`
 - `amplitude`
@@ -72,8 +73,8 @@ removing or flattening the explicitly designed ridge.
 
 ## Ground-detail extensions
 
-Grass and poppies remain owned by their discoverable ground-detail blocks. An
-optional `extension` inside either block targets one named distant-hill layer:
+Grass and poppies remain owned by `flat_landform.surface_objects[]`. An optional
+`population.extension` inside either object targets one named distant-ridge landform:
 
 - `target_distant_hill` selects the receiving layer.
 - `count`, `seed`, `scale`, `max_slope_degrees`, `y_offset`, and `patchiness`
@@ -84,13 +85,14 @@ optional `extension` inside either block targets one named distant-hill layer:
 
 The retained grass extension contains 2,500,000 tufts and the poppy extension
 contains 2,500 smaller plants. Both target `broad_rise`, and both become
-inactive automatically while the distant-hills module is disabled. Render
+inactive automatically while the target landform is disabled. Render
 `053150` verifies poppies on both the foreground meadow and `broad_rise`.
 
 ## Horizon tree line
 
-`tree_line` is an optional, currently unused subordinate detail anchored to one named active hill
-layer. It does not alter the ridge mesh. The configured count is distributed
+The earlier `tree_line` experiment is not present in the retained configuration.
+If restored, it belongs as a surface object anchored to one named active ridge
+landform; it does not alter the ridge mesh. Its configured count is distributed
 across `lateral_range`, mostly in irregular clusters, and placed just behind
 the ridge using `ridge_depth_offset` and `depth_jitter`.
 
@@ -104,12 +106,11 @@ specimen trees or the future reusable-object system.
 
 ## PBRT-v4 Art Studio
 
-The **Distant Hills** inspector exposes the module switch and selectors for the
-configured depth layers and their individual peaks. It provides exact controls for
+The **Distant Hills** inspector selects the configured ridge landforms and their
+individual peaks. It provides exact controls for
 placement, band size, ridge and slope form, peak position/height/width/
-asymmetry, noise amplitude/frequency, layer reflectance, and the horizon tree
-line's enable/count/size controls. Manual edits to the same JSON remain equally
-valid.
+asymmetry, noise amplitude/frequency, and landform reflectance. Manual edits to
+the same JSON remain equally valid.
 
 ## Current visual checkpoint
 

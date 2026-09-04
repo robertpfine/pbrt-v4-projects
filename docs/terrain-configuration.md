@@ -443,6 +443,20 @@ The old `scene.geometry[]` entry labeled `vista_plane` is absent and rejected.
 The builder adapts this landform to the established deterministic bilinear-mesh
 and texture writers, preserving generated PBRT and texture behavior exactly.
 
+### Distant ridge
+
+The retained `broad_rise` is a disabled independent landform with
+`topography.generator: "distant_ridge"`. Landform placement owns its world
+center, base elevation, and Y rotation. Its one plane patch owns width/depth and
+mesh subdivisions. `topography.parameters` owns ridge height, cross-section,
+designed peaks or ridge profile, and subordinate deterministic noise. Its
+surface owns the diffuse material and explicit reflectance scale.
+
+The former `scene.landscape.distant_hills` module and `layers[]` wrapper are
+absent and rejected. Enabling `broad_rise` directly restores the retained hill;
+grass and poppy `population.extension` blocks continue to target its stable
+landform name.
+
 ### Ecological layering
 
 The layers deliberately use different fields and spatial rules:

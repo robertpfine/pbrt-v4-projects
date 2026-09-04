@@ -227,6 +227,30 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 "vista_plane requires material and vista_surface_mottle texture"
             )
+    distant_ridges = [
+        landform
+        for landform in landforms
+        if isinstance(landform, dict)
+        and isinstance(landform.get("topography"), dict)
+        and landform["topography"].get("generator") == "distant_ridge"
+    ]
+    for ridge in distant_ridges:
+        geometry = ridge.get("geometry")
+        patches = geometry.get("patches") if isinstance(geometry, dict) else None
+        topography = ridge.get("topography")
+        surface = ridge.get("surface")
+        if (
+            not isinstance(patches, list)
+            or len(patches) != 1
+            or not isinstance(patches[0], dict)
+            or patches[0].get("generator") != "plane"
+            or not isinstance(topography.get("parameters"), dict)
+            or not isinstance(surface, dict)
+            or not isinstance(surface.get("material"), dict)
+        ):
+            raise RenderSnapshotError(
+                "distant_ridge requires one plane patch, parameters, and material"
+            )
     if isinstance(scene, dict):
         geometry = scene.get("geometry", [])
         if isinstance(geometry, list) and any(
@@ -237,6 +261,10 @@ def configured_scene_name(config: dict) -> str:
                 "obsolete scene.geometry vista_plane is not supported"
             )
     landscape = scene.get("landscape", {}) if isinstance(scene, dict) else {}
+    if isinstance(landscape, dict) and "distant_hills" in landscape:
+        raise RenderSnapshotError(
+            "obsolete scene.landscape.distant_hills is not supported"
+        )
     ground = (
         landscape.get("ground", {}) if isinstance(landscape, dict) else {}
     )

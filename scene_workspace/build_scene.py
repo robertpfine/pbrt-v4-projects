@@ -44,6 +44,7 @@ from cloud_grid_contract import (
 )
 from rain import create_rain_curtains
 from distant_hills import (
+    configured_distant_hills,
     create_distant_hill_grass,
     create_distant_hill_scatter,
     create_distant_hills,
@@ -3346,7 +3347,6 @@ def write_scene(cfg, scene_root, medium_rel_path):
     
     if medium_rel_path is not None:
         write_medium_include(lines, medium_rel_path)
-    landscape_config = scene.get("landscape", {})
     terrain_landforms = [
         landform
         for landform in scene_description.get("landforms", [])
@@ -3412,7 +3412,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     )
     write_distant_hills(
         lines,
-        landscape_config.get("distant_hills", {}),
+        configured_distant_hills(scene_description.get("landforms", [])),
         grass_config,
         poppy_config,
     )

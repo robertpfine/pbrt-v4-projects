@@ -1059,3 +1059,68 @@ separate filesystem call after the result was recorded. The complete `.venv`
 suite ran 122 tests (113 passed, nine skips); system Python passed all 108
 non-GUI tests. Live validation reports zero errors. No production render was
 launched. Stage 5C continues with the retained `broad_rise` distant landform.
+
+The vista-plane commit is `921ef94` (`Migrate vista plane landform`) and is
+pushed to `origin/pbrt-v4-art-studio`. Its required Google Drive continuity
+copy succeeded immediately.
+
+## Stage 5C.2 — distant-ridge landform
+
+Status: implementation and validation complete from pushed vista checkpoint
+`921ef94`
+
+The retained `broad_rise` moved atomically out of
+`scene.landscape.distant_hills.layers[]` and became an independent disabled
+landform. The former module-level disabled state and enabled child state
+collapse into the one meaningful landform switch, `enabled: false`, preserving
+the accepted hill-disabled scene without retaining competing switches.
+
+```text
+placement.position:                 center X/Z + base elevation Y
+placement.rotation_degrees:         prior ground-plane rotation on Y
+geometry.patches[0]:                plane dimensions + mesh subdivisions
+topography.generator:               distant_ridge
+topography.parameters:              ridge height, cross-section, peaks, noise
+surface.material:                   diffuse reflectance + reflectance_scale
+surface.texture.enabled:            false
+surface_objects:                    []
+```
+
+`distant_hills.configured_distant_hills()` translates the new landforms into
+the established deterministic `DistantHillLayer` input. The scene builder uses
+only this new ownership; the old landscape wrapper is absent. Grass and poppy
+extensions continue targeting the stable name `broad_rise`. Configuration and
+snapshot validation accept and inspect `distant_ridge` landforms and reject the
+old wrapper. The Qt inspector now edits landform placement, plane-patch size,
+ridge parameters, material, and the landform's single enable switch directly.
+The scene summary derives its hill status from distant-ridge landforms.
+
+Mechanical ownership audit:
+
+```text
+distant_ridge_names ['broad_rise']
+enabled_distant_ridges []
+broad_rise_patch_generators ['plane']
+legacy_distant_hills_present False
+landscape_keys ['water']
+```
+
+The archived `020525` diagnostic migration was built in memory with no second
+JSON and no PBRT launch:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5C.2 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+To honor the artist's instruction not to trigger another keyboard approval for
+temporary cleanup while unattended, the isolated proof workspace is retained
+at `/tmp/pbrt-ridge-stage5c.igR9p4`. It contains only the generated diagnostic
+scene and texture output.
+
+The complete `.venv` suite ran 125 tests (116 passed, nine skips); system Python
+passed all 111 non-GUI tests. Live validation reports zero errors. No production
+render was launched. Stage 5C is complete; Stage 6 begins with independent
+objects.

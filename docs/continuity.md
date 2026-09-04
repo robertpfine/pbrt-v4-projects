@@ -516,8 +516,8 @@ order:
    consumer uses the new locations, and bounded rebuilds reproduced the
    pre-migration PBRT scene byte for byte. Stage 5B is complete: grass, poppies,
    litter, rocks, and undergrowth are migrated and the empty legacy ground
-   wrapper is removed. Stage 5C is in progress: the vista plane is migrated;
-   the distant ridge landform is next.
+   wrapper is removed. Stage 5C is complete: the vista plane and `broad_rise`
+   are independent landforms. Stage 6 migrates independent objects next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -714,6 +714,21 @@ validation. The archived `020525` structural rebuild remains byte-identical at
 The complete `.venv` suite runs 122 tests (113 passed, nine skips), and all 108
 system-Python non-GUI tests pass. No PBRT render was launched. The next bounded
 Stage 5C move is `broad_rise` from the temporary distant-hills wrapper.
+
+Stage 5C distant-ridge migration is complete in the working implementation.
+The retained disabled `broad_rise` moved from
+`scene.landscape.distant_hills.layers[]` to an independent landform using
+`topography.generator: "distant_ridge"`. Its world center, base elevation, Y
+rotation, patch dimensions/subdivisions, ridge construction, deterministic
+noise, material, and empty surface-object collection are now adjacent. The old
+module wrapper is absent and rejected. Builder adaptation preserves the
+established generator and grass/poppy extension targeting without duplicate
+live ownership. The archived `020525` proof remains byte-identical at
+117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 125 tests (116 passed, nine skips), and all 111
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 5C is
+complete; Stage 6 begins with independent objects.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

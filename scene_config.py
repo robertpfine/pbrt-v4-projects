@@ -17,7 +17,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 JsonPath = tuple[str | int, ...]
 _MISSING = object()
 LANDFORMS_PATH: JsonPath = ("scene_description", "landforms")
-HILLS_PATH: JsonPath = ("scene", "landscape", "distant_hills")
 SKY_PATH: JsonPath = ("scene", "sky")
 
 
@@ -570,19 +569,25 @@ class SceneConfig:
                             errors.append(f"{prefix}.topography.enabled must be boolean")
                         generator = topography.get("generator")
                         if topography_enabled is True:
-                            if generator != "terrain_heightfield":
+                            if generator not in {
+                                "terrain_heightfield",
+                                "distant_ridge",
+                            }:
                                 errors.append(
                                     f"{prefix}.topography.generator must be "
-                                    "terrain_heightfield"
+                                    "terrain_heightfield or distant_ridge"
                                 )
                             if not isinstance(topography.get("parameters"), dict):
                                 errors.append(
                                     f"{prefix}.topography.parameters must be an object"
                                 )
-                        elif generator is not None and generator != "terrain_heightfield":
+                        elif generator is not None and generator not in {
+                            "terrain_heightfield",
+                            "distant_ridge",
+                        }:
                             errors.append(
                                 f"{prefix}.topography.generator must be "
-                                "terrain_heightfield when provided"
+                                "terrain_heightfield or distant_ridge when provided"
                             )
                         if topography_enabled is True and generator == "terrain_heightfield":
                             rotations = []
@@ -603,6 +608,70 @@ class SceneConfig:
                                 errors.append(
                                     f"{prefix} terrain_heightfield rotations "
                                     "must currently be zero"
+                                )
+                        if topography_enabled is True and generator == "distant_ridge":
+                            parameters = topography.get("parameters", {})
+                            rotation = (
+                                placement.get("rotation_degrees", [])
+                                if isinstance(placement, dict)
+                                else []
+                            )
+                            if (
+                                len(rotation) == 3
+                                and (rotation[0] != 0 or rotation[2] != 0)
+                            ):
+                                errors.append(
+                                    f"{prefix} distant_ridge supports only Y rotation"
+                                )
+                            ridge_position = parameters.get(
+                                "cross_section", {}
+                            ).get("ridge_position")
+                            if not isinstance(
+                                ridge_position, (int, float)
+                            ) or not (0.0 < ridge_position < 1.0):
+                                errors.append(
+                                    f"{prefix}.topography.parameters.cross_section."
+                                    "ridge_position must be between 0 and 1"
+                                )
+                            peaks = parameters.get("peaks", [])
+                            ridge_profile = parameters.get("ridge_profile", [])
+                            if not isinstance(peaks, list):
+                                errors.append(
+                                    f"{prefix}.topography.parameters.peaks must be an array"
+                                )
+                            elif peaks:
+                                for peak_index, peak in enumerate(peaks):
+                                    peak_prefix = (
+                                        f"{prefix}.topography.parameters.peaks."
+                                        f"{peak_index}"
+                                    )
+                                    if not isinstance(peak, dict):
+                                        errors.append(f"{peak_prefix} must be an object")
+                                        continue
+                                    width = peak.get("width")
+                                    if not isinstance(
+                                        width, (int, float)
+                                    ) or width <= 0:
+                                        errors.append(
+                                            f"{peak_prefix}.width must be positive"
+                                        )
+                                    asymmetry = peak.get("asymmetry")
+                                    if not isinstance(
+                                        asymmetry, (int, float)
+                                    ) or not (-0.95 <= asymmetry <= 0.95):
+                                        errors.append(
+                                            f"{peak_prefix}.asymmetry must be in "
+                                            "[-0.95, 0.95]"
+                                        )
+                            if not isinstance(ridge_profile, list):
+                                errors.append(
+                                    f"{prefix}.topography.parameters.ridge_profile "
+                                    "must be an array"
+                                )
+                            elif not ridge_profile and not peaks:
+                                errors.append(
+                                    f"{prefix} distant_ridge requires peaks or "
+                                    "a ridge_profile"
                                 )
                         if (
                             enabled is True
@@ -829,11 +898,17 @@ class SceneConfig:
         ground = landscape.get("ground") if landscape is not None else None
         if landscape is not None:
             distant_hills = landscape.get("distant_hills")
-            if not isinstance(distant_hills, dict):
-                errors.append("landscape requires a distant_hills module")
+            if distant_hills is None:
+                pass
+            elif not isinstance(distant_hills, dict):
+                errors.append("obsolete landscape.distant_hills must be an object")
             elif not isinstance(distant_hills.get("enabled", False), bool):
                 errors.append("distant_hills.enabled must be boolean")
             else:
+                errors.append(
+                    "obsolete scene.landscape.distant_hills must be removed "
+                    "after distant-ridge migration"
+                )
                 layers = distant_hills.get("layers")
                 if layers is None and not distant_hills.get("enabled", False):
                     layers = []
@@ -1325,17 +1400,18 @@ class SceneConfig:
             **poppy_object["construction"],
             **poppy_object["population"],
         }
-        distant_hills = self.get(HILLS_PATH)
+        distant_hills = [
+            landform
+            for landform in self.get(LANDFORMS_PATH)
+            if landform.get("topography", {}).get("generator") == "distant_ridge"
+        ]
         water = self.get(("scene", "landscape", "water"))
         sky = self.get(SKY_PATH)
         rain = self.get(("scene", "rain"), {})
         grass_count = sum(
             int(layer.get("count", 0)) for layer in grass.get("layers", [])
         )
-        hill_layer_count = sum(
-            bool(layer.get("enabled"))
-            for layer in distant_hills.get("layers", [])
-        )
+        hill_layer_count = sum(bool(landform.get("enabled")) for landform in distant_hills)
         return "\n".join((
             f"Scene: {scene_description['name']} ({scene_description['mode']})",
             f"Context: {context['date']} {context['local_time']} "
@@ -1352,7 +1428,7 @@ class SceneConfig:
             f"{int(poppies.get('count', 0)):,} instances",
             f"Trees: {', '.join(enabled_trees) if enabled_trees else 'none'}",
             f"Water: {'enabled' if water.get('enabled') else 'disabled'}",
-            f"Distant hills: {'enabled' if distant_hills.get('enabled') else 'disabled'}, "
+            f"Distant hills: {'enabled' if hill_layer_count else 'disabled'}, "
             f"{hill_layer_count} {'layer' if hill_layer_count == 1 else 'layers'}",
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
             f"Clouds: {'enabled' if sky['clouds'].get('enabled') else 'disabled'}",
