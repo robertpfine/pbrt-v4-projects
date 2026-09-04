@@ -1695,3 +1695,42 @@ The Stage 10 implementation commit is `ffcba78` (`Complete live configuration
 migration`) and is pushed to `origin/pbrt-v4-art-studio`. Its Google Drive
 continuity copy succeeded at
 `gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md`.
+
+## Post-migration end-to-end render validation
+
+Status: passed against the pre-migration C++ control
+
+After the complete migration was checkpointed, the sole authoritative live
+configuration was temporarily set to the same bounded diagnostic state used by
+the pre-migration control: 640×464 film, eight samples, integrator depth 20,
+grass and poppies disabled, GPU backend, and the C++ cloud-grid builder. The
+committed 2000×1450, 512-sample, depth-80 values and enabled surface objects
+were restored exactly after the test; `git diff --exit-code` confirmed the live
+JSON matches `HEAD`, and validation reports zero errors.
+
+The first visible-terminal attempt froze snapshot `20260904_072338` but stopped
+before PBRT. Re-running that frozen builder directly proved the migrated build
+itself was sound and generated a PBRT scene identical to the old C++ control.
+A captured sandbox pipeline at `20260904_072454` then identified the
+environmental cause: sandboxed PBRT cannot see the NVIDIA device and aborted
+immediately with `no CUDA-capable device is detected`. That failed snapshot is
+retained; it was not a volumetric loop or scene failure.
+
+The requested host-GPU pipeline run `20260904_072547` completed normally:
+
+```text
+C++ overcast grid       160×40×120, 768,000 voxels, 32 threads, 0.56 s
+PBRT GPU render         0.2 s
+new PNG size            452,947 bytes
+control/new PNG SHA-256 5a10bb2b2d0afbb0f36fe96935181e18ae03ab253923baa834bb40a71d9a0dc5
+PNG cmp                 identical
+new PBRT size           117,462,944 bytes
+control/new PBRT SHA-256 d8d4a23ac52cb5b02a8df04e888d1079eb9b94ac156d4c378ea4b42262747b03
+PBRT cmp                identical
+```
+
+The local `072547` PNG was inspected directly and is the expected bounded
+overcast diagnostic. The complete immutable bundle and manifest are in
+`Archive/`. Remote archive synchronization made one attempt, immediately hit
+the existing Google Drive API rate limit, and was not retried. There was no
+fatal loop, no PBRT hang, and no post-migration image difference.

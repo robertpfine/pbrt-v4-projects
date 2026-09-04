@@ -856,6 +856,20 @@ The completed Stage 10 implementation is Git checkpoint `ffcba78` on
 successfully copied to
 `gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md`.
 
+The bounded post-migration host-GPU validation render `072547` passed. It used
+the C++ 160×40×120 overcast grid, 640×464 film, eight samples, depth 20, and
+disabled grass/poppies. Both its 452,947-byte PNG and 117,462,944-byte PBRT file
+are byte-for-byte identical to pre-migration C++ control `020829`; their
+respective SHA-256 hashes are
+`5a10bb2b2d0afbb0f36fe96935181e18ae03ab253923baa834bb40a71d9a0dc5`
+and `d8d4a23ac52cb5b02a8df04e888d1079eb9b94ac156d4c378ea4b42262747b03`.
+PBRT rendering completed in 0.2 seconds with no volumetric loop. The locally
+archived image was inspected. Google Drive archive synchronization rate-limited
+and was not retried; the complete local bundle is intact. The authoritative
+live configuration was restored exactly to committed settings and validates
+cleanly. See the migration progress record for the retained environmental
+failure diagnostics `072338` and `072454`.
+
 ## 2026-09-03 schema and overcast-work checkpoint
 
 The artist and assistant began the separate architectural draft
