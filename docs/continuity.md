@@ -910,9 +910,11 @@ the render killed. `pkill -INT -x pbrt` succeeded and host verification found no
 remaining PBRT process. No `074733` PNG was produced.
 
 The artist subsequently completed and accepted render `075647` at 2000×1500,
-eight samples, depth 20, with grass and poppies disabled. Its archived and live
-configurations are byte-identical (SHA-256
-`29902ce336bd8ae01b46f71e5cd9de77303d1c84e97798eb56465205b2360d68`).
+eight samples, depth 20, with grass and poppies disabled. Its archived
+configuration has SHA-256
+`29902ce336bd8ae01b46f71e5cd9de77303d1c84e97798eb56465205b2360d68`.
+The live configuration remains data-identical to that archive but now uses the
+compact short-array formatting convention described below.
 The visible vertical split is not grass: it crosses sky and ground at about
 column 1210/2000 and appears at the same normalized position in `072547`. The
 C++ grid contains nonzero density across all 160 X columns. The leading cause
@@ -920,6 +922,29 @@ is the overcast deck's boundary: its sloped-density AABB spans Y=150–1250, so
 the camera at Y=165 begins inside that proxy even though the actual sloped deck
 bottom at the camera is about Y=420. A bounded one-variable boundary control is
 required before changing the accepted state.
+
+## 2026-09-04 compact configuration-format checkpoint
+
+The artist found the migration's vertically expanded vector formatting too
+onerous for direct editing. Short arrays containing at most four scalar values
+are now written on one line; arrays of objects, nested collections, and longer
+scalar lists remain expanded. This is a physical JSON convention only and does
+not change configuration ownership or values. The repeatable
+`format_scene_config.py` command applies the narrow rewrite atomically and
+supports `--check`; the Qt editor's targeted save behavior already preserves
+the surrounding source and writes edited short values compactly.
+
+The live file decreased from 2,380 to 1,871 lines. Its parsed data is exactly
+equal to both the artist's pre-format file and archived `075647`; the formatted
+file has SHA-256
+`0ea66d1cac7f85d8628d3246aea149542dda91e91d0fc1365b890f62ee50425e`.
+All 124 `.venv` tests pass with ten dependency-aware skips, configuration
+validation reports zero errors, and the formatter is idempotent. A fresh scene
+build produced the exact archived `075647` PBRT file: 117,462,946 bytes,
+SHA-256 `85db7d43a7066f75b1a111208fbaaf62beaf5468268b4a609c4c74a4e4b20c48`.
+No PBRT render was launched. Because physical line numbers changed, resolve
+future manual-edit references from the current file rather than older session
+line numbers.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

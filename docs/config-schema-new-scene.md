@@ -834,6 +834,16 @@ controls. No separate generic `volumetrics` category is introduced. Proposed
 generator names used in schema discussion are not treated as registered
 functionality unless corresponding code actually exists.
 
+### Physical JSON formatting convention
+
+The authoritative configuration keeps short arrays of at most four scalar
+values on one line. This includes positions, directions, dimensions, RGB
+colors, resolutions, and numeric ranges. Arrays of objects, nested collections,
+and longer scalar lists remain vertically expanded. This convention improves
+direct manual navigation without changing the schema or any rendered value.
+`format_scene_config.py` applies and checks the convention without reordering or
+otherwise re-serializing the JSON document.
+
 ### Issue 10: astronomical context and explicit sun direction
 
 `scene_description.scene_context` records the date, local time, IANA time-zone

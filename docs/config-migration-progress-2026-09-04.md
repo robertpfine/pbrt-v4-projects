@@ -1773,9 +1773,10 @@ bundle exists for `074733`.
 
 The artist reset to the bounded `072547` controls, then rendered accepted image
 `20260904_075647` at 2000×1500, eight samples, depth 20, with grass and poppies
-disabled. The archived and authoritative live configurations are byte-for-byte
-identical with SHA-256
+disabled. The archived configuration has SHA-256
 `29902ce336bd8ae01b46f71e5cd9de77303d1c84e97798eb56465205b2360d68`.
+The authoritative live configuration remains parsed-data-identical after the
+later compact short-array formatting pass described below.
 The 4,180,493-byte PNG is the current visual reference.
 
 The apparent grass-detail boundary is not generated grass. It crosses the sky,
@@ -1793,3 +1794,43 @@ Different view rays can therefore acquire inconsistent medium transitions,
 affecting both sky noise and ground illumination. This is a strong, testable
 cause, not yet a proven fix. Preserve `075647`; next run one bounded,
 single-variable boundary control before changing production geometry.
+
+## Post-migration compact JSON formatting
+
+Status: implemented and validated without a configuration-value change
+
+During direct cloud-control review, the artist identified that the migration's
+standard pretty-printer had expanded every short vector and color array across
+multiple lines. The live file was first compared against archived `075647`.
+Its only differences were four artist-made whitespace compactions, and parsed
+JSON comparison was exact. The exact pre-format source was also preserved at
+`/tmp/pbrt-config-before-compact-20260904.json` for the duration of validation.
+
+`format_scene_config.py` now performs a deliberately narrow lexical rewrite:
+arrays with no more than four scalar children and an inline representation no
+longer than 120 characters are collapsed onto one line. It does not compact
+arrays of objects, outer nested arrays, long scalar collections, or otherwise
+re-serialize the document. Original key order, indentation outside the selected
+arrays, numeric spellings, string spellings, and all parsed values are
+preserved. It validates JSON before and after rewriting, checks exact parsed
+data equality, writes atomically, is idempotent, and provides a non-writing
+`--check` mode. Five focused tests cover scalar compaction, lexical
+preservation, nested/object exclusions, item limits, invalid JSON, atomic file
+formatting, and idempotence. Existing `SceneConfig.save()` tests continue to
+verify targeted Qt edits preserve surrounding source formatting.
+
+The one authoritative configuration decreased from 2,380 to 1,871 lines. Its
+formatted SHA-256 is
+`0ea66d1cac7f85d8628d3246aea149542dda91e91d0fc1365b890f62ee50425e`,
+while parsed-data comparison against both the artist's pre-format source and
+archived `075647` succeeds exactly. Live configuration validation reports zero
+errors, `git diff --check` passes, `--check` reports formatting current, and the
+complete `.venv` suite runs 124 tests successfully with ten dependency-aware
+skips.
+
+A fresh non-rendering build completed in 19.44 seconds. It produced a
+117,462,946-byte PBRT file with SHA-256
+`85db7d43a7066f75b1a111208fbaaf62beaf5468268b4a609c4c74a4e4b20c48`,
+byte-for-byte identical to archived `075647`. This proves the formatting pass
+has no scene-construction or rendering-input effect. No PBRT render was
+launched.
