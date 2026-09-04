@@ -845,3 +845,49 @@ were not modified.
 - No production PBRT render was launched.
 
 Poppies are fully migrated with no old/new ownership bridge. Litter is next.
+
+The poppy commit is `1a1a76d` (`Migrate poppy surface object`) and is pushed to
+`origin/pbrt-v4-art-studio`. Its required continuity copy to Google Drive
+succeeded immediately.
+
+## Stage 5B.3 — litter surface-object generator
+
+Status: implementation and validation complete from pushed poppy checkpoint
+`1a1a76d`
+
+The disabled legacy litter generator moved to the third surface-object entry
+under enabled `flat_landform`. Its exact partition is:
+
+```text
+construction: variants, scale, reflectance_variants
+population:   seed, count, region, max_slope_degrees, y_offset,
+              patchiness, attraction
+```
+
+The builder resolves `generator: "litter"` through the same explicit
+construction/population adapter used by the other migrated objects. Validation
+checks nonnegative count and ascending construction scale; configuration and
+snapshot boundaries reject the obsolete ground-detail litter path.
+
+The mechanical parsed-JSON audit reports:
+
+```text
+stage5b_litter_only True
+surface_generators ['grass', 'poppy', 'litter']
+legacy_detail_keys ['rocks', 'undergrowth']
+```
+
+Archived `020525` was migrated entirely in memory and built in a temporary
+workspace without launching PBRT or writing another JSON:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5B.3 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The temporary directory was removed. The complete `.venv` suite ran 115 tests
+(106 passed, nine skips), and system Python passed all 101 non-GUI tests. Live
+JSON validation reports zero errors. Litter has no old/new ownership bridge;
+rocks are next.

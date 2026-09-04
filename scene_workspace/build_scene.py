@@ -3272,9 +3272,11 @@ def write_scene(cfg, scene_root, medium_rel_path):
     terrain = create_terrain(terrain_landform)
     grass_config = configured_surface_object(terrain_landform, "grass")
     poppy_config = configured_surface_object(terrain_landform, "poppy")
+    litter_config = configured_surface_object(terrain_landform, "litter")
     terrain_details = dict(ground_config.get("details", {}))
     terrain_details["grass"] = grass_config
     terrain_details["poppies"] = poppy_config
+    terrain_details["litter"] = litter_config
     lights = []
     background = sky_config.get("background")
     if background:

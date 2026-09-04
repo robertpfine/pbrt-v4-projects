@@ -390,6 +390,29 @@
               "y_offset": 0.05,
               "variants": 7
             }
+          },
+          {
+            "name": "litter",
+            "enabled": false,
+            "generator": "litter",
+            "construction": {
+              "variants": 3,
+              "scale": [0.7, 2.2],
+              "reflectance_variants": [
+                [0.16, 0.070, 0.018],
+                [0.22, 0.11, 0.025],
+                [0.095, 0.050, 0.015]
+              ]
+            },
+            "population": {
+              "seed": 53,
+              "count": 950,
+              "region": { "center": [0.0, 0.0], "size": [300.0, 300.0] },
+              "max_slope_degrees": 42.0,
+              "y_offset": 0.055,
+              "patchiness": { "strength": 0.48, "frequency": 0.035 },
+              "attraction": { "center": [0.0, 0.0], "radius": 150.0, "strength": 0.75 }
+            }
           }
         ]
       }
@@ -618,23 +641,6 @@
     "landscape": {
       "ground": {
         "details": {
-          "litter": {
-            "enabled": false,
-            "count": 950,
-            "seed": 53,
-            "region": { "center": [0.0, 0.0], "size": [300.0, 300.0] },
-            "scale": [0.7, 2.2],
-            "max_slope_degrees": 42.0,
-            "patchiness": { "strength": 0.48, "frequency": 0.035 },
-            "attraction": { "center": [0.0, 0.0], "radius": 150.0, "strength": 0.75 },
-            "y_offset": 0.055,
-            "variants": 3,
-            "reflectance_variants": [
-              [0.16, 0.070, 0.018],
-              [0.22, 0.11, 0.025],
-              [0.095, 0.050, 0.015]
-            ]
-          },
           "rocks": {
             "enabled": false,
             "count": 48,

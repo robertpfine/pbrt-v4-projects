@@ -515,7 +515,7 @@ order:
    `scene_description.landforms`. Their old paths are absent, every known
    consumer uses the new locations, and bounded rebuilds reproduced the
    pre-migration PBRT scene byte for byte. Stage 5B is in progress: grass and
-   poppies are migrated, and litter is next.
+   poppies, and litter are migrated; rocks are next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -670,6 +670,15 @@ rejected.
 An in-memory migration of archived `020525` again emitted the exact
 117,462,947-byte PBRT scene and SHA-256 above, without launching PBRT. The next
 one-generator substage is litter.
+
+Stage 5B litter is complete in the working implementation. Disabled litter is
+the `generator: "litter"` surface object after poppies. Its construction owns
+variants, scale, and reflectance variants; its population owns seed, count,
+region, slope limit, Y offset, patchiness, and attraction. The old path is
+absent and rejected, and an in-memory `020525` migration remains exactly
+117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+No PBRT render was launched. Rocks are next.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

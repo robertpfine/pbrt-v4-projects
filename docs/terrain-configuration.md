@@ -399,6 +399,11 @@ camera-frustum framing, and the distant-hill extension. The former
 
 ### Ground litter
 
+Litter is the `generator: "litter"` surface object under enabled
+`flat_landform`. Its construction owns variants, scale, and reflectance colors;
+its population owns count, seed, region, slope limit, Y offset, patchiness, and
+attraction. The former ground-detail litter path is rejected.
+
 Litter instances are shallow folded leaf shapes. They are concentrated in a
 smaller region beneath the tree and use several brown reflectances. Increase
 `count` for continuity, `scale` for more graphic individual leaves, or the

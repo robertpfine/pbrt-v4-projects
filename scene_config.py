@@ -631,9 +631,10 @@ class SceneConfig:
                             if not isinstance(item.get("enabled"), bool):
                                 errors.append(f"{object_prefix}.enabled must be boolean")
                             generator = item.get("generator")
-                            if generator not in {"grass", "poppy"}:
+                            if generator not in {"grass", "poppy", "litter"}:
                                 errors.append(
-                                    f"{object_prefix}.generator must be grass or poppy"
+                                    f"{object_prefix}.generator must be grass, poppy, "
+                                    "or litter"
                                 )
                             else:
                                 object_generators.append(generator)
@@ -715,6 +716,25 @@ class SceneConfig:
                                             "poppies.camera_frustum.placement_reference "
                                             "must be root or flower"
                                         )
+                            elif generator == "litter":
+                                count = population.get("count")
+                                if not isinstance(count, int) or count < 0:
+                                    errors.append(
+                                        "litter.population.count must be non-negative"
+                                    )
+                                scale = construction.get("scale")
+                                if (
+                                    not isinstance(scale, list)
+                                    or len(scale) != 2
+                                    or not all(
+                                        isinstance(value, (int, float))
+                                        for value in scale
+                                    )
+                                    or scale[0] > scale[1]
+                                ):
+                                    errors.append(
+                                        "litter.construction.scale must be an ascending pair"
+                                    )
                         if len(object_names) != len(set(object_names)):
                             errors.append(f"{prefix}.surface object names must be unique")
                         if len(object_generators) != len(set(object_generators)):
@@ -968,6 +988,11 @@ class SceneConfig:
                 errors.append(
                     "obsolete scene.landscape.ground.details.poppies must be "
                     "removed after poppy migration"
+                )
+            if isinstance(details, dict) and "litter" in details:
+                errors.append(
+                    "obsolete scene.landscape.ground.details.litter must be "
+                    "removed after litter migration"
                 )
 
         sky = require(SKY_PATH, dict)

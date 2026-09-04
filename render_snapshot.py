@@ -160,6 +160,21 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "poppy requires one surface object with construction and population"
         )
+    litter_objects = [
+        item
+        for landform in landforms
+        if isinstance(landform, dict)
+        for item in landform.get("surface_objects", [])
+        if isinstance(item, dict) and item.get("generator") == "litter"
+    ]
+    if litter_objects and (
+        len(litter_objects) != 1
+        or not isinstance(litter_objects[0].get("construction"), dict)
+        or not isinstance(litter_objects[0].get("population"), dict)
+    ):
+        raise RenderSnapshotError(
+            "litter requires one surface object with construction and population"
+        )
     ground = (
         scene.get("landscape", {}).get("ground", {})
         if isinstance(scene, dict)
@@ -183,6 +198,10 @@ def configured_scene_name(config: dict) -> str:
         if isinstance(details, dict) and "poppies" in details:
             raise RenderSnapshotError(
                 "obsolete scene.landscape.ground.details.poppies is not supported"
+            )
+        if isinstance(details, dict) and "litter" in details:
+            raise RenderSnapshotError(
+                "obsolete scene.landscape.ground.details.litter is not supported"
             )
     return name
 
