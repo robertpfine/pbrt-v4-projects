@@ -2,6 +2,8 @@ import re
 import unittest
 from types import SimpleNamespace
 
+from atmosphere import configured_fog
+
 try:
     from scene_workspace.build_scene import write_cloud_boundaries, write_fog_medium
 except ModuleNotFoundError:
@@ -13,31 +15,46 @@ except ModuleNotFoundError:
 class FogHeightFalloffTests(unittest.TestCase):
     def fog_config(self):
         return {
-            "scene": {
-                "fog": {
-                    "enabled": True,
-                    "sigma_a": 0.0,
-                    "sigma_s": 0.001,
-                    "g": 0.0,
-                    "camera_inside": True,
-                    "noise": {
+            "scene_description": {
+                "atmosphere": {
+                    "fog": [{
+                        "name": "test_fog",
                         "enabled": True,
-                        "resolution": [2, 3, 2],
-                        "bounds_min": [0.0, 0.0, 0.0],
-                        "bounds_max": [1.0, 10.0, 1.0],
-                        "frequency": 0.01,
-                        "octaves": 1,
-                        "persistence": 0.5,
-                        "lacunarity": 2.0,
-                        "base_density": 1.0,
-                        "contrast": 0.0,
-                        "height_falloff": {
-                            "enabled": True,
-                            "full_density_height": 0.0,
-                            "zero_density_height": 10.0,
-                            "exponent": 1.0,
+                        "boundary": {
+                            "active_shape": "sphere",
+                            "camera_inside": True,
+                            "sphere": {
+                                "center": [0.0, 0.0, 0.0],
+                                "radius": 10.0,
+                            },
                         },
-                    },
+                        "density_field": {
+                            "generator": "perlin",
+                            "enabled": True,
+                            "resolution": [2, 3, 2],
+                            "bounds_min": [0.0, 0.0, 0.0],
+                            "bounds_max": [1.0, 10.0, 1.0],
+                            "frequency": 0.01,
+                            "octaves": 1,
+                            "persistence": 0.5,
+                            "lacunarity": 2.0,
+                            "base_density": 1.0,
+                            "contrast": 0.0,
+                            "height_falloff": {
+                                "enabled": True,
+                                "full_density_height": 0.0,
+                                "zero_density_height": 10.0,
+                                "exponent": 1.0,
+                            },
+                        },
+                        "medium": {
+                            "name": "fog",
+                            "type": "uniformgrid",
+                            "absorption": 0.0,
+                            "scattering": 0.001,
+                            "anisotropy": 0.0,
+                        },
+                    }],
                 }
             }
         }
@@ -53,9 +70,18 @@ class FogHeightFalloffTests(unittest.TestCase):
         self.assertEqual(density[2:4], [0.5, 0.5])
         self.assertEqual(density[4:6], [0.0, 0.0])
 
+    def test_self_contained_fog_flattens_without_value_changes(self):
+        fog = configured_fog(self.fog_config()["scene_description"])
+        self.assertEqual(fog["sigma_a"], 0.0)
+        self.assertEqual(fog["sigma_s"], 0.001)
+        self.assertEqual(fog["g"], 0.0)
+        self.assertEqual(fog["boundary_center"], [0.0, 0.0, 0.0])
+        self.assertEqual(fog["boundary_radius"], 10.0)
+        self.assertEqual(fog["noise"]["type"], "perlin")
+
     def test_invalid_height_range_is_rejected(self):
         config = self.fog_config()
-        config["scene"]["fog"]["noise"]["height_falloff"][
+        config["scene_description"]["atmosphere"]["fog"][0]["density_field"]["height_falloff"][
             "zero_density_height"
         ] = 0.0
         with self.assertRaisesRegex(ValueError, "zero_density_height"):

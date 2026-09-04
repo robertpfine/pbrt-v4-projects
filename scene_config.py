@@ -1255,6 +1255,10 @@ class SceneConfig:
                     errors.append(
                         f"obsolete scene.{name} must be removed after sky migration"
                     )
+            if "fog" in scene_root:
+                errors.append(
+                    "obsolete scene.fog must be removed after atmosphere migration"
+                )
             geometry = scene_root.get("geometry", [])
             if isinstance(geometry, list) and any(
                 isinstance(item, dict) and item.get("label") == "vista_plane"
@@ -1272,6 +1276,13 @@ class SceneConfig:
                 errors.append(
                     "obsolete scene.geometry independent volumes must be removed "
                     "after independent-volume migration"
+                )
+            if isinstance(geometry, list) and any(
+                isinstance(item, dict) and item.get("label") == "fog_volume"
+                for item in geometry
+            ):
+                errors.append(
+                    "obsolete scene.geometry fog_volume must be absorbed by fog"
                 )
 
         landscape = require(("scene", "landscape"), dict)
@@ -1608,6 +1619,35 @@ class SceneConfig:
                 if len(cloud_names) != len(set(cloud_names)):
                     errors.append("sky cloud names must be unique")
 
+        atmosphere = scene_description.get("atmosphere")
+        if not isinstance(atmosphere, dict):
+            errors.append("scene_description.atmosphere must be an object")
+        else:
+            for family in ("fog", "haze", "mist", "rain"):
+                if not isinstance(atmosphere.get(family), list):
+                    errors.append(f"atmosphere.{family} must be an array")
+            fogs = atmosphere.get("fog", [])
+            if isinstance(fogs, list):
+                if len(fogs) != 1:
+                    errors.append("atmosphere.fog must contain one fog object")
+                elif isinstance(fogs[0], dict):
+                    fog = fogs[0]
+                    if not isinstance(fog.get("enabled"), bool):
+                        errors.append("atmosphere.fog.0.enabled must be boolean")
+                    boundary = fog.get("boundary")
+                    density = fog.get("density_field")
+                    medium = fog.get("medium")
+                    if not isinstance(boundary, dict):
+                        errors.append("atmosphere.fog.0.boundary must be an object")
+                    elif boundary.get("active_shape") != "sphere":
+                        errors.append("atmosphere.fog.0 boundary must use sphere")
+                    if not isinstance(density, dict) or density.get("generator") != "perlin":
+                        errors.append("atmosphere.fog.0 density generator must be perlin")
+                    if not isinstance(medium, dict) or medium.get("name") != "fog":
+                        errors.append("atmosphere.fog.0.medium must name fog")
+                else:
+                    errors.append("atmosphere.fog.0 must be an object")
+
         rain = self.get(("scene", "rain"), None)
         if rain is not None:
             if not isinstance(rain, dict):
@@ -1881,7 +1921,7 @@ class SceneConfig:
             f"{hill_layer_count} {'layer' if hill_layer_count == 1 else 'layers'}",
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
             f"Clouds: {'enabled' if any(cloud.get('enabled') for cloud in sky['clouds']) else 'disabled'}",
-            f"Fog: {'enabled' if self.get(('scene', 'fog', 'enabled'), False) else 'disabled'}",
+            f"Fog: {'enabled' if self.get(('scene_description', 'atmosphere', 'fog', 0, 'enabled'), False) else 'disabled'}",
             f"Rain: {'enabled' if rain.get('enabled', False) else 'disabled'}, "
             f"{sum(bool(item.get('enabled', True)) for item in rain.get('curtains', []))} curtains",
         ))

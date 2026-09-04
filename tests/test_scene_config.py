@@ -153,13 +153,35 @@ class SceneConfigTests(unittest.TestCase):
       },
       "cloud_grid_builder": {},
       "clouds": []
+    },
+    "atmosphere": {
+      "fog": [{
+        "name": "test_fog",
+        "enabled": false,
+        "boundary": {
+          "active_shape": "sphere",
+          "camera_inside": true,
+          "sphere": { "center": [0.0, 0.0, 0.0], "radius": 10.0 },
+          "box_alternative": { "enabled": false }
+        },
+        "density_field": { "enabled": false, "generator": "perlin" },
+        "medium": {
+          "name": "fog",
+          "type": "uniformgrid",
+          "absorption": 0.0,
+          "scattering": 0.0,
+          "anisotropy": 0.0
+        }
+      }],
+      "haze": [],
+      "mist": [],
+      "rain": []
     }
   },
   "scene": {
     "landscape": {
       "water": { "enabled": false }
     },
-    "fog": { "enabled": false },
     "geometry": []
   }
 }
@@ -491,12 +513,19 @@ class SceneConfigTests(unittest.TestCase):
         )
         self.assertNotIn("sky", data)
         self.assertNotIn("lights", data)
+        self.assertNotIn("fog", data)
+        self.assertTrue(
+            all(item.get("label") != "fog_volume" for item in data["geometry"])
+        )
         sky = config["scene_description"]["sky"]
         self.assertEqual(
             set(sky), {"background", "sun", "cloud_grid_builder", "clouds"}
         )
         self.assertEqual(sky["background"]["type"], "infinite")
         self.assertFalse(sky["sun"]["use_astronomical_direction"])
+        atmosphere = config["scene_description"]["atmosphere"]
+        self.assertEqual(set(atmosphere), {"fog", "haze", "mist", "rain"})
+        self.assertEqual([fog["name"] for fog in atmosphere["fog"]], ["ground_fog"])
         flat = next(
             landform
             for landform in config["scene_description"]["landforms"]
@@ -624,6 +653,24 @@ class SceneConfigTests(unittest.TestCase):
             self.assertIn(
                 "obsolete scene.geometry independent volumes must be removed "
                 "after independent-volume migration",
+                errors,
+            )
+
+    def test_obsolete_fog_paths_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["fog"] = {"enabled": False}
+            data["scene"]["geometry"] = [{"label": "fog_volume"}]
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+
+            self.assertIn(
+                "obsolete scene.fog must be removed after atmosphere migration",
+                errors,
+            )
+            self.assertIn(
+                "obsolete scene.geometry fog_volume must be absorbed by fog",
                 errors,
             )
 

@@ -1,6 +1,6 @@
 # Live Configuration Migration Progress — 2026-09-04
 
-Status: Stages 1–6 implementation and validation complete
+Status: Stages 1–7 and Stage 8.1 implementation and validation complete
 
 ## Authority and starting point
 
@@ -1467,3 +1467,55 @@ The retained proof workspace is `/tmp/pbrt-clouds-stage7.NBGFcc`. The complete
 125 non-GUI tests. Live validation and pipeline syntax are clean. No production
 render was launched. Stage 7 is complete; Stage 8 begins atmosphere, including
 absorbing the retained `fog_volume` boundary into the fog object.
+
+## Stage 8.1 — self-contained fog atmosphere object
+
+Status: implementation and validation complete from pushed cloud checkpoint
+`7a595ff`
+
+The complete legacy `scene.fog` block moved to the first named object in
+`scene_description.atmosphere.fog[]`. The fog object now owns its active
+spherical boundary, camera-inside state, complete Perlin density field, and
+medium absorption, scattering, and anisotropy. Empty `haze`, `mist`, and
+`rain` arrays establish the other approved atmosphere families without adding
+generators or hidden defaults.
+
+The disabled generic `scene.geometry[]` entry labeled `fog_volume` was not
+discarded. It is now the fog object's explicit disabled `box_alternative`,
+which owns the old interface material, interior/exterior medium names, neutral
+placement, and all six box bounds. The spherical boundary remains selected, so
+rendered behavior is unchanged. The legacy `scene.fog` and `fog_volume` paths
+are absent and rejected by both configuration and immutable-snapshot
+validation.
+
+The dependency-free `atmosphere.py` adapter routes the self-contained fog to
+the established PBRT medium and boundary writers. Fog-aware cloud exterior
+media, the Qt Atmosphere controls, configuration description, and focused
+height-falloff tests all use the new ownership. The adapter and box
+reconstruction were mechanically compared with checkpoint `7a595ff`:
+
+```text
+legacy fog controls preserved       True
+legacy fog box preserved            True
+legacy scene.fog present            False
+legacy fog_volume present           False
+fog object name                     ground_fog
+active boundary                     sphere
+```
+
+The archived `020525` diagnostic configuration was rebuilt in memory without
+creating another JSON or launching PBRT:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 8.1 size:      117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The retained proof workspace is `/tmp/pbrt-fog-stage8.dDzQLC`. The complete
+`.venv` suite runs 143 tests (133 passed, ten dependency-aware skips), and
+system Python passes all 128 non-GUI tests. Live validation reports zero
+errors, the JSON parses cleanly, Python compilation and shell syntax checks
+pass, and no production render was launched. Stage 8.2 migrates each retained
+rain curtain as a self-contained atmosphere object.

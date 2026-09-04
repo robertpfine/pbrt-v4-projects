@@ -232,6 +232,21 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 f"scene_description.sky.clouds.{index} is invalid"
             )
+    atmosphere = description.get("atmosphere")
+    if not isinstance(atmosphere, dict) or any(
+        not isinstance(atmosphere.get(family), list)
+        for family in ("fog", "haze", "mist", "rain")
+    ):
+        raise RenderSnapshotError("scene_description.atmosphere is invalid")
+    fogs = atmosphere["fog"]
+    if (
+        len(fogs) != 1
+        or not isinstance(fogs[0], dict)
+        or not isinstance(fogs[0].get("boundary"), dict)
+        or not isinstance(fogs[0].get("density_field"), dict)
+        or not isinstance(fogs[0].get("medium"), dict)
+    ):
+        raise RenderSnapshotError("scene_description.atmosphere.fog is invalid")
     grass_objects = [
         item
         for landform in landforms
@@ -411,6 +426,8 @@ def configured_scene_name(config: dict) -> str:
                 raise RenderSnapshotError(
                     f"obsolete scene.{legacy_name} is not supported"
                 )
+        if "fog" in scene:
+            raise RenderSnapshotError("obsolete scene.fog is not supported")
         geometry = scene.get("geometry", [])
         if isinstance(geometry, list) and any(
             isinstance(item, dict) and item.get("label") == "vista_plane"
@@ -426,6 +443,13 @@ def configured_scene_name(config: dict) -> str:
         ):
             raise RenderSnapshotError(
                 "obsolete scene.geometry independent volumes are not supported"
+            )
+        if isinstance(geometry, list) and any(
+            isinstance(item, dict) and item.get("label") == "fog_volume"
+            for item in geometry
+        ):
+            raise RenderSnapshotError(
+                "obsolete scene.geometry fog_volume is not supported"
             )
     landscape = scene.get("landscape", {}) if isinstance(scene, dict) else {}
     if isinstance(landscape, dict) and "distant_hills" in landscape:

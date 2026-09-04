@@ -81,6 +81,29 @@ def scene_description(name="Original Scene"):
             "cloud_grid_builder": {},
             "clouds": [],
         },
+        "atmosphere": {
+            "fog": [{
+                "name": "test_fog",
+                "enabled": False,
+                "boundary": {
+                    "active_shape": "sphere",
+                    "camera_inside": True,
+                    "sphere": {"center": [0.0, 0.0, 0.0], "radius": 10.0},
+                    "box_alternative": {"enabled": False},
+                },
+                "density_field": {"enabled": False, "generator": "perlin"},
+                "medium": {
+                    "name": "fog",
+                    "type": "uniformgrid",
+                    "absorption": 0.0,
+                    "scattering": 0.0,
+                    "anisotropy": 0.0,
+                },
+            }],
+            "haze": [],
+            "mist": [],
+            "rain": [],
+        },
     }
 
 
@@ -297,6 +320,19 @@ class RenderSnapshotTests(unittest.TestCase):
         self.config.write_text(json.dumps(config), encoding="utf-8")
         with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.grid"):
             create_snapshot(self.root, self.config, "20260904_010221")
+
+    def test_snapshot_rejects_obsolete_fog_paths(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["fog"] = {"enabled": False}
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.fog"):
+            create_snapshot(self.root, self.config, "20260904_010232")
+
+        config["scene"].pop("fog")
+        config["scene"]["geometry"] = [{"label": "fog_volume"}]
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "geometry fog_volume"):
+            create_snapshot(self.root, self.config, "20260904_010233")
 
     def test_snapshot_rejects_obsolete_ground_landform_core(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))

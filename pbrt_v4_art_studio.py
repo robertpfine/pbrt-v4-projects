@@ -1087,12 +1087,12 @@ class Inspector(QtWidgets.QWidget):
             "uses a homogeneous or noise-modulated PBRT medium; RGB-grid is not "
             "a generic atmosphere label.",
         )
-        base = ("scene", "fog")
+        base = ("scene_description", "atmosphere", "fog", 0)
         self._check(form, "Fog enabled", base + ("enabled",))
-        self._number(form, "Absorption", base + ("sigma_a",), 0.0, 100.0, 7)
-        self._number(form, "Scattering", base + ("sigma_s",), 0.0, 100.0, 7)
-        self._number(form, "Anisotropy", base + ("g",), -0.999, 0.999, 4)
-        self._check(form, "Density variation", base + ("noise", "enabled"))
+        self._number(form, "Absorption", base + ("medium", "absorption"), 0.0, 100.0, 7)
+        self._number(form, "Scattering", base + ("medium", "scattering"), 0.0, 100.0, 7)
+        self._number(form, "Anisotropy", base + ("medium", "anisotropy"), -0.999, 0.999, 4)
+        self._check(form, "Density variation", base + ("density_field", "enabled"))
 
     def _build_lighting_page(self) -> None:
         form = self._page("lighting", "Lighting")

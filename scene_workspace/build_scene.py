@@ -62,6 +62,7 @@ from scene_objects import (
     configured_rgbgrid_media,
     configured_scene_objects,
 )
+from atmosphere import configured_fog
 
 
 # ==============================================================
@@ -289,7 +290,7 @@ def write_fog_medium(cfg, lines):
     pbrt note: MakeNamedMedium for homogeneous media can appear inside
     the world section, unlike rgbgrid which uses Include.
     """
-    fog = cfg["scene"].get("fog")
+    fog = configured_fog(cfg["scene_description"])
     if not fog or not fog.get("enabled", True):
         return
 
@@ -3347,7 +3348,8 @@ def write_scene(cfg, scene_root, medium_rel_path):
 
     # --- World section ---
     lines += ["WorldBegin", ""]
-    write_fog_boundary(lines, scene.get("fog"))
+    fog_config = configured_fog(scene_description)
+    write_fog_boundary(lines, fog_config)
     sky_config = scene_description.get("sky", {})
     cloud_formations = write_cloud_media(
         lines, configured_cloud_module(sky_config), scene_root, scene_files_root
@@ -3396,7 +3398,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     if shaft_light:
         lights.append(shaft_light)
     write_lights(lines, lights)
-    fog_enabled = bool(scene.get("fog", {}).get("enabled", False))
+    fog_enabled = bool(fog_config.get("enabled", False))
     write_cloud_boundaries(
         lines,
         cloud_formations,

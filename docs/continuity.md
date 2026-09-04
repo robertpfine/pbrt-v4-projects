@@ -819,7 +819,22 @@ proof remains byte-identical at 117,462,947 bytes and SHA-256
 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
 All 140 `.venv` tests pass with nine skips, and all 125 system-Python non-GUI
 tests pass. No PBRT render was launched. Stage 7 is complete; Stage 8 atmosphere
-is next.
+is underway.
+
+Stage 8.1 fog migration is complete in the working implementation. The former
+`scene.fog` is now the named `ground_fog` object in
+`scene_description.atmosphere.fog[]`, owning its spherical boundary, complete
+Perlin density construction, and medium optics. The disabled historical
+`fog_volume` box is preserved as that fog object's inactive boundary
+alternative instead of remaining generic geometry. Empty haze, mist, and rain
+arrays introduce no behavior. Both old paths are absent and rejected; the
+builder, validator, immutable snapshot, Qt inspector, and tests consume the new
+ownership. The archived `020525` proof remains byte-identical at 117,462,947
+bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 143 tests (133 passed, ten skips), and all 128
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 8.2 moves
+the disabled rain-curtain experiment into self-contained atmosphere objects.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

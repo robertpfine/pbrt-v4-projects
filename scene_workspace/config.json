@@ -2230,55 +2230,103 @@
         "threads": 0,
         "fallback_to_python": true
       }
+    },
+    "atmosphere": {
+      "fog": [
+        {
+          "name": "ground_fog",
+          "enabled": false,
+          "boundary": {
+            "active_shape": "sphere",
+            "camera_inside": true,
+            "sphere": {
+              "center": [
+                -1600.0,
+                500.0,
+                -1900.0
+              ],
+              "radius": 6500.0
+            },
+            "box_alternative": {
+              "enabled": false,
+              "placement": {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "rotation_degrees": [
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "material": {
+                "type": "interface"
+              },
+              "medium_interior": "fog",
+              "medium_exterior": "",
+              "geometry": {
+                "generator": "box",
+                "parameters": {
+                  "x_min": -750.0,
+                  "x_max": 750.0,
+                  "y_min": -0.9,
+                  "y_max": 250.0,
+                  "z_min": -1550.0,
+                  "z_max": 130.0
+                }
+              }
+            }
+          },
+          "density_field": {
+            "enabled": true,
+            "seed": 29,
+            "resolution": [
+              72,
+              24,
+              96
+            ],
+            "bounds_min": [
+              -2200.0,
+              -25.0,
+              -4500.0
+            ],
+            "bounds_max": [
+              1400.0,
+              85.0,
+              900.0
+            ],
+            "frequency": 0.0015,
+            "octaves": 3,
+            "persistence": 0.5,
+            "lacunarity": 2.0,
+            "base_density": 0.28,
+            "contrast": 0.6,
+            "height_falloff": {
+              "enabled": true,
+              "full_density_height": 4.0,
+              "zero_density_height": 90.0,
+              "exponent": 1.4
+            },
+            "generator": "perlin"
+          },
+          "medium": {
+            "name": "fog",
+            "type": "uniformgrid",
+            "absorption": 3e-06,
+            "scattering": 0.00024,
+            "anisotropy": 0.35
+          }
+        }
+      ],
+      "haze": [],
+      "mist": [],
+      "rain": []
     }
   },
 
   "scene": {
-    "fog": {
-      "enabled": false,
-      "sigma_a": 3e-06,
-      "sigma_s": 0.00024,
-      "g": 0.35,
-      "camera_inside": true,
-      "boundary_center": [
-        -1600.0,
-        500.0,
-        -1900.0
-      ],
-      "boundary_radius": 6500.0,
-      "noise": {
-        "enabled": true,
-        "type": "perlin",
-        "seed": 29,
-        "resolution": [
-          72,
-          24,
-          96
-        ],
-        "bounds_min": [
-          -2200.0,
-          -25.0,
-          -4500.0
-        ],
-        "bounds_max": [
-          1400.0,
-          85.0,
-          900.0
-        ],
-        "frequency": 0.0015,
-        "octaves": 3,
-        "persistence": 0.5,
-        "lacunarity": 2.0,
-        "base_density": 0.28,
-        "contrast": 0.6,
-        "height_falloff": {
-          "enabled": true,
-          "full_density_height": 4.0,
-          "zero_density_height": 90.0,
-          "exponent": 1.4
-        }
-      }
-    },
     "rain": {
       "enabled": false,
       "appearance": {
@@ -2349,32 +2397,6 @@
         "enabled": false
       }
     },
-    "geometry": [
-      {
-        "enabled": false,
-        "label": "fog_volume",
-        "material": {
-          "type": "interface"
-        },
-        "medium_interior": "fog",
-        "medium_exterior": "",
-        "transform": {
-          "translate": [
-            0,
-            0,
-            0
-          ]
-        },
-        "shape": {
-          "type": "box",
-          "x_min": -750.0,
-          "x_max": 750.0,
-          "y_min": -0.9,
-          "y_max": 250.0,
-          "z_min": -1550.0,
-          "z_max": 130.0
-        }
-      }
-    ]
+    "geometry": []
   }
 }
