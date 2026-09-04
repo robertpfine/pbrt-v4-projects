@@ -18,7 +18,7 @@ JsonPath = tuple[str | int, ...]
 _MISSING = object()
 LANDFORMS_PATH: JsonPath = ("scene_description", "landforms")
 OBJECTS_PATH: JsonPath = ("scene_description", "objects")
-SKY_PATH: JsonPath = ("scene", "sky")
+SKY_PATH: JsonPath = ("scene_description", "sky")
 
 
 class SceneConfigError(ValueError):
@@ -1250,6 +1250,11 @@ class SceneConfig:
                         f"obsolete scene.{name} must be removed after "
                         "independent-volume migration"
                     )
+            for name in ("sky", "lights", "sun_aperture"):
+                if name in scene_root:
+                    errors.append(
+                        f"obsolete scene.{name} must be removed after sky migration"
+                    )
             geometry = scene_root.get("geometry", [])
             if isinstance(geometry, list) and any(
                 isinstance(item, dict) and item.get("label") == "vista_plane"
@@ -1527,10 +1532,28 @@ class SceneConfig:
         if sky is not None:
             background = sky.get("background")
             clouds = sky.get("clouds")
+            sun = sky.get("sun")
             if not isinstance(background, dict):
                 errors.append("sky requires a background module")
             elif background.get("type") != "infinite":
                 errors.append("sky.background.type must be infinite")
+            if not isinstance(sun, dict):
+                errors.append("sky requires a sun module")
+            else:
+                if not isinstance(sun.get("enabled"), bool):
+                    errors.append("sky.sun.enabled must be boolean")
+                if sun.get("type") != "distant":
+                    errors.append("sky.sun.type must be distant")
+                if not isinstance(sun.get("use_astronomical_direction"), bool):
+                    errors.append(
+                        "sky.sun.use_astronomical_direction must be boolean"
+                    )
+                for field in ("from", "to"):
+                    vector = sun.get(field)
+                    if not isinstance(vector, list) or len(vector) != 3:
+                        errors.append(f"sky.sun.{field} must contain three values")
+                if not isinstance(sun.get("light_shafts"), dict):
+                    errors.append("sky.sun.light_shafts must be an object")
             if not isinstance(clouds, dict):
                 errors.append("sky requires a clouds module")
             elif not isinstance(clouds.get("enabled", False), bool):
@@ -1715,11 +1738,13 @@ class SceneConfig:
                     "render_settings.shaft_composite.shaft_light must be a name"
                 )
             else:
-                lights = self.get(("scene", "lights"), [])
+                shaft_source = self.get(
+                    SKY_PATH + ("sun", "light_shafts", "light"), {}
+                )
                 labels = {
-                    light.get("label")
-                    for light in lights
-                    if isinstance(light, dict)
+                    shaft_source.get("label")
+                    if isinstance(shaft_source, dict)
+                    else None
                 }
                 if shaft_light not in labels:
                     errors.append(

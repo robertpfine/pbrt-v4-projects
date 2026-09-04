@@ -65,6 +65,21 @@ def scene_description(name="Original Scene"):
             }
         ],
         "objects": [],
+        "sky": {
+            "background": {"enabled": True, "type": "infinite"},
+            "sun": {
+                "enabled": True,
+                "type": "distant",
+                "use_astronomical_direction": False,
+                "from": [1, 1, 1],
+                "to": [0, 0, 0],
+                "light_shafts": {
+                    "light": {"enabled": False, "label": "shaft_sun"},
+                    "aperture": {"enabled": False, "light": "shaft_sun"},
+                },
+            },
+            "clouds": {"enabled": False},
+        },
     }
 
 
@@ -407,17 +422,12 @@ class RenderSnapshotTests(unittest.TestCase):
         shutil.copy2(Path("cloud_grid_contract.py"), self.root / "cloud_grid_contract.py")
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene_description"]["name"] = "Compiled Scene"
-        config["scene"] = {
-            "sky": {
-                "clouds": {
-                    "grid_builder": {
-                        "backend": "cpp",
-                        "executable": "build/cloud_grid_builder/cloud_grid_builder",
-                        "fallback_to_python": False,
-                    }
-                }
-            },
+        config["scene_description"]["sky"]["clouds"]["grid_builder"] = {
+            "backend": "cpp",
+            "executable": "build/cloud_grid_builder/cloud_grid_builder",
+            "fallback_to_python": False,
         }
+        config["scene"] = {}
         self.config.write_text(json.dumps(config), encoding="utf-8")
 
         result = create_snapshot(self.root, self.config, "20260904_010207")
@@ -455,14 +465,10 @@ class RenderSnapshotTests(unittest.TestCase):
 
     def test_snapshot_allows_missing_compiled_builder_with_explicit_fallback(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["sky"] = {
-            "clouds": {
-                "grid_builder": {
-                    "backend": "cpp",
-                    "executable": "build/cloud_grid_builder/missing",
-                    "fallback_to_python": True,
-                }
-            }
+        config["scene_description"]["sky"]["clouds"]["grid_builder"] = {
+            "backend": "cpp",
+            "executable": "build/cloud_grid_builder/missing",
+            "fallback_to_python": True,
         }
         self.config.write_text(json.dumps(config), encoding="utf-8")
 
@@ -768,7 +774,11 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
             render_shaft_composite.pbrt_flags(settings)
 
     def test_composite_options_require_valid_light_and_nonnegative_values(self):
-        scene = {"lights": [{"label": "shaft_sun"}]}
+        sky = {
+            "sun": {
+                "light_shafts": {"light": {"label": "shaft_sun"}}
+            }
+        }
         options = {
             "enabled": True,
             "shaft_light": "shaft_sun",
@@ -778,26 +788,26 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
             "terrain_reflectance_scale": 0.015,
             "blur_radius": 2.0,
         }
-        render_shaft_composite.validate_composite_options(options, scene)
+        render_shaft_composite.validate_composite_options(options, sky)
 
         options["shaft_light"] = "missing"
         with self.assertRaisesRegex(ValueError, "must resolve to a scene light"):
-            render_shaft_composite.validate_composite_options(options, scene)
+            render_shaft_composite.validate_composite_options(options, sky)
 
         options["shaft_light"] = "shaft_sun"
         options["blur_radius"] = -1.0
         with self.assertRaisesRegex(ValueError, "blur_radius must be nonnegative"):
-            render_shaft_composite.validate_composite_options(options, scene)
+            render_shaft_composite.validate_composite_options(options, sky)
 
     def test_composite_passes_use_migrated_scene_filenames(self):
         config = {
             "file_names": {"pbrt_scene": "scene.pbrt"},
             "scene_description": scene_description(),
-            "scene": {
-                "sun_aperture": {"enabled": True},
-                "lights": [{"label": "shaft_sun", "enabled": True}],
-                "landscape": {},
-            },
+            "scene": {"landscape": {}},
+        }
+        config["scene_description"]["sky"]["sun"]["light_shafts"] = {
+            "light": {"label": "shaft_sun", "enabled": True},
+            "aperture": {"enabled": True, "light": "shaft_sun"},
         }
         config["scene_description"]["landforms"][0]["surface"] = {
             "material": {"reflectance": [0.2, 0.3, 0.4]},

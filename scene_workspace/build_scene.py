@@ -3348,7 +3348,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     # --- World section ---
     lines += ["WorldBegin", ""]
     write_fog_boundary(lines, scene.get("fog"))
-    sky_config = scene.get("sky", {})
+    sky_config = scene_description.get("sky", {})
     cloud_formations = write_cloud_media(
         lines, sky_config.get("clouds", {}), scene_root, scene_files_root
     )
@@ -3388,7 +3388,13 @@ def write_scene(cfg, scene_root, medium_rel_path):
     background = sky_config.get("background")
     if background:
         lights.append(background)
-    lights.extend(scene.get("lights", []))
+    sun = sky_config.get("sun", {})
+    if sun:
+        lights.append(sun)
+    light_shafts = sun.get("light_shafts", {}) if isinstance(sun, dict) else {}
+    shaft_light = light_shafts.get("light")
+    if shaft_light:
+        lights.append(shaft_light)
     write_lights(lines, lights)
     fog_enabled = bool(scene.get("fog", {}).get("enabled", False))
     write_cloud_boundaries(
@@ -3401,7 +3407,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
         rain_curtains,
         exterior_medium="fog" if fog_enabled else "",
     )
-    write_sun_aperture(lines, scene.get("sun_aperture"), lights)
+    write_sun_aperture(lines, light_shafts.get("aperture"), lights)
     write_planar_landforms(
         lines,
         scene_description.get("landforms", []),

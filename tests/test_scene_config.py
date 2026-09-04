@@ -137,18 +137,29 @@ class SceneConfigTests(unittest.TestCase):
         "surface_objects": []
       }
     ],
-    "objects": []
+    "objects": [],
+    "sky": {
+      "background": { "enabled": true, "type": "infinite" },
+      "sun": {
+        "enabled": true,
+        "type": "distant",
+        "use_astronomical_direction": false,
+        "from": [1, 1, 1],
+        "to": [0, 0, 0],
+        "light_shafts": {
+          "light": { "enabled": false, "label": "shaft_sun" },
+          "aperture": { "enabled": false, "light": "shaft_sun" }
+        }
+      },
+      "clouds": { "enabled": false }
+    }
   },
   "scene": {
     "landscape": {
       "water": { "enabled": false }
     },
-    "sky": {
-      "background": { "enabled": true, "type": "infinite" },
-      "clouds": { "enabled": false }
-    },
     "fog": { "enabled": false },
-    "lights": [{ "label": "shaft_sun", "enabled": false }]
+    "geometry": []
   }
 }
 '''
@@ -477,9 +488,12 @@ class SceneConfigTests(unittest.TestCase):
             set(data["landscape"]),
             {"water"},
         )
-        self.assertEqual(set(data["sky"]), {"background", "clouds"})
-        self.assertEqual(data["sky"]["background"]["type"], "infinite")
-        self.assertTrue(all(light.get("type") != "infinite" for light in data["lights"]))
+        self.assertNotIn("sky", data)
+        self.assertNotIn("lights", data)
+        sky = config["scene_description"]["sky"]
+        self.assertEqual(set(sky), {"background", "sun", "clouds"})
+        self.assertEqual(sky["background"]["type"], "infinite")
+        self.assertFalse(sky["sun"]["use_astronomical_direction"])
         flat = next(
             landform
             for landform in config["scene_description"]["landforms"]

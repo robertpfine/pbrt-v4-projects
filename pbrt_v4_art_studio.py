@@ -1065,12 +1065,7 @@ class Inspector(QtWidgets.QWidget):
 
     def _build_lighting_page(self) -> None:
         form = self._page("lighting", "Lighting")
-        lights = self.config.get(("scene", "lights"))
-        sun_index = next(
-            (index for index, light in enumerate(lights) if light.get("label") == "morning_sun"),
-            0,
-        )
-        base = ("scene", "lights", sun_index)
+        base = SKY_PATH + ("sun",)
         self._check(form, "Morning sun", base + ("enabled",))
         self._number(form, "Temperature", base + ("temperature",), 1000.0, 20_000.0, 0)
         self._number(form, "Intensity", base + ("scale",), 0.0, 1_000_000.0, 3)

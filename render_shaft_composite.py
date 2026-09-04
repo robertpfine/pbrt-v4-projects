@@ -55,18 +55,20 @@ def scale_reflectances(value, scale):
 def configure_base(cfg, shaft_label):
     result = copy.deepcopy(cfg)
     result["file_names"]["pbrt_scene"] = "scene_base.pbrt"
-    result["scene"]["sun_aperture"]["enabled"] = False
-    for light in result["scene"].get("lights", []):
-        if light.get("label") == shaft_label:
-            light["enabled"] = False
+    shafts = result["scene_description"]["sky"]["sun"]["light_shafts"]
+    shafts["aperture"]["enabled"] = False
+    if shafts["light"].get("label") == shaft_label:
+        shafts["light"]["enabled"] = False
     return result
 
 
 def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
     result = copy.deepcopy(cfg)
     result["file_names"]["pbrt_scene"] = "scene_shaft.pbrt"
-    for light in result["scene"].get("lights", []):
-        light["enabled"] = light.get("label") == shaft_label
+    sun = result["scene_description"]["sky"]["sun"]
+    sun["enabled"] = False
+    shaft_light = sun["light_shafts"]["light"]
+    shaft_light["enabled"] = shaft_light.get("label") == shaft_label
     scale_reflectances(result["scene"], surface_scale)
     scale_reflectances(result["scene_description"]["landforms"], surface_scale)
     scale_reflectances(result["scene_description"]["objects"], surface_scale)
@@ -163,7 +165,7 @@ def pbrt_flags(render_settings):
     return flags
 
 
-def validate_composite_options(options, scene):
+def validate_composite_options(options, sky):
     """Reject incomplete or unsafe composite controls before either pass."""
 
     if not isinstance(options.get("enabled"), bool):
@@ -171,7 +173,10 @@ def validate_composite_options(options, scene):
     shaft_light = options.get("shaft_light")
     labels = {
         light.get("label")
-        for light in scene.get("lights", [])
+        for light in (
+            sky.get("sun", {}),
+            sky.get("sun", {}).get("light_shafts", {}).get("light", {}),
+        )
         if isinstance(light, dict)
     }
     if not isinstance(shaft_light, str) or shaft_light not in labels:
@@ -240,7 +245,7 @@ def main():
 
     render_settings = cfg["render_settings"]
     options = render_settings["shaft_composite"]
-    validate_composite_options(options, cfg["scene"])
+    validate_composite_options(options, cfg["scene_description"]["sky"])
     shaft_label = options["shaft_light"]
     pbrt = cfg["file_paths"]["pbrt_executable"]
     flags = pbrt_flags(render_settings)

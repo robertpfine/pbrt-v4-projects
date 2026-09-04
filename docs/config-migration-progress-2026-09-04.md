@@ -1384,3 +1384,48 @@ tests (130 passed, nine dependency-aware skips), and system Python passes all
 cleanly. No production render was launched. Stage 6 is complete; Stage 7 begins
 with the sky background and sun before migrating each cloud as a self-contained
 sky object.
+
+## Stage 7.1 — sky shell, sun, and light shafts
+
+Status: implementation and validation complete from pushed Stage 6 checkpoint
+`9f2f9b5`
+
+The complete legacy sky shell moved from `scene.sky` to
+`scene_description.sky`. Its background is unchanged. The active labeled
+`morning_sun` moved out of `scene.lights[]` to the singular `sky.sun` object;
+its enabled state, PBRT distant type, from/to direction, blackbody temperature,
+and scale are unchanged, and `use_astronomical_direction: false` explicitly
+preserves manual direction. The dormant `shaft_sun` and complete
+`sun_aperture` moved intact to `sun.light_shafts.light` and `.aperture`.
+Rejected disabled point/spot experiments were removed from the live config and
+remain recoverable in Git history. Old `scene.sky`, `scene.lights`, and
+`scene.sun_aperture` are absent and rejected.
+
+The builder reconstructs the established PBRT light order from the new
+ownership. Cloud building, snapshot executable freezing, Qt sky/lighting
+controls, description output, shaft base/isolated-pass configuration, and
+shaft-option validation all read the new path. The legacy shared cloud shell
+moved without internal changes in this substage; Stage 7.2 makes each cloud
+self-contained.
+
+Value and structural audit:
+
+```text
+background preserved       True
+cloud shell preserved      True
+morning sun preserved      True
+shaft light preserved      True
+aperture preserved         True
+legacy sky/light keys      []
+pre-migration size         117,462,947 bytes
+Stage 7.1 size             117,462,947 bytes
+both SHA-256               c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result                 identical
+```
+
+The retained proof workspace is `/tmp/pbrt-sky-stage7.GJcx7S`. The complete
+`.venv` suite runs 139 tests (130 passed, nine skips), system Python passes all
+124 non-GUI tests, live validation reports zero errors, and pipeline syntax is
+clean. No production render was launched. Stage 7.2 migrates the two cloud
+formations and copies their actually used shared construction/medium values
+into each cloud.

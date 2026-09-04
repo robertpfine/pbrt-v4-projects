@@ -201,6 +201,23 @@ def configured_scene_name(config: dict) -> str:
                 )
     if len(names) != len(set(names)):
         raise RenderSnapshotError("scene_description object names must be unique")
+    sky = description.get("sky")
+    if not isinstance(sky, dict):
+        raise RenderSnapshotError("scene_description.sky must be an object")
+    background = sky.get("background")
+    sun = sky.get("sun")
+    if not isinstance(background, dict) or background.get("type") != "infinite":
+        raise RenderSnapshotError("scene_description.sky requires infinite background")
+    if (
+        not isinstance(sun, dict)
+        or sun.get("type") != "distant"
+        or not isinstance(sun.get("enabled"), bool)
+        or not isinstance(sun.get("use_astronomical_direction"), bool)
+        or not isinstance(sun.get("light_shafts"), dict)
+    ):
+        raise RenderSnapshotError("scene_description.sky.sun is invalid")
+    if not isinstance(sky.get("clouds"), dict):
+        raise RenderSnapshotError("scene_description.sky.clouds must be an object")
     grass_objects = [
         item
         for landform in landforms
@@ -371,6 +388,11 @@ def configured_scene_name(config: dict) -> str:
                 "obsolete scene.planar_phyllotaxis is not supported"
             )
         for legacy_name in ("grid", "zones"):
+            if legacy_name in scene:
+                raise RenderSnapshotError(
+                    f"obsolete scene.{legacy_name} is not supported"
+                )
+        for legacy_name in ("sky", "lights", "sun_aperture"):
             if legacy_name in scene:
                 raise RenderSnapshotError(
                     f"obsolete scene.{legacy_name} is not supported"
@@ -625,7 +647,7 @@ def create_snapshot(
             copied_paths.append(destination)
 
         cloud_grid = (
-            config.get("scene", {})
+            config.get("scene_description", {})
             .get("sky", {})
             .get("clouds", {})
             .get("grid_builder", {})

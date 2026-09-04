@@ -797,6 +797,18 @@ The complete `.venv` suite runs 139 tests (130 passed, nine skips), and all 124
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 6 is
 complete; Stage 7 begins sky background, sun, and self-contained clouds.
 
+Stage 7.1 sky-shell and sun migration is complete in the working
+implementation. `scene_description.sky` now owns the unchanged infinite
+background, the active morning sun with explicit manual-direction mode, and
+the dormant shaft light/aperture subsystem. Rejected disabled point/spot
+experiments remain in history rather than the live scene. All consumers use the
+new paths, and old `scene.sky`, `scene.lights`, and `scene.sun_aperture` are
+absent and rejected. The cloud shell moved intact and is the Stage 7.2 target.
+The archived `020525` proof remains byte-identical at 117,462,947 bytes and
+SHA-256 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+All 139 `.venv` tests pass with nine skips; all 124 system-Python non-GUI tests
+pass. No PBRT render was launched.
+
 ## 2026-09-03 schema and overcast-work checkpoint
 
 The artist and assistant began the separate architectural draft
