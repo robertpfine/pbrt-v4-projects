@@ -51,9 +51,20 @@
     }
   },
 
-  "scene": {
-    "name":             "Poppy Field Overcast 8AM Study",
+  "scene_description": {
+    "mode": "new",
+    "name": "Poppy Field Overcast 8AM Study",
+    "scene_context": {
+      "date": "2026-06-21",
+      "local_time": "08:00:00",
+      "time_zone": "America/New_York",
+      "latitude": 43.0,
+      "longitude": -76.0,
+      "world_north": [0.0, 0.0, 1.0]
+    }
+  },
 
+  "scene": {
     "fog": {
       "enabled": false,
       "sigma_a": 0.000003,

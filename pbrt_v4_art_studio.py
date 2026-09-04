@@ -402,22 +402,53 @@ class Inspector(QtWidgets.QWidget):
         form = self._page(
             "scene",
             "Working Scene",
-            "A saved and rendered parameter state is one complete PBRT scene.",
+            "A saved and rendered parameter state is one complete PBRT scene. "
+            "Scene context is explicit and will control sun direction only when "
+            "astronomical direction is enabled in a later migration stage.",
         )
-        name = QtWidgets.QLineEdit(str(self.config.get(("scene", "name"))))
-        name.editingFinished.connect(
-            lambda: self._set(("scene", "name"), name.text().strip())
+        base = ("scene_description",)
+        self._choice(
+            form,
+            "Mode",
+            base + ("mode",),
+            (("New scene", "new"),),
+            "scene_description_mode",
         )
-        form.addRow("Scene name", name)
+        self._text(
+            form,
+            "Scene name",
+            base + ("name",),
+            "scene_description_name",
+        )
+        context = base + ("scene_context",)
+        self._text(form, "Date", context + ("date",), "scene_context_date")
+        self._text(
+            form,
+            "Local time",
+            context + ("local_time",),
+            "scene_context_local_time",
+        )
+        self._text(
+            form,
+            "Time zone",
+            context + ("time_zone",),
+            "scene_context_time_zone",
+        )
+        latitude = self._number(
+            form, "Latitude", context + ("latitude",), -90.0, 90.0, 5
+        )
+        latitude.setObjectName("scene_context_latitude")
+        longitude = self._number(
+            form, "Longitude", context + ("longitude",), -180.0, 180.0, 5
+        )
+        longitude.setObjectName("scene_context_longitude")
+        self._vector(form, "World north", context + ("world_north",))
         summary = QtWidgets.QPlainTextEdit(self.config.describe())
         summary.setReadOnly(True)
         summary.setMaximumHeight(155)
         form.addRow("Current state", summary)
 
         def refresh() -> None:
-            blocker = QtCore.QSignalBlocker(name)
-            name.setText(str(self.config.get(("scene", "name"))))
-            del blocker
             summary.setPlainText(self.config.describe())
 
         self.refreshers.append(refresh)

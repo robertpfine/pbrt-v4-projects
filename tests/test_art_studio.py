@@ -58,6 +58,35 @@ class ArtStudioTests(unittest.TestCase):
             },
         )
 
+    def test_scene_page_uses_scene_description_and_context(self):
+        mode = self.window.findChild(
+            QtWidgets.QComboBox, "scene_description_mode"
+        )
+        expected_text = {
+            "scene_description_name": "Poppy Field Overcast 8AM Study",
+            "scene_context_date": "2026-06-21",
+            "scene_context_local_time": "08:00:00",
+            "scene_context_time_zone": "America/New_York",
+        }
+        self.assertIsNotNone(mode)
+        self.assertEqual(mode.currentData(), "new")
+        for object_name, value in expected_text.items():
+            widget = self.window.findChild(QtWidgets.QLineEdit, object_name)
+            self.assertIsNotNone(widget, object_name)
+            self.assertEqual(widget.text(), value)
+
+        self.window.inspector._set(("scene_description", "name"), "Context Study")
+        self.window.inspector._set(
+            ("scene_description", "scene_context", "longitude"), -75.5
+        )
+        self.assertTrue(self.window.save_config())
+        data = json.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(data["scene_description"]["name"], "Context Study")
+        self.assertEqual(
+            data["scene_description"]["scene_context"]["longitude"], -75.5
+        )
+        self.assertNotIn("name", data["scene"])
+
     def test_control_change_saves_to_the_single_configuration(self):
         path = (
             "scene", "landscape", "ground", "details", "poppies", "count"

@@ -4,15 +4,17 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
+from datetime import date, datetime, time
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
 import shutil
 import tarfile
 from typing import Iterable
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 RUN_DIRECTORY = Path("scene_workspace") / ".render_runs"
@@ -36,6 +38,83 @@ def sha256_file(path: Path) -> str:
 def archive_stem(scene_name: str) -> str:
     value = re.sub(r"[^A-Za-z0-9._-]+", "_", scene_name).strip("_")
     return value or "untitled_scene"
+
+
+def configured_scene_name(config: dict) -> str:
+    """Validate the Stage 4 scene shell and return its required name."""
+
+    description = config.get("scene_description")
+    if not isinstance(description, dict):
+        raise RenderSnapshotError("scene configuration requires scene_description")
+    if description.get("mode") != "new":
+        raise RenderSnapshotError("scene_description.mode must be new")
+    name = description.get("name")
+    if not isinstance(name, str) or not name.strip():
+        raise RenderSnapshotError("scene_description.name requires a non-empty name")
+
+    context = description.get("scene_context")
+    if not isinstance(context, dict):
+        raise RenderSnapshotError("scene_description.scene_context must be an object")
+    date_value = context.get("date")
+    if not isinstance(date_value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_value):
+        raise RenderSnapshotError("scene_context.date must use YYYY-MM-DD")
+    try:
+        date.fromisoformat(date_value)
+    except ValueError as error:
+        raise RenderSnapshotError("scene_context.date must be a calendar date") from error
+
+    time_value = context.get("local_time")
+    if not isinstance(time_value, str) or not re.fullmatch(r"\d{2}:\d{2}:\d{2}", time_value):
+        raise RenderSnapshotError("scene_context.local_time must use HH:MM:SS")
+    try:
+        time.fromisoformat(time_value)
+    except ValueError as error:
+        raise RenderSnapshotError("scene_context.local_time must be a valid time") from error
+
+    time_zone = context.get("time_zone")
+    if not isinstance(time_zone, str) or not time_zone.strip():
+        raise RenderSnapshotError("scene_context.time_zone requires an IANA name")
+    try:
+        ZoneInfo(time_zone)
+    except (ValueError, ZoneInfoNotFoundError) as error:
+        raise RenderSnapshotError("scene_context.time_zone must be a valid IANA name") from error
+
+    for field, minimum, maximum in (
+        ("latitude", -90.0, 90.0),
+        ("longitude", -180.0, 180.0),
+    ):
+        value = context.get(field)
+        if (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
+            or not minimum <= value <= maximum
+        ):
+            raise RenderSnapshotError(
+                f"scene_context.{field} must be between {minimum:g} and {maximum:g}"
+            )
+
+    world_north = context.get("world_north")
+    if (
+        not isinstance(world_north, list)
+        or len(world_north) != 3
+        or any(
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
+            for value in world_north
+        )
+        or not math.isclose(world_north[1], 0.0, abs_tol=1e-9)
+        or math.hypot(world_north[0], world_north[2]) <= 1e-12
+    ):
+        raise RenderSnapshotError(
+            "scene_context.world_north must be a nonzero horizontal vector"
+        )
+
+    scene = config.get("scene")
+    if isinstance(scene, dict) and "name" in scene:
+        raise RenderSnapshotError("obsolete scene.name is not supported")
+    return name
 
 
 def _filename(value: object, label: str) -> str:
@@ -86,7 +165,7 @@ def archive_image_name(config: dict, timestamp: str) -> str:
             "file_names.archive_image must contain {scene_name} and {timestamp}"
         )
     name = pattern.replace(
-        "{scene_name}", archive_stem(str(config["scene"].get("name", "untitled_scene")))
+        "{scene_name}", archive_stem(configured_scene_name(config))
     ).replace("{timestamp}", timestamp)
     if "{" in name or "}" in name:
         raise RenderSnapshotError(
@@ -137,6 +216,7 @@ def _validate_config(path: Path) -> dict:
         raise RenderSnapshotError(f"invalid scene configuration {path}: {error}") from error
     if not isinstance(config, dict) or not isinstance(config.get("scene"), dict):
         raise RenderSnapshotError("scene configuration requires a scene object")
+    configured_scene_name(config)
     if not isinstance(config.get("camera_settings"), dict):
         raise RenderSnapshotError("scene configuration requires camera_settings")
     if not isinstance(config.get("render_settings"), dict):
@@ -209,7 +289,7 @@ def create_snapshot(
         _copy_file(config_path, snapshot_config)
         config = _validate_config(snapshot_config)
 
-        scene_name = str(config["scene"].get("name", "untitled_scene"))
+        scene_name = configured_scene_name(config)
         archive_directory = resolve_local_archive(config, repository_root)
         archive_image = archive_image_name(config, timestamp)
         prefix_name = str(Path(archive_image).with_suffix(""))

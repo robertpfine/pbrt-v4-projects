@@ -215,12 +215,13 @@ cost were temporarily removed. The Python control `020525` and C++ comparison
 byte-for-byte identical PNGs. The live configuration was then restored exactly
 to its committed pre-test contents.
 
-The compiled cloud-grid validation gate is complete. The first three live
-migration stages—file names/paths, camera settings, and render settings—are also
-complete and recorded in `docs/config-migration-progress-2026-09-04.md`. Their
-bounded structural rebuilds are byte-identical to the pre-migration PBRT scene.
-The next implementation stage establishes the `scene_description` shell, name,
-and scene context.
+The compiled cloud-grid validation gate is complete. The first four live
+migration stages—file names/paths, camera settings, render settings, and the
+scene-description shell/context—are also complete and recorded in
+`docs/config-migration-progress-2026-09-04.md`. Their bounded structural
+rebuilds are byte-identical to the pre-migration PBRT scene. The next
+implementation stage migrates landforms and their surface objects one complete
+generator at a time.
 
 Stage 1 final verification ran 86 tests in the project virtual environment:
 79 passed and seven dependency-aware tests were skipped. The explicit
@@ -241,6 +242,16 @@ in `.venv` and nine dependency-aware tests were skipped. System Python passed
 all 85 non-GUI tests. The live validator reports zero errors and the exact
 migration-only comparison against `184eb02` reports true. A fresh isolated
 build of an in-memory `020525` configuration migrated through Stages 1–3 again
+matched the archived pre-migration PBRT file byte for byte at 117,462,947 bytes
+and SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`. No
+production render was launched.
+
+Stage 4 final verification increased the project suite to 102 tests: 93 passed
+in `.venv` and nine dependency-aware tests were skipped. System Python passed
+all 88 non-GUI tests. The live validator reports zero errors and the exact
+migration-only comparison against `9e91e65` reports true. A fresh isolated
+build of an in-memory `020525` configuration migrated through Stages 1–4 again
 matched the archived pre-migration PBRT file byte for byte at 117,462,947 bytes
 and SHA-256
 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`. No

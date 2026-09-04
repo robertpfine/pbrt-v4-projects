@@ -41,6 +41,18 @@ class SceneConfigTests(unittest.TestCase):
       "blur_radius": 2.0
     }
   },
+  "scene_description": {
+    "mode": "new",
+    "name": "Original Scene",
+    "scene_context": {
+      "date": "2026-06-21",
+      "local_time": "08:00:00",
+      "time_zone": "America/New_York",
+      "latitude": 43.0,
+      "longitude": -76.0,
+      "world_north": [0.0, 0.0, 1.0]
+    }
+  },
   "scene": {
     "landscape": {
       "ground": {
@@ -173,11 +185,48 @@ class SceneConfigTests(unittest.TestCase):
             )
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
+    def test_invalid_scene_description_and_context_are_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set("scene_description.mode", "legacy")
+            config.set("scene_description.scene_context.date", "2026-02-30")
+            config.set("scene_description.scene_context.local_time", "25:00:00")
+            config.set(
+                "scene_description.scene_context.time_zone", "Not/A_Time_Zone"
+            )
+            config.set("scene_description.scene_context.latitude", 91.0)
+            config.set("scene_description.scene_context.longitude", -181.0)
+            config.set(
+                "scene_description.scene_context.world_north",
+                [0.0, 1.0, 0.0],
+            )
+            with self.assertRaises(SceneConfigError) as context:
+                config.save()
+            message = str(context.exception)
+            self.assertIn("scene_description.mode must be new", message)
+            self.assertIn("scene_context.date must be a calendar date", message)
+            self.assertIn("scene_context.local_time must be a valid time", message)
+            self.assertIn(
+                "scene_context.time_zone must be a valid IANA name", message
+            )
+            self.assertIn("scene_context.latitude must be between -90 and 90", message)
+            self.assertIn(
+                "scene_context.longitude must be between -180 and 180", message
+            )
+            self.assertIn(
+                "scene_context.world_north must be a nonzero horizontal vector",
+                message,
+            )
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
     def test_current_scene_is_valid_and_describable(self):
         root = Path(__file__).resolve().parents[1]
         config = SceneConfig(root / "scene_workspace" / "config.json")
         self.assertEqual(config.validate(), [])
         description = config.describe()
+        self.assertIn("Scene: Poppy Field Overcast 8AM Study (new)", description)
+        self.assertIn("Context: 2026-06-21 08:00:00 America/New_York", description)
         self.assertIn("Landform: flat_landform", description)
         self.assertIn("Poppies:", description)
         self.assertIn("Water: disabled", description)
@@ -206,13 +255,20 @@ class SceneConfigTests(unittest.TestCase):
             (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
         )
         self.assertEqual(
-            list(config)[:4],
-            ["file_names", "file_paths", "camera_settings", "render_settings"],
+            list(config)[:5],
+            [
+                "file_names",
+                "file_paths",
+                "camera_settings",
+                "render_settings",
+                "scene_description",
+            ],
         )
         self.assertNotIn("archive", config)
         self.assertNotIn("runtime", config)
         self.assertNotIn("pipeline", config)
         data = config["scene"]
+        self.assertNotIn("name", data)
         self.assertNotIn("camera", data)
         for obsolete in ("film", "sampler", "integrator"):
             self.assertNotIn(obsolete, data)

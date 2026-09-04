@@ -22,6 +22,21 @@ except ModuleNotFoundError:
     render_shaft_composite = None
 
 
+def scene_description(name="Original Scene"):
+    return {
+        "mode": "new",
+        "name": name,
+        "scene_context": {
+            "date": "2026-06-21",
+            "local_time": "08:00:00",
+            "time_zone": "America/New_York",
+            "latitude": 43.0,
+            "longitude": -76.0,
+            "world_north": [0.0, 0.0, 1.0],
+        },
+    }
+
+
 class RenderSnapshotTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
@@ -71,7 +86,8 @@ class RenderSnapshotTests(unittest.TestCase):
                             "blur_radius": 2.0,
                         },
                     },
-                    "scene": {"name": "Original Scene"},
+                    "scene_description": scene_description(),
+                    "scene": {},
                 }
             )
             + "\n",
@@ -87,14 +103,17 @@ class RenderSnapshotTests(unittest.TestCase):
         original_hash = sha256_file(snapshot_config)
 
         self.config.write_text(
-            json.dumps({"scene": {"name": "Changed Scene"}}) + "\n",
+            json.dumps({"scene_description": scene_description("Changed Scene")})
+            + "\n",
             encoding="utf-8",
         )
         (self.scene_root / "build_scene.py").write_text("# changed\n", encoding="utf-8")
 
         self.assertEqual(sha256_file(snapshot_config), original_hash)
         self.assertEqual(
-            json.loads(snapshot_config.read_text(encoding="utf-8"))["scene"]["name"],
+            json.loads(snapshot_config.read_text(encoding="utf-8"))[
+                "scene_description"
+            ]["name"],
             "Original Scene",
         )
 
@@ -155,7 +174,9 @@ class RenderSnapshotTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            json.loads(Path(str(prefix) + "_config.json").read_text())["scene"]["name"],
+            json.loads(Path(str(prefix) + "_config.json").read_text())[
+                "scene_description"
+            ]["name"],
             "Original Scene",
         )
         self.assertTrue(Path(str(prefix) + "_snapshot_sources.tar.gz").is_file())
@@ -176,7 +197,7 @@ class RenderSnapshotTests(unittest.TestCase):
 
     def test_snapshot_rejects_scene_files_outside_frozen_repository(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["name"] = "Unsafe Scene"
+        config["scene_description"]["name"] = "Unsafe Scene"
         config["file_paths"]["scene_files"] = "../live_scene"
         self.config.write_text(json.dumps(config), encoding="utf-8")
         with self.assertRaisesRegex(
@@ -216,6 +237,20 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "obsolete runtime root"):
             create_snapshot(self.root, self.config, "20260904_010218")
 
+    def test_snapshot_rejects_obsolete_scene_name(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["name"] = config["scene_description"]["name"]
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.name"):
+            create_snapshot(self.root, self.config, "20260904_010219")
+
+    def test_snapshot_rejects_invalid_scene_context(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene_description"]["scene_context"]["date"] = "2026-02-30"
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "calendar date"):
+            create_snapshot(self.root, self.config, "20260904_010220")
+
     def test_snapshot_freezes_configured_cloud_grid_executable(self):
         executable = self.root / "build" / "cloud_grid_builder" / "cloud_grid_builder"
         executable.parent.mkdir(parents=True)
@@ -223,8 +258,8 @@ class RenderSnapshotTests(unittest.TestCase):
         executable.chmod(0o755)
         shutil.copy2(Path("cloud_grid_contract.py"), self.root / "cloud_grid_contract.py")
         config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene_description"]["name"] = "Compiled Scene"
         config["scene"] = {
-            "name": "Compiled Scene",
             "sky": {
                 "clouds": {
                     "grid_builder": {
@@ -345,7 +380,8 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                     "backend": {"type": "vulkan", "show_statistics": False},
                     "shaft_composite": {"enabled": False},
                 },
-                "scene": {"name": "Invalid Backend"},
+                "scene_description": scene_description("Invalid Backend"),
+                "scene": {},
             }
             config_path = scene_root / "config.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
@@ -396,7 +432,8 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                     "backend": {"type": "cpu", "show_statistics": False},
                     "shaft_composite": {"enabled": True},
                 },
-                "scene": {"name": "Composite Dispatch"},
+                "scene_description": scene_description("Composite Dispatch"),
+                "scene": {},
             }
             config_path = scene_root / "config.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
@@ -449,7 +486,8 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                 "config['file_names']['pbrt_scene'])\n"
                 "os.makedirs(os.path.dirname(path), exist_ok=True)\n"
                 "with open(path, 'w') as handle: "
-                "handle.write('# SCENE: ' + config['scene']['name'] + '\\nWorldBegin\\n')\n",
+                "handle.write('# SCENE: ' + config['scene_description']['name'] + "
+                "'\\nWorldBegin\\n')\n",
                 encoding="utf-8",
             )
 
@@ -491,8 +529,8 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                         "blur_radius": 2.0,
                     },
                 },
+                "scene_description": scene_description(),
                 "scene": {
-                    "name": "Original Scene",
                     "trees": [],
                 },
             }
@@ -513,7 +551,7 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
             for line in process.stdout:
                 output_lines.append(line)
                 if line.startswith("Render inputs frozen:"):
-                    config["scene"]["name"] = "Changed Scene"
+                    config["scene_description"]["name"] = "Changed Scene"
                     config_path.write_text(json.dumps(config), encoding="utf-8")
                 if line.startswith("Pipeline complete:"):
                     break
@@ -530,7 +568,9 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
             )
             self.assertEqual(len(archived_configs), 1)
             archived_config = json.loads(archived_configs[0].read_text(encoding="utf-8"))
-            self.assertEqual(archived_config["scene"]["name"], "Original Scene")
+            self.assertEqual(
+                archived_config["scene_description"]["name"], "Original Scene"
+            )
             archived_scenes = list(
                 (root / "SavedRenders").glob("proof-Original_Scene-*.pbrt")
             )

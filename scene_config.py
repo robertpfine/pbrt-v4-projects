@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import date, time
 import json
 import math
 import os
 from pathlib import Path
+import re
 import tempfile
 from typing import Any, Iterable
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 JsonPath = tuple[str | int, ...]
@@ -316,8 +319,95 @@ class SceneConfig:
             errors.append("obsolete runtime root must be removed after render migration")
         if "pipeline" in self.data:
             errors.append("obsolete pipeline root must be removed after render migration")
+
+        scene_description = require(("scene_description",), dict)
+        if scene_description is not None:
+            if scene_description.get("mode") != "new":
+                errors.append("scene_description.mode must be new")
+            scene_name = scene_description.get("name")
+            if not isinstance(scene_name, str) or not scene_name.strip():
+                errors.append("scene_description.name must be a non-empty name")
+
+            context = scene_description.get("scene_context")
+            if not isinstance(context, dict):
+                errors.append("scene_description.scene_context must be an object")
+            else:
+                date_value = context.get("date")
+                if (
+                    not isinstance(date_value, str)
+                    or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_value)
+                ):
+                    errors.append("scene_context.date must use YYYY-MM-DD")
+                else:
+                    try:
+                        date.fromisoformat(date_value)
+                    except ValueError:
+                        errors.append("scene_context.date must be a calendar date")
+
+                time_value = context.get("local_time")
+                if (
+                    not isinstance(time_value, str)
+                    or not re.fullmatch(r"\d{2}:\d{2}:\d{2}", time_value)
+                ):
+                    errors.append("scene_context.local_time must use HH:MM:SS")
+                else:
+                    try:
+                        time.fromisoformat(time_value)
+                    except ValueError:
+                        errors.append("scene_context.local_time must be a valid time")
+
+                time_zone = context.get("time_zone")
+                if not isinstance(time_zone, str) or not time_zone.strip():
+                    errors.append("scene_context.time_zone must be an IANA name")
+                else:
+                    try:
+                        ZoneInfo(time_zone)
+                    except (ValueError, ZoneInfoNotFoundError):
+                        errors.append(
+                            "scene_context.time_zone must be a valid IANA name"
+                        )
+
+                for field, minimum, maximum in (
+                    ("latitude", -90.0, 90.0),
+                    ("longitude", -180.0, 180.0),
+                ):
+                    value = context.get(field)
+                    if (
+                        not isinstance(value, (int, float))
+                        or isinstance(value, bool)
+                        or not math.isfinite(value)
+                        or not minimum <= value <= maximum
+                    ):
+                        errors.append(
+                            f"scene_context.{field} must be between "
+                            f"{minimum:g} and {maximum:g}"
+                        )
+
+                world_north = context.get("world_north")
+                if (
+                    not isinstance(world_north, list)
+                    or len(world_north) != 3
+                    or any(
+                        not isinstance(value, (int, float))
+                        or isinstance(value, bool)
+                        or not math.isfinite(value)
+                        for value in world_north
+                    )
+                    or not math.isclose(world_north[1], 0.0, abs_tol=1e-9)
+                    or math.hypot(world_north[0], world_north[2]) <= 1e-12
+                ):
+                    errors.append(
+                        "scene_context.world_north must be a nonzero "
+                        "horizontal vector"
+                    )
+
         scene_root = self.get(("scene",), {})
         if isinstance(scene_root, dict):
+            if "name" in scene_root:
+                errors.append(
+                    "obsolete scene.name must be removed after "
+                    "scene_description migration"
+                )
             for name in ("master_file", "output_filename", "generated_medium"):
                 if name in scene_root:
                     errors.append(
@@ -806,6 +896,8 @@ class SceneConfig:
         return errors
 
     def describe(self) -> str:
+        scene_description = self.get(("scene_description",))
+        context = scene_description["scene_context"]
         enabled_trees = []
         for entry in self.get(("scene", "lsystem_trees"), []):
             if entry.get("enabled", False):
@@ -827,6 +919,10 @@ class SceneConfig:
             for layer in distant_hills.get("layers", [])
         )
         return "\n".join((
+            f"Scene: {scene_description['name']} ({scene_description['mode']})",
+            f"Context: {context['date']} {context['local_time']} "
+            f"{context['time_zone']}, {context['latitude']:.3f}, "
+            f"{context['longitude']:.3f}",
             f"Landform: {self.get(GROUND_PATH + ('active_landform',))}",
             f"Grass: {'enabled' if grass.get('enabled') else 'disabled'}, "
             f"{grass_count:,} tufts",

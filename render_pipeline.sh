@@ -36,7 +36,7 @@ FINAL_IMAGE=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.archive_image')
 echo "Render inputs frozen: $RUN_DIRECTORY"
 
 # --- 2. PARSE CONFIG VIA JQ ---
-SCENE_NAME=$(jq -r '.scene.name // "untitled_scene"' "$CONFIG_FILE")
+SCENE_NAME=$(jq -r '.scene_description.name' "$CONFIG_FILE")
 REMOTE_PATH=$(jq -r '.file_paths.remote_archive'   "$CONFIG_FILE")
 PBRT_BIN=$(jq    -r '.file_paths.pbrt_executable'  "$CONFIG_FILE")
 BACKEND_TYPE=$(jq -r '.render_settings.backend.type' "$CONFIG_FILE")

@@ -418,3 +418,110 @@ All Stage 3 acceptance requirements are satisfied. The next approved stage is
 to establish the `scene_description` shell with `mode`, the migrated scene
 name, and `scene_context`, while continuing to keep only one authoritative
 configuration.
+
+## Stage 4 — scene description shell and context
+
+Status: implementation and validation complete from pushed Stage 3 checkpoint
+`9e91e65`
+
+### Exact target and bounded scope
+
+Stage 4 inserts this root immediately after `render_settings`:
+
+```json
+"scene_description": {
+  "mode": "new",
+  "name": "Poppy Field Overcast 8AM Study",
+  "scene_context": {
+    "date": "2026-06-21",
+    "local_time": "08:00:00",
+    "time_zone": "America/New_York",
+    "latitude": 43.0,
+    "longitude": -76.0,
+    "world_north": [0.0, 0.0, 1.0]
+  }
+}
+```
+
+The existing `scene.name` value moves once to `scene_description.name` and the
+old path is removed. The six approved context values are explicit new metadata
+that will affect lighting only after a later sky/sun stage adds
+`use_astronomical_direction`; current explicit light directions remain
+unchanged.
+
+The remaining legacy `scene` object deliberately stays beside the new shell
+for now. Landforms, independent objects, sky, atmosphere, and water move in
+their later approved stages, one complete subsystem at a time. Creating empty
+placeholder modules in `scene_description` now would duplicate those still-live
+concepts, so Stage 4 does not do that.
+
+### Consumer inventory
+
+- `render_pipeline.sh` displays the migrated name from the frozen JSON.
+- `render_snapshot.py` derives archive names and manifest metadata from
+  `scene_description.name`, validates the complete shell/context contract, and
+  rejects obsolete `scene.name` before a render can proceed.
+- `scene_workspace/build_scene.py` uses the migrated name in the PBRT header and
+  direct-builder progress output while continuing to read not-yet-migrated
+  scene modules from the temporary legacy root.
+- `scene_config.py` validates mode, name, ISO date/time, IANA time zone,
+  latitude, longitude, and nonzero horizontal world north, and rejects the old
+  name path.
+- The Qt Scene page exposes every shell and context value through the sole live
+  JSON, while its summary reports the active name, mode, time, and location.
+- Snapshot, pipeline, formatting-preserving configuration, direct builder, and
+  offscreen Qt tests form the regression boundary.
+
+### Progress and verification record
+
+- Verified a clean synchronized `pbrt-v4-art-studio` worktree at `9e91e65`
+  before beginning Stage 4.
+- Added only the approved `scene_description` shell/context and moved the live
+  name without altering any current landform, object, sky, atmosphere, water,
+  camera, render, file, or path value.
+- Removed all operational reads of `scene.name`; remaining occurrences are
+  rejection tests, migration maps, and historical documentation.
+- Focused `.venv` verification ran 60 tests: 56 passed and four
+  NumPy/Pillow-dependent tests were skipped. The matching system-Python subset
+  passed all 46 tests.
+- The complete `.venv` suite ran 102 tests: 93 passed and nine
+  dependency-aware tests were skipped. System Python passed all 88 non-GUI
+  tests.
+- Live validation reports zero errors. Python byte-compilation, shell syntax,
+  and `git diff --check` all pass.
+
+### Exact Stage 4 migration audit
+
+A mechanical comparison starts from `9e91e65`, removes only `scene.name`, and
+inserts that same value plus the approved context at the new root. It reports:
+
+```text
+stage_four_only True
+root_order ['file_names', 'file_paths', 'camera_settings', 'render_settings', 'scene_description', 'scene']
+scene_name_present False
+scene_description_keys ['mode', 'name', 'scene_context']
+```
+
+### Stage 4 structural PBRT comparison
+
+The archived `020525` configuration was migrated through Stages 1–4 entirely
+in memory and built with the current builder in a temporary `/tmp` workspace.
+No second scene JSON was written and PBRT was not launched. The emitted scene
+is byte-for-byte identical to the pre-migration artifact:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 4 size:        117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The temporary comparison directory was removed automatically. The live,
+gitignored generated scene was not rebuilt or altered, and no production render
+was launched.
+
+### Stage 4 result
+
+All Stage 4 acceptance requirements are satisfied. The next approved work is
+Stage 5: migrate landforms and their surface objects one complete generator at
+a time, beginning with a fresh exact ownership and consumer inventory.

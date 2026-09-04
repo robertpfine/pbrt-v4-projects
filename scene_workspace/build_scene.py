@@ -705,7 +705,7 @@ def write_medium(cfg, scene_root):
 def write_header(lines, scene_name):
     """
     Write the comment header at the top of scene.pbrt.
-    Config reads: scene.name
+    Config reads: scene_description.name
     """
     lines += [
         "# FILE: scene.pbrt",
@@ -3185,11 +3185,12 @@ def write_scene(cfg, scene_root, medium_rel_path):
       Pre-world:  header, camera, sampler, integrator, film, medium Include
       World:      WorldBegin, lights, geometry
 
-    Config reads: camera_settings, render_settings, scene.*, file_names.*,
-                  and file_paths.scene_files
+    Config reads: camera_settings, render_settings, scene_description.name,
+                  scene.*, file_names.*, and file_paths.scene_files
     Output file:  file_paths.scene_files/file_names.pbrt_scene
     """
     scene    = cfg["scene"]
+    scene_description = cfg["scene_description"]
     camera_settings = cfg["camera_settings"]
     render_settings = cfg["render_settings"]
     scene_files_root = configured_scene_files(cfg, scene_root)
@@ -3198,7 +3199,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     lines    = []
 
     # --- Pre-world section ---
-    write_header(lines, scene.get("name", "untitled_scene"))
+    write_header(lines, scene_description["name"])
     write_fog_medium(cfg, lines)
     write_camera(lines, camera_settings)
     write_sampler(lines, render_settings["sampler"])
@@ -3338,7 +3339,7 @@ def main():
 
     scene_root = os.path.dirname(os.path.abspath(config_path))
 
-    print(f"Building scene: {cfg['scene'].get('name', 'untitled_scene')}")
+    print(f"Building scene: {cfg['scene_description']['name']}")
     medium_rel = write_medium(cfg, scene_root)
     write_scene(cfg, scene_root, medium_rel)
     print("Build complete.")

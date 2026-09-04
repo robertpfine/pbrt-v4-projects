@@ -54,7 +54,8 @@ technical choices.
 
 The active configuration no longer contains a top-level `project` object:
 
-- `scene.name` identifies the current working scene for archive filenames.
+- `scene_description.name` identifies the current working scene for archive
+  filenames.
 - `file_names` now owns the PBRT, working-image, and archive-image names.
 - `file_paths` now owns scene outputs, local and remote archives, and the PBRT
   executable.
@@ -507,11 +508,12 @@ order:
    geometry, placement, material, color, and surface objects remain
    adjacent. Begin from the landform-first principle: choose a landform, then
    decide its relief, appearance, and surface objects.
-   The first three live migration stages are complete: `file_names`,
-   `file_paths`, `camera_settings`, and `render_settings` are active, their old
-   paths are absent, every known consumer uses the new locations, and bounded
-   rebuilds reproduced the pre-migration PBRT scene byte for byte. The next
-   stage establishes the `scene_description` shell, name, and scene context.
+   The first four live migration stages are complete: `file_names`,
+   `file_paths`, `camera_settings`, `render_settings`, and the
+   `scene_description` shell/context are active, their old paths are absent,
+   every known consumer uses the new locations, and bounded rebuilds reproduced
+   the pre-migration PBRT scene byte for byte. The next stage migrates
+   landforms and their surface objects one complete generator at a time.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -555,12 +557,13 @@ Additional continuity requirements:
 12. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
-## 2026-09-04 first three live configuration-migration stages
+## 2026-09-04 first four live configuration-migration stages
 
-The first three staged migrations are implemented in the sole authoritative
+The first four staged migrations are implemented in the sole authoritative
 `scene_workspace/config.json`. Its roots are now `file_names`, `file_paths`,
-`camera_settings`, `render_settings`, and the not-yet-migrated `scene`, in that
-order. The old top-level `archive`, `runtime`, and `pipeline` objects and
+`camera_settings`, `render_settings`, `scene_description`, and the temporary
+not-yet-migrated `scene`, in that order. The old top-level `archive`, `runtime`,
+and `pipeline` objects and
 `scene.master_file`, `scene.output_filename`, `scene.generated_medium`,
 `scene.camera`, `scene.film`, `scene.sampler`, and `scene.integrator` are absent;
 there are no duplicate compatibility readers. A configured remote archive now
@@ -596,9 +599,22 @@ of the same `020525` diagnostic configuration again produced the exact
 tests (89 passed, nine dependency-aware skips), and all 85 system-Python
 non-GUI tests passed. No PBRT render was launched.
 
-The next migration stage establishes `scene_description` with `mode`, the
-migrated scene name, and `scene_context`, preserving the one-live-JSON rule and
-moving operational consumers together.
+Stage 4 established root `scene_description` with `mode: "new"`, moved the
+existing scene name there, and added explicit June 21, 8:00 AM,
+`America/New_York`, latitude 43, longitude -76, and +Z world-north context. The
+context is metadata until the later sun migration explicitly selects
+astronomical direction; current light directions and rendered behavior remain
+unchanged. The pipeline, immutable snapshot, builder, validator, Qt Scene page,
+and tests all consume the migrated name. The old `scene.name` path is absent.
+The remaining `scene` object intentionally retains not-yet-migrated subsystems
+rather than duplicating them under empty placeholders. A fresh in-memory
+migration and isolated build of `020525` again produced the exact
+117,462,947-byte PBRT scene and SHA-256 above. The complete `.venv` suite ran
+102 tests (93 passed, nine dependency-aware skips), and all 88 system-Python
+non-GUI tests passed. No PBRT render was launched.
+
+The next migration stage moves landforms and their surface objects one complete
+generator at a time, starting with an exact ownership and consumer inventory.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 
@@ -606,7 +622,9 @@ The artist and assistant began the separate architectural draft
 `docs/config-schema-new-scene.md`. It documents only
 `scene_description.mode: "new"`; it is not a runnable configuration and does
 not replace the one authoritative live `scene_workspace/config.json`. The live
-file has not yet migrated to this proposal.
+file is now migrating to this proposal in bounded checkpoints; its shell and
+context are active while later scene subsystems remain at temporary legacy
+paths until their own stages.
 
 The approved first four configuration sections are `file_names`, `file_paths`,
 `camera_settings`, and `render_settings`, followed by `scene_description`.
