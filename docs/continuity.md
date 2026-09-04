@@ -508,12 +508,14 @@ order:
    geometry, placement, material, color, and surface objects remain
    adjacent. Begin from the landform-first principle: choose a landform, then
    decide its relief, appearance, and surface objects.
-   The first four live migration stages are complete: `file_names`,
+   The first four live migration stages and Stage 5A are complete: `file_names`,
    `file_paths`, `camera_settings`, `render_settings`, and the
-   `scene_description` shell/context are active, their old paths are absent,
-   every known consumer uses the new locations, and bounded rebuilds reproduced
-   the pre-migration PBRT scene byte for byte. The next stage migrates
-   landforms and their surface objects one complete generator at a time.
+   `scene_description` shell/context are active; the foreground terrain
+   alternatives, their geometry/topography, material, and texture now live in
+   `scene_description.landforms`. Their old paths are absent, every known
+   consumer uses the new locations, and bounded rebuilds reproduced the
+   pre-migration PBRT scene byte for byte. Stage 5B next migrates surface-object
+   generators one at a time.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -543,9 +545,12 @@ order:
 
 Additional continuity requirements:
 
-8. Preserve `scene.landscape.ground` and `scene.sky.background` as the migrated
-   homes of the accepted ground system and neutral infinite sky respectively.
-   Do not create another scene JSON or change accepted rendered behavior.
+8. Preserve `scene_description.landforms` as the migrated home of foreground
+   terrain geometry, topography, material, and texture. Until their individual
+   Stage 5B moves, preserve the remaining generators under the temporary
+   `scene.landscape.ground.details`. Preserve `scene.sky.background` until its
+   later sky stage. Do not create another scene JSON or change accepted rendered
+   behavior.
 9. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
 10. Keep renderer implementations subordinate to artistic categories; in
@@ -557,9 +562,10 @@ Additional continuity requirements:
 12. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
-## 2026-09-04 first four live configuration-migration stages
+## 2026-09-04 live configuration-migration Stages 1–5A
 
-The first four staged migrations are implemented in the sole authoritative
+The first four staged migrations and the foreground landform-core substage are
+implemented in the sole authoritative
 `scene_workspace/config.json`. Its roots are now `file_names`, `file_paths`,
 `camera_settings`, `render_settings`, `scene_description`, and the temporary
 not-yet-migrated `scene`, in that order. The old top-level `archive`, `runtime`,
@@ -613,8 +619,26 @@ migration and isolated build of `020525` again produced the exact
 102 tests (93 passed, nine dependency-aware skips), and all 88 system-Python
 non-GUI tests passed. No PBRT render was launched.
 
-The next migration stage moves landforms and their surface objects one complete
-generator at a time, starting with an exact ownership and consumer inventory.
+Stage 5A moved both retained foreground terrain alternatives to
+`scene_description.landforms[]`. Each now owns explicit placement, one named
+plane patch, `terrain_heightfield` topography parameters, surface material,
+surface texture, and an empty `surface_objects` array. The former active
+`flat_landform` is enabled and `right_dip_rise` remains an independently
+disabled reversible alternative. The old `ground.enabled`,
+`ground.active_landform`, `ground.landforms`, `ground.material`, and
+`ground.details.surface` paths are absent and rejected by both configuration
+and render-snapshot validation. The builder, terrain adapter, shaft pass, Qt
+inspector, preview helper, tests, and subsystem documentation consume the new
+paths. The only temporary `scene.landscape.ground` child is `details`, containing
+the five not-yet-migrated surface-object generators.
+
+A fresh in-memory migration of the archived `020525` diagnostic configuration
+again produced its exact 117,462,947-byte PBRT scene and SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite ran 108 tests (99 passed and nine dependency-aware
+skips), and all 94 system-Python non-GUI tests passed. No PBRT render was
+launched. Stage 5B next migrates the retained surface-object generators one at
+a time, beginning with grass.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

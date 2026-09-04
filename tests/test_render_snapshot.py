@@ -34,6 +34,36 @@ def scene_description(name="Original Scene"):
             "longitude": -76.0,
             "world_north": [0.0, 0.0, 1.0],
         },
+        "landforms": [
+            {
+                "name": "flat",
+                "enabled": True,
+                "placement": {
+                    "position": [0.0, 0.0, 0.0],
+                    "rotation_degrees": [0.0, 0.0, 0.0],
+                },
+                "geometry": {
+                    "patches": [
+                        {
+                            "name": "main_patch",
+                            "enabled": True,
+                            "generator": "plane",
+                            "dimensions": [10.0, 10.0],
+                            "subdivisions": [3, 3],
+                            "local_position": [0.0, 0.0, 0.0],
+                            "local_rotation_degrees": [0.0, 0.0, 0.0],
+                        }
+                    ]
+                },
+                "topography": {
+                    "enabled": True,
+                    "generator": "terrain_heightfield",
+                    "parameters": {},
+                },
+                "surface": {"material": {}, "texture": {}},
+                "surface_objects": [],
+            }
+        ],
     }
 
 
@@ -243,6 +273,24 @@ class RenderSnapshotTests(unittest.TestCase):
         self.config.write_text(json.dumps(config), encoding="utf-8")
         with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.name"):
             create_snapshot(self.root, self.config, "20260904_010219")
+
+    def test_snapshot_rejects_obsolete_ground_landform_core(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"] = {
+            "landscape": {
+                "ground": {"active_landform": "flat", "details": {}}
+            }
+        }
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "active_landform"):
+            create_snapshot(self.root, self.config, "20260904_010220")
+
+    def test_snapshot_requires_one_enabled_terrain_landform(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene_description"]["landforms"][0]["enabled"] = False
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "exactly one enabled"):
+            create_snapshot(self.root, self.config, "20260904_010221")
 
     def test_snapshot_rejects_invalid_scene_context(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
@@ -646,20 +694,44 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
     def test_composite_passes_use_migrated_scene_filenames(self):
         config = {
             "file_names": {"pbrt_scene": "scene.pbrt"},
+            "scene_description": scene_description(),
             "scene": {
                 "sun_aperture": {"enabled": True},
                 "lights": [{"label": "shaft_sun", "enabled": True}],
-                "landscape": {"ground": {}},
+                "landscape": {
+                    "ground": {
+                        "details": {
+                            "grass": {"reflectance": [0.4, 0.5, 0.6]}
+                        }
+                    }
+                },
             },
+        }
+        config["scene_description"]["landforms"][0]["surface"] = {
+            "material": {"reflectance": [0.2, 0.3, 0.4]},
+            "texture": {},
         }
         base = render_shaft_composite.configure_base(config, "shaft_sun")
         shaft = render_shaft_composite.configure_shaft(
-            config, "shaft_sun", 0.0, 0.0
+            config, "shaft_sun", 0.1, 0.01
         )
         self.assertEqual(base["file_names"]["pbrt_scene"], "scene_base.pbrt")
         self.assertEqual(shaft["file_names"]["pbrt_scene"], "scene_shaft.pbrt")
         self.assertNotIn("master_file", base["scene"])
         self.assertNotIn("master_file", shaft["scene"])
+        self.assertEqual(
+            shaft["scene_description"]["landforms"][0]["surface"],
+            {
+                "material": {"reflectance": [0.002, 0.003, 0.004]},
+                "texture": {},
+            },
+        )
+        self.assertEqual(
+            shaft["scene"]["landscape"]["ground"]["details"]["grass"][
+                "reflectance"
+            ],
+            [0.004, 0.005, 0.006],
+        )
 
     def test_entry_point_reexecutes_the_frozen_script_and_config(self):
         result = {

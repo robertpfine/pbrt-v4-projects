@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 JsonPath = tuple[str | int, ...]
 _MISSING = object()
 GROUND_PATH: JsonPath = ("scene", "landscape", "ground")
+LANDFORMS_PATH: JsonPath = ("scene_description", "landforms")
 HILLS_PATH: JsonPath = ("scene", "landscape", "distant_hills")
 SKY_PATH: JsonPath = ("scene", "sky")
 
@@ -195,12 +196,36 @@ class SceneConfig:
             self._pending[normalized] = deepcopy(value)
 
     def landform_names(self) -> tuple[str, ...]:
-        landforms = self.get(GROUND_PATH + ("landforms",))
-        if not isinstance(landforms, dict):
+        landforms = self.get(LANDFORMS_PATH)
+        if not isinstance(landforms, list):
             raise SceneConfigError(
-                "scene.landscape.ground.landforms must be an object"
+                "scene_description.landforms must be an array"
             )
-        return tuple(landforms)
+        return tuple(
+            landform["name"]
+            for landform in landforms
+            if isinstance(landform, dict) and isinstance(landform.get("name"), str)
+        )
+
+    def terrain_landform_index(self) -> int:
+        """Return the sole enabled terrain-heightfield landform index."""
+
+        landforms = self.get(LANDFORMS_PATH)
+        matches = [
+            index
+            for index, landform in enumerate(landforms)
+            if isinstance(landform, dict)
+            and landform.get("enabled", False)
+            and isinstance(landform.get("topography"), dict)
+            and landform["topography"].get("enabled", False)
+            and landform["topography"].get("generator")
+            == "terrain_heightfield"
+        ]
+        if len(matches) != 1:
+            raise SceneConfigError(
+                "scene requires exactly one enabled terrain_heightfield landform"
+            )
+        return matches[0]
 
     def validate(self) -> list[str]:
         errors: list[str] = []
@@ -399,6 +424,181 @@ class SceneConfig:
                     errors.append(
                         "scene_context.world_north must be a nonzero "
                         "horizontal vector"
+                    )
+
+            landforms = scene_description.get("landforms")
+            if not isinstance(landforms, list):
+                errors.append("scene_description.landforms must be an array")
+            else:
+                names: list[str] = []
+                enabled_terrain_count = 0
+                for index, landform in enumerate(landforms):
+                    prefix = f"scene_description.landforms.{index}"
+                    if not isinstance(landform, dict):
+                        errors.append(f"{prefix} must be an object")
+                        continue
+                    name = landform.get("name")
+                    if not isinstance(name, str) or not name.strip():
+                        errors.append(f"{prefix}.name must be a non-empty string")
+                    else:
+                        names.append(name)
+                    enabled = landform.get("enabled")
+                    if not isinstance(enabled, bool):
+                        errors.append(f"{prefix}.enabled must be boolean")
+
+                    placement = landform.get("placement")
+                    if not isinstance(placement, dict):
+                        errors.append(f"{prefix}.placement must be an object")
+                    else:
+                        for field in ("position", "rotation_degrees"):
+                            vector = placement.get(field)
+                            if (
+                                not isinstance(vector, list)
+                                or len(vector) != 3
+                                or any(
+                                    not isinstance(value, (int, float))
+                                    or isinstance(value, bool)
+                                    or not math.isfinite(value)
+                                    for value in vector
+                                )
+                            ):
+                                errors.append(
+                                    f"{prefix}.placement.{field} must contain "
+                                    "3 finite numbers"
+                                )
+
+                    geometry = landform.get("geometry")
+                    patches = (
+                        geometry.get("patches")
+                        if isinstance(geometry, dict)
+                        else None
+                    )
+                    if not isinstance(patches, list) or not patches:
+                        errors.append(f"{prefix}.geometry.patches must be a non-empty array")
+                    else:
+                        patch_names: list[str] = []
+                        for patch_index, patch in enumerate(patches):
+                            patch_prefix = (
+                                f"{prefix}.geometry.patches.{patch_index}"
+                            )
+                            if not isinstance(patch, dict):
+                                errors.append(f"{patch_prefix} must be an object")
+                                continue
+                            patch_name = patch.get("name")
+                            if not isinstance(patch_name, str) or not patch_name.strip():
+                                errors.append(
+                                    f"{patch_prefix}.name must be a non-empty string"
+                                )
+                            else:
+                                patch_names.append(patch_name)
+                            if not isinstance(patch.get("enabled"), bool):
+                                errors.append(f"{patch_prefix}.enabled must be boolean")
+                            if patch.get("generator") != "plane":
+                                errors.append(f"{patch_prefix}.generator must be plane")
+                            dimensions = patch.get("dimensions")
+                            if (
+                                not isinstance(dimensions, list)
+                                or len(dimensions) != 2
+                                or any(
+                                    not isinstance(value, (int, float))
+                                    or isinstance(value, bool)
+                                    or not math.isfinite(value)
+                                    or value <= 0
+                                    for value in dimensions
+                                )
+                            ):
+                                errors.append(
+                                    f"{patch_prefix}.dimensions must contain 2 positive numbers"
+                                )
+                            subdivisions = patch.get("subdivisions")
+                            if (
+                                not isinstance(subdivisions, list)
+                                or len(subdivisions) != 2
+                                or any(
+                                    not isinstance(value, int)
+                                    or isinstance(value, bool)
+                                    or value < 2
+                                    for value in subdivisions
+                                )
+                            ):
+                                errors.append(
+                                    f"{patch_prefix}.subdivisions must contain 2 integers at least 2"
+                                )
+                            for field in (
+                                "local_position",
+                                "local_rotation_degrees",
+                            ):
+                                vector = patch.get(field)
+                                if (
+                                    not isinstance(vector, list)
+                                    or len(vector) != 3
+                                    or any(
+                                        not isinstance(value, (int, float))
+                                        or isinstance(value, bool)
+                                        or not math.isfinite(value)
+                                        for value in vector
+                                    )
+                                ):
+                                    errors.append(
+                                        f"{patch_prefix}.{field} must contain 3 finite numbers"
+                                    )
+                        if len(patch_names) != len(set(patch_names)):
+                            errors.append(f"{prefix}.geometry patch names must be unique")
+
+                    topography = landform.get("topography")
+                    if not isinstance(topography, dict):
+                        errors.append(f"{prefix}.topography must be an object")
+                    else:
+                        if not isinstance(topography.get("enabled"), bool):
+                            errors.append(f"{prefix}.topography.enabled must be boolean")
+                        if topography.get("generator") != "terrain_heightfield":
+                            errors.append(
+                                f"{prefix}.topography.generator must be terrain_heightfield"
+                            )
+                        else:
+                            rotations = []
+                            if isinstance(placement, dict):
+                                rotations.append(placement.get("rotation_degrees"))
+                            if isinstance(patches, list):
+                                rotations.extend(
+                                    patch.get("local_rotation_degrees")
+                                    for patch in patches
+                                    if isinstance(patch, dict)
+                                )
+                            if any(
+                                isinstance(rotation, list)
+                                and len(rotation) == 3
+                                and any(value != 0 for value in rotation)
+                                for rotation in rotations
+                            ):
+                                errors.append(
+                                    f"{prefix} terrain_heightfield rotations "
+                                    "must currently be zero"
+                                )
+                        if not isinstance(topography.get("parameters"), dict):
+                            errors.append(f"{prefix}.topography.parameters must be an object")
+                        if (
+                            enabled is True
+                            and topography.get("enabled") is True
+                            and topography.get("generator") == "terrain_heightfield"
+                        ):
+                            enabled_terrain_count += 1
+
+                    surface = landform.get("surface")
+                    if not isinstance(surface, dict):
+                        errors.append(f"{prefix}.surface must be an object")
+                    else:
+                        for field in ("material", "texture"):
+                            if not isinstance(surface.get(field), dict):
+                                errors.append(f"{prefix}.surface.{field} must be an object")
+                    if not isinstance(landform.get("surface_objects"), list):
+                        errors.append(f"{prefix}.surface_objects must be an array")
+
+                if len(names) != len(set(names)):
+                    errors.append("scene_description.landform names must be unique")
+                if enabled_terrain_count != 1:
+                    errors.append(
+                        "scene requires exactly one enabled terrain_heightfield landform"
                     )
 
         scene_root = self.get(("scene",), {})
@@ -617,12 +817,20 @@ class SceneConfig:
             elif not isinstance(water.get("enabled", False), bool):
                 errors.append("water.enabled must be boolean")
         if ground is not None:
-            active = ground.get("active_landform")
-            landforms = ground.get("landforms")
-            if not isinstance(active, str) or not isinstance(landforms, dict):
-                errors.append("landscape.ground requires active_landform and landforms")
-            elif active not in landforms:
-                errors.append(f"unknown active landform: {active}")
+            for name in ("enabled", "active_landform", "landforms", "material"):
+                if name in ground:
+                    errors.append(
+                        f"obsolete scene.landscape.ground.{name} must be removed "
+                        "after landform migration"
+                    )
+            details = ground.get("details")
+            if not isinstance(details, dict):
+                errors.append("landscape.ground.details must be an object")
+            elif "surface" in details:
+                errors.append(
+                    "obsolete scene.landscape.ground.details.surface must be "
+                    "removed after landform migration"
+                )
 
         sky = require(SKY_PATH, dict)
         if sky is not None:
@@ -923,7 +1131,11 @@ class SceneConfig:
             f"Context: {context['date']} {context['local_time']} "
             f"{context['time_zone']}, {context['latitude']:.3f}, "
             f"{context['longitude']:.3f}",
-            f"Landform: {self.get(GROUND_PATH + ('active_landform',))}",
+            "Landform: " + ", ".join(
+                landform.get("name", "unnamed")
+                for landform in self.get(LANDFORMS_PATH)
+                if landform.get("enabled", False)
+            ),
             f"Grass: {'enabled' if grass.get('enabled') else 'disabled'}, "
             f"{grass_count:,} tufts",
             f"Poppies: {'enabled' if poppies.get('enabled') else 'disabled'}, "

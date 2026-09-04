@@ -5,21 +5,26 @@ PBRT-v4 Art Studio keeps one authoritative configuration at
 artistic boundaries without changing the accepted rendered scene:
 
 ```text
-scene
+scene_description
+└── landforms[]
+    ├── placement
+    ├── geometry.patches[]
+    ├── topography
+    ├── surface
+    │   ├── material
+    │   └── texture
+    └── surface_objects[]
+
+scene (temporary migration root)
 ├── fog
 ├── rain
 ├── landscape
-│   ├── ground
-│   │   ├── active_landform
-│   │   ├── landforms
-│   │   ├── material
-│   │   └── details
-│   │       ├── surface
-│   │       ├── grass
-│   │       ├── poppies
-│   │       ├── litter
-│   │       ├── rocks
-│   │       └── undergrowth
+│   ├── ground.details
+│   │   ├── grass
+│   │   ├── poppies
+│   │   ├── litter
+│   │   ├── rocks
+│   │   └── undergrowth
 │   ├── water
 │   └── distant_hills
 └── sky
@@ -29,9 +34,12 @@ scene
 
 ## Landscape
 
-`scene.landscape.ground` owns the contiguous ground system: landform geometry,
-ground material, surface treatment, and terrain-aware detail populations. The
-complete former `scene.terrain` object moved here without changing its values.
+`scene_description.landforms` now owns foreground landform geometry,
+topography, material, and surface texture. The retained `right_dip_rise` and
+`flat_landform` alternatives are independent entries; `flat_landform` is the
+sole enabled terrain heightfield. The temporary
+`scene.landscape.ground.details` object contains only surface-object generators
+that have not reached their individual migration substages.
 
 `scene.landscape.distant_hills` is the explicit boundary for receding-horizon
 geometry. Its generator and Qt controls remain independent of the accepted

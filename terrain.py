@@ -180,17 +180,52 @@ class RollingHillside:
 
 
 def create_terrain(config):
-    """Create an enabled terrain implementation from configuration."""
+    """Create one enabled terrain-heightfield landform implementation."""
 
     if not config.get("enabled", False):
         return None
-    active_landform = config.get("active_landform")
-    if active_landform is not None:
-        landforms = config.get("landforms", {})
-        if active_landform not in landforms:
-            raise ValueError(f"unknown active landform: {active_landform}")
-        return RollingHillside(landforms[active_landform])
-    terrain_type = config.get("type", "rolling_hillside")
-    if terrain_type != "rolling_hillside":
-        raise ValueError(f"unsupported terrain type: {terrain_type}")
-    return RollingHillside(config)
+    topography = config.get("topography", {})
+    if not topography.get("enabled", False):
+        return None
+    if topography.get("generator") != "terrain_heightfield":
+        raise ValueError(
+            f"unsupported topography generator: {topography.get('generator')!r}"
+        )
+
+    patches = config.get("geometry", {}).get("patches", [])
+    plane_patches = [
+        patch
+        for patch in patches
+        if patch.get("enabled", False) and patch.get("generator") == "plane"
+    ]
+    if len(plane_patches) != 1:
+        raise ValueError(
+            "terrain_heightfield requires exactly one enabled plane patch"
+        )
+    patch = plane_patches[0]
+    placement = config.get("placement", {})
+    position = placement.get("position", [0.0, 0.0, 0.0])
+    local_position = patch.get("local_position", [0.0, 0.0, 0.0])
+    rotations = (
+        placement.get("rotation_degrees", [0.0, 0.0, 0.0]),
+        patch.get("local_rotation_degrees", [0.0, 0.0, 0.0]),
+    )
+    if any(any(float(value) != 0.0 for value in rotation) for rotation in rotations):
+        raise ValueError(
+            "terrain_heightfield does not yet support nonzero landform rotations"
+        )
+
+    parameters = topography.get("parameters", {})
+    terrain_config = {
+        "size": patch.get("dimensions", [300.0, 300.0]),
+        "resolution": patch.get("subdivisions", [129, 129]),
+        "center": [
+            float(position[0]) + float(local_position[0]),
+            float(position[2]) + float(local_position[2]),
+        ],
+        "base_height": float(position[1]) + float(local_position[1]),
+        "slope": parameters.get("slope", {}),
+        "noise": parameters.get("noise", {}),
+        "right_profile": parameters.get("right_profile", {}),
+    }
+    return RollingHillside(terrain_config)

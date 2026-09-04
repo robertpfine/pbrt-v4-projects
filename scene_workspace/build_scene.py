@@ -1579,9 +1579,10 @@ def write_terrain(lines, terrain, config, scene_root, scene_files_root):
     if terrain is None:
         return
     points, normals, indices = terrain.mesh()
-    material = config.get("material", {})
+    surface_config = config.get("surface", {})
+    material = surface_config.get("material", {})
     reflectance = material.get("reflectance", [0.12, 0.18, 0.055])
-    surface = config.get("details", {}).get("surface", {})
+    surface = surface_config.get("texture", {})
     point_values = " ".join(
         f"{x:.9f} {y:.9f} {z:.9f}" for x, y, z in points
     )
@@ -3225,7 +3226,20 @@ def write_scene(cfg, scene_root, medium_rel_path):
         write_medium_include(lines, medium_rel_path)
     landscape_config = scene.get("landscape", {})
     ground_config = landscape_config.get("ground", {})
-    terrain = create_terrain(ground_config)
+    terrain_landforms = [
+        landform
+        for landform in scene_description.get("landforms", [])
+        if landform.get("enabled", False)
+        and landform.get("topography", {}).get("enabled", False)
+        and landform.get("topography", {}).get("generator")
+        == "terrain_heightfield"
+    ]
+    if len(terrain_landforms) != 1:
+        raise ValueError(
+            "scene requires exactly one enabled terrain_heightfield landform"
+        )
+    terrain_landform = terrain_landforms[0]
+    terrain = create_terrain(terrain_landform)
     lights = []
     background = sky_config.get("background")
     if background:
@@ -3247,7 +3261,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_geometry(
         lines, scene.get("geometry", []), scene_root, scene_files_root
     )
-    write_terrain(lines, terrain, ground_config, scene_root, scene_files_root)
+    write_terrain(lines, terrain, terrain_landform, scene_root, scene_files_root)
     write_terrain_details(
         lines,
         terrain,

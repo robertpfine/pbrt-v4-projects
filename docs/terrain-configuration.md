@@ -2,8 +2,11 @@
 
 Procedural terrain is implemented in [`terrain.py`](../terrain.py), written to
 PBRT by [`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py), and
-configured under `scene.landscape.ground`. One authoritative JSON contains
-named landform profiles plus shared material and ecosystem-detail controls.
+configured as entries in `scene_description.landforms`. One authoritative JSON
+contains independently enabled landforms, each with adjacent geometry,
+topography, material, texture, and surface-object ownership. During the staged
+migration, not-yet-moved ecosystem generators remain temporarily under
+`scene.landscape.ground.details`.
 
 Each named landform currently uses the `RollingHillside` implementation. It
 combines a planar incline with deterministic, smooth, multi-octave value noise:
@@ -19,15 +22,29 @@ y(x,z) = base_height
 ## Complete example
 
 ```json
-"landscape": {
-  "ground": {
+"landforms": [
+  {
+    "name": "flat_landform",
     "enabled": true,
-    "active_landform": "flat_landform",
-    "landforms": {
-      "flat_landform": {
-        "size": [1200.0, 1200.0],
-        "resolution": [257, 257],
-        "base_height": 0.0,
+    "placement": {
+      "position": [0.0, 0.0, 0.0],
+      "rotation_degrees": [0.0, 0.0, 0.0]
+    },
+    "geometry": {
+      "patches": [{
+        "name": "main_patch",
+        "enabled": true,
+        "generator": "plane",
+        "dimensions": [1200.0, 1200.0],
+        "subdivisions": [257, 257],
+        "local_position": [0.0, 0.0, 0.0],
+        "local_rotation_degrees": [0.0, 0.0, 0.0]
+      }]
+    },
+    "topography": {
+      "enabled": true,
+      "generator": "terrain_heightfield",
+      "parameters": {
         "slope": {
           "direction_degrees": 270.0,
           "grade": 0.025,
@@ -43,49 +60,31 @@ y(x,z) = base_height
         }
       }
     },
-    "material": {
-      "reflectance": [0.10, 0.17, 0.045]
+    "surface": {
+      "material": { "reflectance": [0.10, 0.17, 0.045] },
+      "texture": { "enabled": true }
     },
-    "details": {
-      "surface": { "enabled": true },
-      "grass": { "enabled": true, "count": 2400 },
-      "poppies": { "enabled": true, "count": 120 },
-      "litter": { "enabled": true, "count": 950 },
-      "rocks": { "enabled": true, "count": 48 },
-      "undergrowth": { "enabled": true, "count": 140 }
-    }
-  },
-  "water": {
-    "enabled": false
-  },
-  "distant_hills": {
-    "enabled": false
+    "surface_objects": []
   }
-}
+]
 ```
 
 ## General controls
 
-### `enabled`
+### `landforms[].enabled`
 
 Creates and renders the terrain when `true`. When `false`, no terrain mesh is
 written and terrain-aware object placement is not applied.
 
-### `active_landform`
-
-Selects exactly one key from `landforms`. Changing it changes ground geometry
-without disconnecting or duplicating the shared material, grass, poppies,
-litter, rocks, or undergrowth configuration. The legacy top-level `type` layout
-remains readable for older configurations, but named landforms are preferred.
-
-### `landforms`
+### `scene_description.landforms`
 
 Contains named geometry profiles. `right_dip_rise` preserves the established
 gully terrain; `flat_landform` provides a broad, gently rising meadow. These are
-configuration profiles of the same terrain implementation, not separate scene
-files or separate ecosystem stacks.
+independent entries using the same terrain implementation, not separate scene
+files. Exactly one current `terrain_heightfield` entry is enabled. The old
+`ground.active_landform` selector and profile dictionary are rejected.
 
-### `size`
+### `geometry.patches[].dimensions`
 
 The `[width, depth]` of the generated mesh in world units. It is centered on
 local `(x,z) = (0,0)` and therefore extends half the width and depth in both
@@ -95,7 +94,7 @@ This setting changes the terrain's coverage, not the scale of its noise. A
 larger mesh with unchanged frequency reveals more repetitions of the same
 landform scale.
 
-### `resolution`
+### `geometry.patches[].subdivisions`
 
 The `[x_vertices, z_vertices]` grid resolution. A value of `[129,129]` creates
 16,641 vertices and 32,768 triangles.
@@ -110,7 +109,7 @@ Geometry and scene-file size grow approximately with the product of the two
 values. Doubling both dimensions creates roughly four times as many vertices
 and triangles.
 
-### `base_height`
+### `placement.position[1]`
 
 Adds a constant world-space vertical offset to the complete terrain. It does
 not change slope or relief.
@@ -237,7 +236,7 @@ useful starting point.
 
 ## Material
 
-### `material.reflectance`
+### `surface.material.reflectance`
 
 Sets the terrain's linear RGB diffuse reflectance. It affects appearance only,
 not height, normals, or placement.
@@ -247,9 +246,11 @@ contact and landform lighting without adding grass geometry.
 
 ## Surface and ecosystem details
 
-The optional `terrain.details` system adds one surface treatment plus five
-independently switchable instanced layers. All placement is deterministic for a
-given seed and samples the actual terrain height, normal, and local slope.
+The landform's `surface.texture` enriches the terrain itself. Five independently
+switchable instanced layers still temporarily live at
+`scene.landscape.ground.details` until their one-generator-at-a-time migration.
+All placement is deterministic for a given seed and samples the actual terrain
+height, normal, and local slope.
 
 Object layers may also constrain placement to the active camera with a
 `camera_frustum` block:
@@ -281,7 +282,7 @@ contribute blades inside the image, preventing a screen-aligned grass cutoff.
 The accepted `054517` state uses `0.08` for grass. Poppies continue to use their
 main flower as the visibility reference instead.
 
-### `details.surface`
+### `surface.texture`
 
 This layer enriches the terrain mesh itself rather than adding objects.
 

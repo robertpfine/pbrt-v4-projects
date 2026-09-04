@@ -525,3 +525,126 @@ was launched.
 All Stage 4 acceptance requirements are satisfied. The next approved work is
 Stage 5: migrate landforms and their surface objects one complete generator at
 a time, beginning with a fresh exact ownership and consumer inventory.
+
+## Stage 5A — foreground landform core
+
+Status: implementation and validation complete from pushed Stage 4 checkpoint
+`856d84d`
+
+### Exact target and bounded scope
+
+Stage 5A moves the two foreground terrain profiles and their shared rendered
+surface into the approved landform-first structure. It deliberately does not
+move grass, poppies, litter, rocks, undergrowth, the vista plane, or distant
+hills. Those generators retain one temporary live location until their own
+one-at-a-time substages.
+
+The new ownership for each retained terrain alternative is:
+
+- profile name -> `scene_description.landforms[].name`;
+- old module/profile selection -> independent `enabled` values;
+- `center` plus `base_height` -> `placement.position`;
+- `size` and `resolution` -> the named plane patch's `dimensions` and
+  `subdivisions`;
+- `slope`, `noise`, and optional `right_profile` ->
+  `topography.parameters` under generator `terrain_heightfield`;
+- the old shared ground material and surface texture -> each independent
+  landform's `surface.material` and `surface.texture`;
+- an explicit empty `surface_objects` array, reserved for later Stage 5B moves.
+
+`flat_landform` is enabled because it was the selected live terrain;
+`right_dip_rise` remains present and independently disabled. Copying the shared
+material and texture into both new independent objects is intentional ownership,
+not an old/new compatibility duplicate: either retained landform remains a
+complete usable authored alternative.
+
+After the move, the only child of temporary `scene.landscape.ground` is
+`details`, and its keys are exactly `grass`, `poppies`, `litter`, `rocks`, and
+`undergrowth`. The obsolete `ground.enabled`, `ground.active_landform`,
+`ground.landforms`, `ground.material`, and `ground.details.surface` keys are
+absent.
+
+### Consumer inventory and implementation
+
+- `terrain.py` now translates one enabled `terrain_heightfield` landform and
+  its enabled plane patch into the existing deterministic `RollingHillside`
+  implementation. Position and local-position offsets are applied explicitly;
+  nonzero rotations are rejected rather than silently ignored.
+- `scene_workspace/build_scene.py` locates exactly one enabled foreground
+  terrain landform, reads its material and texture from `surface`, and continues
+  passing the temporary detail-only ground block to not-yet-migrated generators.
+- `scene_config.py` validates names, enable switches, placement vectors, named
+  plane patches, dimensions, subdivisions, topography registration, surface
+  ownership, surface-object arrays, uniqueness, the sole enabled terrain
+  invariant, and the absence of old core paths.
+- `render_snapshot.py` enforces the same stage boundary before freezing a
+  render, including rejection of obsolete ground ownership and missing or
+  ambiguous enabled terrain.
+- `render_shaft_composite.py` applies terrain reflectance scaling at the new
+  landform surface while preserving the same terrain scaling for legacy surface
+  objects until each object moves.
+- The Qt Ground page edits the active landform's surface texture. The Landform
+  page exposes both independent entries, their enable values, placement,
+  dimensions, grade, and noise amplitude without the removed selector.
+- `scene_workspace/flat_landform_preview.py` uses the new landform entry while
+  retaining its intentionally bounded legacy detail preview input.
+- Terrain, snapshot, shaft-composite, formatting-preserving config, live-config,
+  and offscreen Qt tests cover the new boundary.
+
+### Mechanical Stage 5A ownership audit
+
+A mechanical transformation starts from `856d84d`, performs only the approved
+mapping above, and compares the complete parsed result with the live JSON. It
+reports:
+
+```text
+stage5a_only True
+landform_names ['right_dip_rise', 'flat_landform']
+enabled_landforms ['flat_landform']
+legacy_ground_keys ['details']
+legacy_detail_keys ['grass', 'poppies', 'litter', 'rocks', 'undergrowth']
+```
+
+### Structural-build diagnosis and exact comparison
+
+The first full-current-config build was intentionally isolated under `/tmp` and
+did not launch PBRT. It emitted about 1.044 GB rather than matching the
+117,462,947-byte `020525` diagnostic artifact. Inspection showed that the new
+file contained today's enabled 3,400,000 grass instances, while the archived
+`020525` configuration used for every earlier migration proof had grass
+disabled and bounded render settings. This was an invalid comparison between
+different inputs, not a terrain migration divergence. The temporary 1.044 GB
+file was removed.
+
+The comparison was rerun by migrating the archived `020525` input through
+Stages 1–5A entirely in memory and building it with the current builder in a
+fresh temporary workspace. No second scene JSON was written and PBRT was not
+launched. The result is byte-for-byte identical:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5A size:       117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+Both temporary structural-build directories were removed. The live accepted
+artifact and the live generated PBRT file were not modified.
+
+### Tests and checks
+
+- Focused `.venv` verification ran 63 tests: 59 passed and four
+  NumPy/Pillow-dependent tests were skipped.
+- The complete `.venv` suite ran 108 tests: 99 passed and nine
+  dependency-aware tests were skipped.
+- System Python passed all 94 non-GUI tests.
+- The live JSON validates with zero errors; JSON parsing, Python byte
+  compilation, operational old-path search, and `git diff --check` pass.
+- No production PBRT render was launched.
+
+### Stage 5A result
+
+The foreground landform core is fully migrated with no live old/new ownership
+bridge. Stage 5B proceeds through surface-object generators individually,
+beginning with grass, while preserving exact generator parameters and rendered
+behavior at each checkpoint.

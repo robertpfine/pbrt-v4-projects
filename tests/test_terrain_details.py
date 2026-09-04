@@ -1,6 +1,6 @@
 import unittest
 
-from terrain import RollingHillside
+from terrain import RollingHillside, create_terrain
 from terrain_details import (
     _camera_frame,
     _instance_anchor_position,
@@ -128,6 +128,58 @@ class CameraFrustumScatterTests(unittest.TestCase):
         self.assertEqual(len(points), config["count"])
         self.assertLessEqual(max(depths), 45.0)
         self.assertTrue(any(depth > 20.0 for depth in depths))
+
+
+class TerrainLandformTests(unittest.TestCase):
+    def make_landform(self):
+        return {
+            "name": "offset_plane",
+            "enabled": True,
+            "placement": {
+                "position": [12.0, 3.0, -7.0],
+                "rotation_degrees": [0.0, 0.0, 0.0],
+            },
+            "geometry": {
+                "patches": [{
+                    "name": "main_patch",
+                    "enabled": True,
+                    "generator": "plane",
+                    "dimensions": [80.0, 60.0],
+                    "subdivisions": [9, 7],
+                    "local_position": [2.0, 1.0, 4.0],
+                    "local_rotation_degrees": [0.0, 0.0, 0.0],
+                }]
+            },
+            "topography": {
+                "enabled": True,
+                "generator": "terrain_heightfield",
+                "parameters": {
+                    "slope": {"direction_degrees": 0.0, "grade": 0.0},
+                    "noise": {"amplitude": 0.0},
+                },
+            },
+            "surface": {"material": {}, "texture": {}},
+            "surface_objects": [],
+        }
+
+    def test_landform_schema_maps_to_existing_heightfield_coordinates(self):
+        terrain = create_terrain(self.make_landform())
+        self.assertIsNotNone(terrain)
+        self.assertEqual((terrain.center_x, terrain.center_z), (14.0, -3.0))
+        self.assertEqual(terrain.base_height, 4.0)
+        self.assertEqual((terrain.width, terrain.depth), (80.0, 60.0))
+        self.assertEqual((terrain.nx, terrain.nz), (9, 7))
+
+    def test_disabled_landform_produces_no_terrain(self):
+        landform = self.make_landform()
+        landform["enabled"] = False
+        self.assertIsNone(create_terrain(landform))
+
+    def test_nonzero_rotation_is_rejected_instead_of_ignored(self):
+        landform = self.make_landform()
+        landform["placement"]["rotation_degrees"][1] = 10.0
+        with self.assertRaisesRegex(ValueError, "nonzero landform rotations"):
+            create_terrain(landform)
 
 
 if __name__ == "__main__":

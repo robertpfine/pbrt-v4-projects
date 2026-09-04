@@ -51,13 +51,71 @@ class SceneConfigTests(unittest.TestCase):
       "latitude": 43.0,
       "longitude": -76.0,
       "world_north": [0.0, 0.0, 1.0]
-    }
+    },
+    "landforms": [
+      {
+        "name": "flat",
+        "enabled": true,
+        "placement": {
+          "position": [0.0, 0.0, 0.0],
+          "rotation_degrees": [0.0, 0.0, 0.0]
+        },
+        "geometry": {
+          "patches": [{
+            "name": "main_patch",
+            "enabled": true,
+            "generator": "plane",
+            "dimensions": [10.0, 10.0],
+            "subdivisions": [3, 3],
+            "local_position": [0.0, 0.0, 0.0],
+            "local_rotation_degrees": [0.0, 0.0, 0.0]
+          }]
+        },
+        "topography": {
+          "enabled": true,
+          "generator": "terrain_heightfield",
+          "parameters": {
+            "slope": { "grade": 0.0 },
+            "noise": { "amplitude": 0.0 }
+          }
+        },
+        "surface": { "material": {}, "texture": {} },
+        "surface_objects": []
+      },
+      {
+        "name": "gully",
+        "enabled": false,
+        "placement": {
+          "position": [0.0, 0.0, 0.0],
+          "rotation_degrees": [0.0, 0.0, 0.0]
+        },
+        "geometry": {
+          "patches": [{
+            "name": "main_patch",
+            "enabled": true,
+            "generator": "plane",
+            "dimensions": [10.0, 10.0],
+            "subdivisions": [3, 3],
+            "local_position": [0.0, 0.0, 0.0],
+            "local_rotation_degrees": [0.0, 0.0, 0.0]
+          }]
+        },
+        "topography": {
+          "enabled": true,
+          "generator": "terrain_heightfield",
+          "parameters": {
+            "slope": { "grade": 0.1 },
+            "noise": { "amplitude": 1.0 }
+          }
+        },
+        "surface": { "material": {}, "texture": {} },
+        "surface_objects": []
+      }
+    ]
   },
   "scene": {
     "landscape": {
       "ground": {
-        "active_landform": "flat",
-        "landforms": { "flat": {}, "gully": {} },
         "details": {
           "grass": { "enabled": true, "layers": [{ "count": 10 }] },
           "poppies": {
@@ -218,6 +276,19 @@ class SceneConfigTests(unittest.TestCase):
                 "scene_context.world_north must be a nonzero horizontal vector",
                 message,
             )
+
+    def test_unsupported_terrain_rotation_is_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set(
+                "scene_description.landforms.0.placement.rotation_degrees",
+                [0.0, 15.0, 0.0],
+            )
+            with self.assertRaisesRegex(
+                SceneConfigError, "terrain_heightfield rotations must currently be zero"
+            ):
+                config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
     def test_current_scene_is_valid_and_describable(self):
@@ -275,6 +346,19 @@ class SceneConfigTests(unittest.TestCase):
         for obsolete in ("master_file", "output_filename", "generated_medium"):
             self.assertNotIn(obsolete, data)
         self.assertNotIn("terrain", data)
+        self.assertEqual(
+            [
+                landform["name"]
+                for landform in config["scene_description"]["landforms"]
+                if landform["enabled"]
+            ],
+            ["flat_landform"],
+        )
+        self.assertEqual(
+            set(data["landscape"]["ground"]),
+            {"details"},
+        )
+        self.assertNotIn("surface", data["landscape"]["ground"]["details"])
         self.assertEqual(
             set(data["landscape"]),
             {"ground", "water", "distant_hills"},
@@ -337,13 +421,18 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             config = SceneConfig(path)
-            config.set("scene.landscape.ground.active_landform", "gully")
+            config.set("scene_description.landforms.0.enabled", False)
+            config.set("scene_description.landforms.1.enabled", True)
             config.save()
             self.assertEqual(
-                json.loads(path.read_text())["scene"]["landscape"]["ground"][
-                    "active_landform"
+                [
+                    landform["name"]
+                    for landform in json.loads(path.read_text())["scene_description"][
+                        "landforms"
+                    ]
+                    if landform["enabled"]
                 ],
-                "gully",
+                ["gully"],
             )
 
 

@@ -61,7 +61,146 @@
       "latitude": 43.0,
       "longitude": -76.0,
       "world_north": [0.0, 0.0, 1.0]
-    }
+    },
+    "landforms": [
+      {
+        "name": "right_dip_rise",
+        "enabled": false,
+        "placement": {
+          "position": [150.0, 0.0, -100.0],
+          "rotation_degrees": [0.0, 0.0, 0.0]
+        },
+        "geometry": {
+          "patches": [
+            {
+              "name": "main_patch",
+              "enabled": true,
+              "generator": "plane",
+              "dimensions": [1900.0, 1600.0],
+              "subdivisions": [401, 337],
+              "local_position": [0.0, 0.0, 0.0],
+              "local_rotation_degrees": [0.0, 0.0, 0.0]
+            }
+          ]
+        },
+        "topography": {
+          "enabled": true,
+          "generator": "terrain_heightfield",
+          "parameters": {
+            "slope": {
+              "direction_degrees": 320.0,
+              "grade": 0.40,
+              "foreground_leveling": {
+                "enabled": true,
+                "direction_degrees": 51.5,
+                "start": 0.0,
+                "end": 360.0,
+                "minimum_grade_ratio": 0.35,
+                "target_height": null
+              }
+            },
+            "noise": {
+              "seed": 7,
+              "amplitude": 14.0,
+              "frequency": 0.008,
+              "octaves": 3,
+              "persistence": 0.45,
+              "lacunarity": 2.0
+            },
+            "right_profile": {
+              "enabled": true,
+              "direction_degrees": 142.0,
+              "dip_center": 140.0,
+              "dip_width": 140.0,
+              "dip_depth": 100.0,
+              "rise_center": 480.0,
+              "rise_width": 150.0,
+              "rise_height": 260.0
+            }
+          }
+        },
+        "surface": {
+          "material": {
+            "reflectance": [0.10, 0.17, 0.045]
+          },
+          "texture": {
+            "enabled": true,
+            "mode": "terrain_surface_texture",
+            "terrain_surface_texture": {
+              "resolution": 2048,
+              "seed": 97,
+              "flow_direction_degrees": 18.0,
+              "dark_color": [58, 104, 31],
+              "light_color": [105, 151, 55],
+              "fiber_contrast": 0.055,
+              "bump_contrast": 0.10,
+              "bump_scale": 0.008
+            }
+          }
+        },
+        "surface_objects": []
+      },
+      {
+        "name": "flat_landform",
+        "enabled": true,
+        "placement": {
+          "position": [-400.0, 0.0, -700.0],
+          "rotation_degrees": [0.0, 0.0, 0.0]
+        },
+        "geometry": {
+          "patches": [
+            {
+              "name": "main_patch",
+              "enabled": true,
+              "generator": "plane",
+              "dimensions": [3000.0, 2800.0],
+              "subdivisions": [401, 373],
+              "local_position": [0.0, 0.0, 0.0],
+              "local_rotation_degrees": [0.0, 0.0, 0.0]
+            }
+          ]
+        },
+        "topography": {
+          "enabled": true,
+          "generator": "terrain_heightfield",
+          "parameters": {
+            "slope": {
+              "direction_degrees": 270.0,
+              "grade": 0.0,
+              "foreground_leveling": { "enabled": false }
+            },
+            "noise": {
+              "seed": 113,
+              "amplitude": 0.0,
+              "frequency": 0.0045,
+              "octaves": 3,
+              "persistence": 0.48,
+              "lacunarity": 2.0
+            }
+          }
+        },
+        "surface": {
+          "material": {
+            "reflectance": [0.10, 0.17, 0.045]
+          },
+          "texture": {
+            "enabled": true,
+            "mode": "terrain_surface_texture",
+            "terrain_surface_texture": {
+              "resolution": 2048,
+              "seed": 97,
+              "flow_direction_degrees": 18.0,
+              "dark_color": [58, 104, 31],
+              "light_color": [105, 151, 55],
+              "fiber_contrast": 0.055,
+              "bump_contrast": 0.10,
+              "bump_scale": 0.008
+            }
+          }
+        },
+        "surface_objects": []
+      }
+    ]
   },
 
   "scene": {
@@ -285,83 +424,7 @@
 
     "landscape": {
       "ground": {
-        "enabled": true,
-        "active_landform": "flat_landform",
-        "landforms": {
-          "right_dip_rise": {
-            "size": [1900.0, 1600.0],
-            "center": [150.0, -100.0],
-            "resolution": [401, 337],
-            "base_height": 0.0,
-            "slope": {
-              "direction_degrees": 320.0,
-              "grade": 0.40,
-              "foreground_leveling": {
-                "enabled": true,
-                "direction_degrees": 51.5,
-                "start": 0.0,
-                "end": 360.0,
-                "minimum_grade_ratio": 0.35,
-                "target_height": null
-              }
-            },
-            "noise": {
-              "seed": 7,
-              "amplitude": 14.0,
-              "frequency": 0.008,
-              "octaves": 3,
-              "persistence": 0.45,
-              "lacunarity": 2.0
-            },
-            "right_profile": {
-              "enabled": true,
-              "direction_degrees": 142.0,
-              "dip_center": 140.0,
-              "dip_width": 140.0,
-              "dip_depth": 100.0,
-              "rise_center": 480.0,
-              "rise_width": 150.0,
-              "rise_height": 260.0
-            }
-          },
-          "flat_landform": {
-            "size": [3000.0, 2800.0],
-            "center": [-400.0, -700.0],
-            "resolution": [401, 373],
-            "base_height": 0.0,
-            "slope": {
-              "direction_degrees": 270.0,
-              "grade": 0.0,
-              "foreground_leveling": { "enabled": false }
-            },
-            "noise": {
-              "seed": 113,
-              "amplitude": 0.0,
-              "frequency": 0.0045,
-              "octaves": 3,
-              "persistence": 0.48,
-              "lacunarity": 2.0
-            }
-          }
-        },
-        "material": {
-          "reflectance": [0.10, 0.17, 0.045]
-        },
         "details": {
-          "surface": {
-            "enabled": true,
-            "mode": "terrain_surface_texture",
-            "terrain_surface_texture": {
-              "resolution": 2048,
-              "seed": 97,
-              "flow_direction_degrees": 18.0,
-              "dark_color": [58, 104, 31],
-              "light_color": [105, 151, 55],
-              "fiber_contrast": 0.055,
-              "bump_contrast": 0.10,
-              "bump_scale": 0.008
-            }
-          },
           "grass": {
             "enabled": true,
             "seed": 41,

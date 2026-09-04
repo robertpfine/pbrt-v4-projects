@@ -114,6 +114,38 @@ def configured_scene_name(config: dict) -> str:
     scene = config.get("scene")
     if isinstance(scene, dict) and "name" in scene:
         raise RenderSnapshotError("obsolete scene.name is not supported")
+    landforms = description.get("landforms")
+    if not isinstance(landforms, list):
+        raise RenderSnapshotError("scene_description.landforms must be an array")
+    enabled_terrain = [
+        landform
+        for landform in landforms
+        if isinstance(landform, dict)
+        and landform.get("enabled", False)
+        and isinstance(landform.get("topography"), dict)
+        and landform["topography"].get("enabled", False)
+        and landform["topography"].get("generator") == "terrain_heightfield"
+    ]
+    if len(enabled_terrain) != 1:
+        raise RenderSnapshotError(
+            "scene requires exactly one enabled terrain_heightfield landform"
+        )
+    ground = (
+        scene.get("landscape", {}).get("ground", {})
+        if isinstance(scene, dict)
+        else {}
+    )
+    if isinstance(ground, dict):
+        for field in ("enabled", "active_landform", "landforms", "material"):
+            if field in ground:
+                raise RenderSnapshotError(
+                    f"obsolete scene.landscape.ground.{field} is not supported"
+                )
+        details = ground.get("details", {})
+        if isinstance(details, dict) and "surface" in details:
+            raise RenderSnapshotError(
+                "obsolete scene.landscape.ground.details.surface is not supported"
+            )
     return name
 
 

@@ -26,6 +26,7 @@ except ImportError as error:  # pragma: no cover - exercised before Qt starts
 from scene_config import (
     GROUND_PATH,
     HILLS_PATH,
+    LANDFORMS_PATH,
     SKY_PATH,
     SceneConfig,
     SceneConfigError,
@@ -460,7 +461,11 @@ class Inspector(QtWidgets.QWidget):
             "This controls the surface treatment beneath independently enabled "
             "grass, flowers, stones, undergrowth, and litter.",
         )
-        base = GROUND_PATH + ("details", "surface")
+        base = LANDFORMS_PATH + (
+            self.config.terrain_landform_index(),
+            "surface",
+            "texture",
+        )
         self._check(form, "Surface treatment", base + ("enabled",))
         mode = QtWidgets.QLabel(str(self.config.get(base + ("mode",))))
         mode.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -470,38 +475,47 @@ class Inspector(QtWidgets.QWidget):
         form = self._page(
             "landform",
             "Landform",
-            "The landform defines geometry. Ground contents remain separate and "
-            "can be edited after this choice.",
+            "Each retained landform owns its geometry, topography, and surface. "
+            "Exactly one terrain heightfield is enabled in the current scene.",
         )
-        path = GROUND_PATH + ("active_landform",)
-        combo = QtWidgets.QComboBox()
-        combo.addItems(self.config.landform_names())
-        combo.setCurrentText(str(self.config.get(path)))
-        combo.currentTextChanged.connect(lambda value: self._set(path, value))
-        form.addRow("Type", combo)
-        self.refreshers.append(
-            lambda: self._blocked(combo, str(self.config.get(path)))
-        )
-        active = str(self.config.get(path))
-        root = GROUND_PATH + ("landforms", active)
-        self._pair(form, "Size", root + ("size",), 1.0, 100_000.0, 2)
-        self._number(form, "Base height", root + ("base_height",), decimals=3)
-        self._number(
-            form,
-            "Grade",
-            root + ("slope", "grade"),
-            minimum=-10.0,
-            maximum=10.0,
-            decimals=4,
-        )
-        self._number(
-            form,
-            "Noise amplitude",
-            root + ("noise", "amplitude"),
-            minimum=0.0,
-            maximum=10_000.0,
-            decimals=3,
-        )
+        for index, name in enumerate(self.config.landform_names()):
+            root = LANDFORMS_PATH + (index,)
+            heading = QtWidgets.QLabel(name)
+            heading.setStyleSheet("font-weight: 600; color: #f0b84c;")
+            form.addRow(heading)
+            self._check(form, "Enabled", root + ("enabled",))
+            self._vector(form, "Position", root + ("placement", "position"))
+            self._vector(
+                form,
+                "Rotation",
+                root + ("placement", "rotation_degrees"),
+            )
+            patch = root + ("geometry", "patches", 0)
+            self._pair(
+                form,
+                "Dimensions",
+                patch + ("dimensions",),
+                1.0,
+                100_000.0,
+                2,
+            )
+            parameters = root + ("topography", "parameters")
+            self._number(
+                form,
+                "Grade",
+                parameters + ("slope", "grade"),
+                minimum=-10.0,
+                maximum=10.0,
+                decimals=4,
+            )
+            self._number(
+                form,
+                "Noise amplitude",
+                parameters + ("noise", "amplitude"),
+                minimum=0.0,
+                maximum=10_000.0,
+                decimals=3,
+            )
 
     def _build_grass_page(self) -> None:
         form = self._page(
@@ -1176,11 +1190,6 @@ class StudioWindow(QtWidgets.QMainWindow):
 
     def _configuration_changed(self, path: str) -> None:
         self._update_status(f"Unsaved change: {path}")
-        if path.startswith("scene.landscape.ground.active_landform"):
-            self.log.appendPlainText(
-                "Landform selected. Reopen the studio after saving to refresh "
-                "landform-specific inspector fields."
-            )
 
     def _update_status(self, message: str) -> None:
         marker = " • modified" if self.config.dirty else ""
