@@ -45,6 +45,7 @@ fi
 unset XDG_DATA_DIRS_VSCODE_SNAP_ORIG
 
 exec /usr/bin/gnome-terminal \
+    --wait \
     --title="PBRT-v4 Art Studio — Render Log" \
     --working-directory="${REPOSITORY_ROOT}" \
     -- bash -lc '

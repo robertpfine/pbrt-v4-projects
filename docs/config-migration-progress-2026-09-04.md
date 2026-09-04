@@ -1734,3 +1734,27 @@ overcast diagnostic. The complete immutable bundle and manifest are in
 `Archive/`. Remote archive synchronization made one attempt, immediately hit
 the existing Google Drive API rate limit, and was not retried. There was no
 fatal loop, no PBRT hang, and no post-migration image difference.
+
+### Visible-terminal follow-up
+
+The successful `072547` host-GPU run was captured by the automation process;
+it did not stream through the dedicated GNOME Terminal window. It therefore
+validated the migrated builder, C++ cloud-grid path, PBRT/CUDA execution, and
+archived output equivalence, but it did **not** validate the artist's required
+visible-log workflow.
+
+The earlier `072338` attempt used `run_render_terminal.sh`, but the GNOME
+Terminal launcher detached from its child window and the render stopped during
+snapshot preparation. The wrapper now passes GNOME Terminal's `--wait` option.
+This keeps the launcher attached to the terminal session for the lifetime of
+the render log; the existing inner interactive shell still keeps the visible
+window open after the pipeline exits. The canonical artist-facing command is:
+
+```bash
+./run_render_terminal.sh
+```
+
+Running `./render_pipeline.sh` directly remains supported when pipeline output
+is intentionally wanted in the current terminal, but it is not the canonical
+dedicated-window workflow. A successful render launched with the corrected
+wrapper is still required to close this workflow-validation item.

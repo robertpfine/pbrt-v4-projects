@@ -870,6 +870,16 @@ live configuration was restored exactly to committed settings and validates
 cleanly. See the migration progress record for the retained environmental
 failure diagnostics `072338` and `072454`.
 
+The successful `072547` run was captured by the automation process rather than
+streamed in the dedicated GNOME Terminal, so it did not validate the required
+visible-log workflow. The earlier terminal attempt `072338` detached and
+stopped during snapshot setup. `run_render_terminal.sh` now passes
+`gnome-terminal --wait`, keeping the launcher attached to the terminal session;
+its existing inner interactive shell continues to keep the window open after
+the pipeline exits. The canonical visible-log command remains
+`./run_render_terminal.sh`. One successful render through that corrected
+wrapper is still required to close the workflow-validation item.
+
 ## 2026-09-03 schema and overcast-work checkpoint
 
 The artist and assistant began the separate architectural draft
