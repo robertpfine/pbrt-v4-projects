@@ -2392,9 +2392,5 @@
     "water": {
       "enabled": false
     }
-  },
-
-  "scene": {
-    "geometry": []
   }
 }

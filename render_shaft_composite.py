@@ -69,7 +69,6 @@ def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
     sun["enabled"] = False
     shaft_light = sun["light_shafts"]["light"]
     shaft_light["enabled"] = shaft_light.get("label") == shaft_label
-    scale_reflectances(result["scene"], surface_scale)
     scale_reflectances(result["scene_description"]["landforms"], surface_scale)
     scale_reflectances(result["scene_description"]["objects"], surface_scale)
     for index, source in enumerate(cfg["scene_description"]["landforms"]):

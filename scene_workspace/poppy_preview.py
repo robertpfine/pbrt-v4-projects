@@ -4,14 +4,20 @@
 import json
 from pathlib import Path
 
-from build_scene import _poppy_mesh, _write_detail_mesh
+from build_scene import _poppy_mesh, _write_detail_mesh, configured_surface_object
 
 
 def main():
     output = Path(__file__).parent / "scene_files" / "poppy_preview.pbrt"
     config_path = Path(__file__).parent / "config.json"
     config = json.loads(config_path.read_text(encoding="utf-8"))
-    poppy_config = config["scene"]["landscape"]["ground"]["details"]["poppies"]
+    landform = next(
+        item
+        for item in config["scene_description"]["landforms"]
+        if item.get("enabled", False)
+        and item.get("topography", {}).get("generator") == "terrain_heightfield"
+    )
+    poppy_config = configured_surface_object(landform, "poppy")
     parts = _poppy_mesh(0, poppy_config)
     lines = [
         '# FILE: poppy_preview.pbrt',

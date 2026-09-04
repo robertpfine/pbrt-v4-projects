@@ -1379,10 +1379,21 @@ def run(cfg, scene_files_root):
         relative path to tree.pbrt for use as Include directive,
         or None if tree is disabled.
     """
-    tree_cfg = cfg.get('scene', {}).get('tree', None)
+    from generate import configured_space_colonization_trees
 
-    if tree_cfg is None or not tree_cfg.get('enabled', False):
+    enabled = [
+        tree
+        for tree in configured_space_colonization_trees(cfg)
+        if tree.get('enabled', False)
+    ]
+    if not enabled:
         return None
+    if len(enabled) != 1:
+        raise ValueError(
+            'standalone space_col.py requires exactly one enabled tree; '
+            'use generate.py for multiple trees'
+        )
+    tree_cfg = enabled[0]
 
     print(f"  Growing tree: {tree_cfg['num_leaves']} leaves, "
           f"{tree_cfg['max_loops']} max iterations...")

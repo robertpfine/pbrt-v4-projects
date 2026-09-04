@@ -158,7 +158,6 @@ class RenderSnapshotTests(unittest.TestCase):
                         },
                     },
                     "scene_description": scene_description(),
-                    "scene": {},
                 }
             )
             + "\n",
@@ -285,21 +284,12 @@ class RenderSnapshotTests(unittest.TestCase):
         ):
             create_snapshot(self.root, self.config, "20260904_010215")
 
-    def test_snapshot_rejects_obsolete_stage_one_keys(self):
+    def test_snapshot_rejects_obsolete_scene_root(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["master_file"] = "scene_files/scene.pbrt"
+        config["scene"] = {"geometry": []}
         self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(
-            RenderSnapshotError, "obsolete scene.master_file"
-        ):
+        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene root"):
             create_snapshot(self.root, self.config, "20260904_010216")
-
-    def test_snapshot_rejects_obsolete_scene_camera(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["camera"] = config["camera_settings"]
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.camera"):
-            create_snapshot(self.root, self.config, "20260904_010217")
 
     def test_snapshot_rejects_obsolete_render_roots(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
@@ -308,149 +298,7 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "obsolete runtime root"):
             create_snapshot(self.root, self.config, "20260904_010218")
 
-    def test_snapshot_rejects_obsolete_scene_name(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["name"] = config["scene_description"]["name"]
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.name"):
-            create_snapshot(self.root, self.config, "20260904_010219")
 
-    def test_snapshot_rejects_obsolete_independent_volume_paths(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["grid"] = {"enabled": False}
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.grid"):
-            create_snapshot(self.root, self.config, "20260904_010221")
-
-    def test_snapshot_rejects_obsolete_fog_paths(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["fog"] = {"enabled": False}
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.fog"):
-            create_snapshot(self.root, self.config, "20260904_010232")
-
-        config["scene"].pop("fog")
-        config["scene"]["geometry"] = [{"label": "fog_volume"}]
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "geometry fog_volume"):
-            create_snapshot(self.root, self.config, "20260904_010233")
-
-    def test_snapshot_rejects_obsolete_rain_path(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["rain"] = {"enabled": False}
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.rain"):
-            create_snapshot(self.root, self.config, "20260904_010234")
-
-    def test_snapshot_rejects_obsolete_ground_landform_core(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {
-            "landscape": {
-                "ground": {"active_landform": "flat", "details": {}}
-            }
-        }
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "active_landform"):
-            create_snapshot(self.root, self.config, "20260904_010220")
-
-    def test_snapshot_rejects_obsolete_ground_grass(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {
-            "landscape": {
-                "ground": {"details": {"grass": {"enabled": False}}}
-            }
-        }
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "details.grass"):
-            create_snapshot(self.root, self.config, "20260904_010222")
-
-    def test_snapshot_rejects_obsolete_ground_poppies(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {
-            "landscape": {
-                "ground": {"details": {"poppies": {"enabled": False}}}
-            }
-        }
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "details.poppies"):
-            create_snapshot(self.root, self.config, "20260904_010223")
-
-    def test_snapshot_rejects_obsolete_ground_litter(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {
-            "landscape": {
-                "ground": {"details": {"litter": {"enabled": False}}}
-            }
-        }
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "details.litter"):
-            create_snapshot(self.root, self.config, "20260904_010224")
-
-    def test_snapshot_rejects_obsolete_ground_rocks(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {
-            "landscape": {
-                "ground": {"details": {"rocks": {"enabled": False}}}
-            }
-        }
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "details.rocks"):
-            create_snapshot(self.root, self.config, "20260904_010225")
-
-    def test_snapshot_rejects_obsolete_ground_undergrowth(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {
-            "landscape": {
-                "ground": {"details": {"undergrowth": {"enabled": False}}}
-            }
-        }
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "details.undergrowth"):
-            create_snapshot(self.root, self.config, "20260904_010226")
-
-    def test_snapshot_rejects_obsolete_geometry_vista_plane(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["geometry"] = [{"label": "vista_plane"}]
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "geometry vista_plane"):
-            create_snapshot(self.root, self.config, "20260904_010227")
-
-    def test_snapshot_rejects_obsolete_water_path(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {"landscape": {"water": {"enabled": False}}}
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "landscape.water"):
-            create_snapshot(self.root, self.config, "20260904_010235")
-
-    def test_snapshot_rejects_obsolete_distant_hills_wrapper(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"] = {
-            "landscape": {"distant_hills": {"enabled": False, "layers": []}}
-        }
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "landscape.distant_hills"):
-            create_snapshot(self.root, self.config, "20260904_010228")
-
-    def test_snapshot_rejects_obsolete_lsystem_tree_array(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["lsystem_trees"] = []
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "scene.lsystem_trees"):
-            create_snapshot(self.root, self.config, "20260904_010229")
-
-    def test_snapshot_rejects_obsolete_space_tree_array(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["trees"] = []
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "scene.trees"):
-            create_snapshot(self.root, self.config, "20260904_010230")
-
-    def test_snapshot_rejects_obsolete_grove(self):
-        config = json.loads(self.config.read_text(encoding="utf-8"))
-        config["scene"]["grove"] = {"enabled": False}
-        self.config.write_text(json.dumps(config), encoding="utf-8")
-        with self.assertRaisesRegex(RenderSnapshotError, "scene.grove"):
-            create_snapshot(self.root, self.config, "20260904_010231")
 
     def test_snapshot_requires_one_enabled_terrain_landform(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
@@ -479,7 +327,6 @@ class RenderSnapshotTests(unittest.TestCase):
             "executable": "build/cloud_grid_builder/cloud_grid_builder",
             "fallback_to_python": False,
         }
-        config["scene"] = {}
         self.config.write_text(json.dumps(config), encoding="utf-8")
 
         result = create_snapshot(self.root, self.config, "20260904_010207")
@@ -587,7 +434,6 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                     "shaft_composite": {"enabled": False},
                 },
                 "scene_description": scene_description("Invalid Backend"),
-                "scene": {},
             }
             config_path = scene_root / "config.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
@@ -639,7 +485,6 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                     "shaft_composite": {"enabled": True},
                 },
                 "scene_description": scene_description("Composite Dispatch"),
-                "scene": {},
             }
             config_path = scene_root / "config.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
@@ -736,7 +581,6 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                     },
                 },
                 "scene_description": scene_description(),
-                "scene": {},
             }
             config_path.write_text(json.dumps(config), encoding="utf-8")
 
@@ -855,7 +699,6 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
         config = {
             "file_names": {"pbrt_scene": "scene.pbrt"},
             "scene_description": scene_description(),
-            "scene": {"landscape": {}},
         }
         config["scene_description"]["sky"]["sun"]["light_shafts"] = {
             "light": {"label": "shaft_sun", "enabled": True},
@@ -895,8 +738,8 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
         )
         self.assertEqual(base["file_names"]["pbrt_scene"], "scene_base.pbrt")
         self.assertEqual(shaft["file_names"]["pbrt_scene"], "scene_shaft.pbrt")
-        self.assertNotIn("master_file", base["scene"])
-        self.assertNotIn("master_file", shaft["scene"])
+        self.assertNotIn("scene", base)
+        self.assertNotIn("scene", shaft)
         self.assertEqual(
             shaft["scene_description"]["landforms"][0]["surface"],
             {

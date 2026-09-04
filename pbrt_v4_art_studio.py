@@ -368,8 +368,8 @@ class Inspector(QtWidgets.QWidget):
         self._placeholder(
             "landscape",
             "Landscape",
-            "scene.landscape is the boundary for the ground and receding-horizon "
-            "systems. Ground contents remain independently editable.",
+            "scene_description.landforms is the boundary for ground and "
+            "receding-horizon systems. Surface objects remain independently editable.",
         )
         self._build_ground_page()
         self._build_landform_page()

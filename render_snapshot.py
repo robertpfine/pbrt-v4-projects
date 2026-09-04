@@ -111,9 +111,8 @@ def configured_scene_name(config: dict) -> str:
             "scene_context.world_north must be a nonzero horizontal vector"
         )
 
-    scene = config.get("scene")
-    if isinstance(scene, dict) and "name" in scene:
-        raise RenderSnapshotError("obsolete scene.name is not supported")
+    if "scene" in config:
+        raise RenderSnapshotError("obsolete scene root is not supported")
     landforms = description.get("landforms")
     if not isinstance(landforms, list):
         raise RenderSnapshotError("scene_description.landforms must be an array")
@@ -421,102 +420,6 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 "distant_ridge requires one plane patch, parameters, and material"
             )
-    if isinstance(scene, dict):
-        if "lsystem_trees" in scene:
-            raise RenderSnapshotError(
-                "obsolete scene.lsystem_trees is not supported"
-            )
-        for legacy_name in ("trees", "grove"):
-            if legacy_name in scene:
-                raise RenderSnapshotError(
-                    f"obsolete scene.{legacy_name} is not supported"
-                )
-        if "planar_phyllotaxis" in scene:
-            raise RenderSnapshotError(
-                "obsolete scene.planar_phyllotaxis is not supported"
-            )
-        for legacy_name in ("grid", "zones"):
-            if legacy_name in scene:
-                raise RenderSnapshotError(
-                    f"obsolete scene.{legacy_name} is not supported"
-                )
-        for legacy_name in ("sky", "lights", "sun_aperture"):
-            if legacy_name in scene:
-                raise RenderSnapshotError(
-                    f"obsolete scene.{legacy_name} is not supported"
-                )
-        if "fog" in scene:
-            raise RenderSnapshotError("obsolete scene.fog is not supported")
-        if "rain" in scene:
-            raise RenderSnapshotError("obsolete scene.rain is not supported")
-        geometry = scene.get("geometry", [])
-        if isinstance(geometry, list) and any(
-            isinstance(item, dict) and item.get("label") == "vista_plane"
-            for item in geometry
-        ):
-            raise RenderSnapshotError(
-                "obsolete scene.geometry vista_plane is not supported"
-            )
-        if isinstance(geometry, list) and any(
-            isinstance(item, dict)
-            and item.get("label") in {"volume_sphere", "volume_box"}
-            for item in geometry
-        ):
-            raise RenderSnapshotError(
-                "obsolete scene.geometry independent volumes are not supported"
-            )
-        if isinstance(geometry, list) and any(
-            isinstance(item, dict) and item.get("label") == "fog_volume"
-            for item in geometry
-        ):
-            raise RenderSnapshotError(
-                "obsolete scene.geometry fog_volume is not supported"
-            )
-    landscape = scene.get("landscape", {}) if isinstance(scene, dict) else {}
-    if isinstance(landscape, dict) and "water" in landscape:
-        raise RenderSnapshotError(
-            "obsolete scene.landscape.water is not supported"
-        )
-    if isinstance(landscape, dict) and "distant_hills" in landscape:
-        raise RenderSnapshotError(
-            "obsolete scene.landscape.distant_hills is not supported"
-        )
-    ground = (
-        landscape.get("ground", {}) if isinstance(landscape, dict) else {}
-    )
-    if isinstance(ground, dict):
-        for field in ("enabled", "active_landform", "landforms", "material"):
-            if field in ground:
-                raise RenderSnapshotError(
-                    f"obsolete scene.landscape.ground.{field} is not supported"
-                )
-        details = ground.get("details", {})
-        if isinstance(details, dict) and "surface" in details:
-            raise RenderSnapshotError(
-                "obsolete scene.landscape.ground.details.surface is not supported"
-            )
-        if isinstance(details, dict) and "grass" in details:
-            raise RenderSnapshotError(
-                "obsolete scene.landscape.ground.details.grass is not supported"
-            )
-        if isinstance(details, dict) and "poppies" in details:
-            raise RenderSnapshotError(
-                "obsolete scene.landscape.ground.details.poppies is not supported"
-            )
-        if isinstance(details, dict) and "litter" in details:
-            raise RenderSnapshotError(
-                "obsolete scene.landscape.ground.details.litter is not supported"
-            )
-        if isinstance(details, dict) and "rocks" in details:
-            raise RenderSnapshotError(
-                "obsolete scene.landscape.ground.details.rocks is not supported"
-            )
-        if isinstance(details, dict) and "undergrowth" in details:
-            raise RenderSnapshotError(
-                "obsolete scene.landscape.ground.details.undergrowth is not supported"
-            )
-    if isinstance(landscape, dict) and "ground" in landscape:
-        raise RenderSnapshotError("obsolete scene.landscape.ground is not supported")
     return name
 
 
@@ -617,8 +520,8 @@ def _validate_config(path: Path) -> dict:
             config = json.load(handle)
     except (OSError, json.JSONDecodeError) as error:
         raise RenderSnapshotError(f"invalid scene configuration {path}: {error}") from error
-    if not isinstance(config, dict) or not isinstance(config.get("scene"), dict):
-        raise RenderSnapshotError("scene configuration requires a scene object")
+    if not isinstance(config, dict):
+        raise RenderSnapshotError("scene configuration root must be an object")
     configured_scene_name(config)
     if not isinstance(config.get("camera_settings"), dict):
         raise RenderSnapshotError("scene configuration requires camera_settings")
@@ -647,14 +550,6 @@ def _validate_config(path: Path) -> dict:
         raise RenderSnapshotError("obsolete runtime root is not supported")
     if "pipeline" in config:
         raise RenderSnapshotError("obsolete pipeline root is not supported")
-    for name in ("master_file", "output_filename", "generated_medium"):
-        if name in config["scene"]:
-            raise RenderSnapshotError(f"obsolete scene.{name} is not supported")
-    if "camera" in config["scene"]:
-        raise RenderSnapshotError("obsolete scene.camera is not supported")
-    for name in ("film", "sampler", "integrator"):
-        if name in config["scene"]:
-            raise RenderSnapshotError(f"obsolete scene.{name} is not supported")
     return config
 
 

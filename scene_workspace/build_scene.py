@@ -285,7 +285,7 @@ def write_fog_medium(cfg, lines):
     """
     Write a homogeneous fog medium named "fog" into the world section.
     This creates the exterior atmospheric medium that makes god rays visible.
-    Config reads: scene.fog (enabled, sigma_a, sigma_s, g, camera_inside)
+    Config reads: scene_description.atmosphere.fog[]
 
     pbrt note: MakeNamedMedium for homogeneous media can appear inside
     the world section, unlike rgbgrid which uses Include.
@@ -815,8 +815,7 @@ def write_lights(lines, lights):
     """
     Write all enabled LightSource directives.
     Must appear after WorldBegin.
-    Config reads: scene.lights[] (enabled, type, color_mode, temperature/color,
-                                 scale, position)
+    Config reads: normalized lights from scene_description.sky
 
     Supported light types:
       "infinite" — environment/sky light, no position
@@ -1042,7 +1041,7 @@ def write_geometry(lines, geometry, scene_root=None, scene_files_root=None):
     """
     Write all enabled geometry objects as AttributeBegin/AttributeEnd blocks.
     Must appear after WorldBegin.
-    Config reads: scene.geometry[] (enabled, label, material, transform, medium, shape)
+    Config reads: normalized scene_description.objects[] geometry
 
     Transform order within an AttributeBegin block matters in pbrt —
     transforms are applied in reverse order (last listed = first applied).
@@ -3319,11 +3318,10 @@ def write_scene(cfg, scene_root, medium_rel_path):
       Pre-world:  header, camera, sampler, integrator, film, medium Include
       World:      WorldBegin, lights, geometry
 
-    Config reads: camera_settings, render_settings, scene_description.name,
-                  scene.*, file_names.*, and file_paths.scene_files
+    Config reads: camera_settings, render_settings, scene_description,
+                  file_names.*, and file_paths.scene_files
     Output file:  file_paths.scene_files/file_names.pbrt_scene
     """
-    scene    = cfg["scene"]
     scene_description = cfg["scene_description"]
     camera_settings = cfg["camera_settings"]
     render_settings = cfg["render_settings"]
@@ -3418,8 +3416,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     )
     write_geometry(
         lines,
-        configured_independent_geometry(scene_description)
-        + scene.get("geometry", []),
+        configured_independent_geometry(scene_description),
         scene_root,
         scene_files_root,
     )

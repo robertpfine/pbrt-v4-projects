@@ -180,10 +180,6 @@ class SceneConfigTests(unittest.TestCase):
     "water": {
       "enabled": false
     }
-  },
-  "scene": {
-    "landscape": {},
-    "geometry": []
   }
 }
 '''
@@ -381,89 +377,13 @@ class SceneConfigTests(unittest.TestCase):
                 ),
             )
 
-    def test_obsolete_ground_grass_is_reported(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"] = {
-                "details": {"grass": {"enabled": False}}
-            }
-            path.write_text(json.dumps(data), encoding="utf-8")
-            self.assertIn(
-                "obsolete scene.landscape.ground.details.grass must be "
-                "removed after grass migration",
-                SceneConfig(path).validate(),
-            )
-
-    def test_obsolete_ground_poppies_are_reported(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"] = {
-                "details": {"poppies": {"enabled": False}}
-            }
-            path.write_text(json.dumps(data), encoding="utf-8")
-            self.assertIn(
-                "obsolete scene.landscape.ground.details.poppies must be "
-                "removed after poppy migration",
-                SceneConfig(path).validate(),
-            )
-
-    def test_obsolete_ground_litter_is_reported(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"] = {
-                "details": {"litter": {"enabled": False}}
-            }
-            path.write_text(json.dumps(data), encoding="utf-8")
-            self.assertIn(
-                "obsolete scene.landscape.ground.details.litter must be "
-                "removed after litter migration",
-                SceneConfig(path).validate(),
-            )
-
-    def test_obsolete_ground_rocks_are_reported(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"] = {
-                "details": {"rocks": {"enabled": False}}
-            }
-            path.write_text(json.dumps(data), encoding="utf-8")
-            self.assertIn(
-                "obsolete scene.landscape.ground.details.rocks must be "
-                "removed after rock migration",
-                SceneConfig(path).validate(),
-            )
-
-    def test_obsolete_ground_undergrowth_is_reported(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"] = {
-                "details": {"undergrowth": {"enabled": False}}
-            }
-            path.write_text(json.dumps(data), encoding="utf-8")
-            errors = SceneConfig(path).validate()
-            self.assertIn(
-                "obsolete scene.landscape.ground must be removed after "
-                "surface-object migration",
-                errors,
-            )
-            self.assertIn(
-                "obsolete scene.landscape.ground.details.undergrowth must be "
-                "removed after undergrowth migration",
-                errors,
-            )
-
-    def test_current_scene_uses_explicit_landscape_and_sky_boundaries(self):
+    def test_current_scene_uses_only_migrated_root_boundaries(self):
         root = Path(__file__).resolve().parents[1]
         config = json.loads(
             (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
         )
         self.assertEqual(
-            list(config)[:5],
+            list(config),
             [
                 "file_names",
                 "file_paths",
@@ -475,17 +395,7 @@ class SceneConfigTests(unittest.TestCase):
         self.assertNotIn("archive", config)
         self.assertNotIn("runtime", config)
         self.assertNotIn("pipeline", config)
-        data = config["scene"]
-        self.assertNotIn("name", data)
-        self.assertNotIn("camera", data)
-        for obsolete in ("film", "sampler", "integrator"):
-            self.assertNotIn(obsolete, data)
-        for obsolete in ("master_file", "output_filename", "generated_medium"):
-            self.assertNotIn(obsolete, data)
-        self.assertNotIn("terrain", data)
-        self.assertNotIn("lsystem_trees", data)
-        self.assertNotIn("trees", data)
-        self.assertNotIn("grove", data)
+        self.assertNotIn("scene", config)
         self.assertEqual(
             [
                 landform["name"]
@@ -503,17 +413,6 @@ class SceneConfigTests(unittest.TestCase):
         self.assertEqual(
             vista["surface"]["texture"]["generator"],
             "vista_surface_mottle",
-        )
-        self.assertTrue(
-            all(item.get("label") != "vista_plane" for item in data["geometry"])
-        )
-        self.assertNotIn("landscape", data)
-        self.assertNotIn("sky", data)
-        self.assertNotIn("lights", data)
-        self.assertNotIn("fog", data)
-        self.assertNotIn("rain", data)
-        self.assertTrue(
-            all(item.get("label") != "fog_volume" for item in data["geometry"])
         )
         sky = config["scene_description"]["sky"]
         self.assertEqual(
@@ -566,40 +465,9 @@ class SceneConfigTests(unittest.TestCase):
             [7, 0],
         )
 
-    def test_obsolete_lsystem_tree_array_is_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["lsystem_trees"] = []
-            path.write_text(json.dumps(data), encoding="utf-8")
 
-            self.assertIn(
-                "obsolete scene.lsystem_trees must be removed after "
-                "L-system tree migration",
-                SceneConfig(path).validate(),
-            )
 
-    def test_obsolete_space_tree_and_grove_paths_are_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["trees"] = []
-            data["scene"]["grove"] = {"enabled": False}
-            path.write_text(json.dumps(data), encoding="utf-8")
-            errors = SceneConfig(path).validate()
-
-            self.assertIn(
-                "obsolete scene.trees must be removed after "
-                "space-colonization tree migration",
-                errors,
-            )
-            self.assertIn(
-                "obsolete scene.grove must be removed after "
-                "space-colonization tree migration",
-                errors,
-            )
-
-    def test_independent_object_schema_and_obsolete_phyllotaxis_are_checked(self):
+    def test_independent_object_schema_is_checked(self):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -619,116 +487,26 @@ class SceneConfigTests(unittest.TestCase):
                     "zones": [{"index_min": 0, "index_max": 2, "organ": {}}],
                 },
             }]
-            data["scene"]["planar_phyllotaxis"] = []
             path.write_text(json.dumps(data), encoding="utf-8")
             errors = SceneConfig(path).validate()
 
-            self.assertIn(
-                "obsolete scene.planar_phyllotaxis must be removed after "
-                "independent-object migration",
-                errors,
-            )
             self.assertEqual(
                 [error for error in errors if "scene_description.objects" in error],
                 [],
             )
 
-    def test_obsolete_independent_volume_paths_are_rejected(self):
+    def test_obsolete_scene_root_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["grid"] = {"enabled": False}
-            data["scene"]["zones"] = []
-            data["scene"]["geometry"] = [{"label": "volume_box"}]
-            path.write_text(json.dumps(data), encoding="utf-8")
-            errors = SceneConfig(path).validate()
-
-            self.assertIn(
-                "obsolete scene.grid must be removed after "
-                "independent-volume migration",
-                errors,
-            )
-            self.assertIn(
-                "obsolete scene.zones must be removed after "
-                "independent-volume migration",
-                errors,
-            )
-            self.assertIn(
-                "obsolete scene.geometry independent volumes must be removed "
-                "after independent-volume migration",
-                errors,
-            )
-
-    def test_obsolete_fog_paths_are_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["fog"] = {"enabled": False}
-            data["scene"]["geometry"] = [{"label": "fog_volume"}]
-            path.write_text(json.dumps(data), encoding="utf-8")
-            errors = SceneConfig(path).validate()
-
-            self.assertIn(
-                "obsolete scene.fog must be removed after atmosphere migration",
-                errors,
-            )
-            self.assertIn(
-                "obsolete scene.geometry fog_volume must be absorbed by fog",
-                errors,
-            )
-
-    def test_obsolete_rain_path_is_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["rain"] = {"enabled": False}
+            data["scene"] = {"geometry": []}
             path.write_text(json.dumps(data), encoding="utf-8")
 
             self.assertIn(
-                "obsolete scene.rain must be removed after atmosphere migration",
+                "obsolete scene root must be removed after migration",
                 SceneConfig(path).validate(),
             )
 
-    def test_obsolete_geometry_vista_plane_is_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["geometry"] = [{"label": "vista_plane"}]
-            path.write_text(json.dumps(data), encoding="utf-8")
-
-            self.assertIn(
-                "obsolete scene.geometry vista_plane must be removed after "
-                "vista landform migration",
-                SceneConfig(path).validate(),
-            )
-
-    def test_obsolete_water_path_is_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["water"] = {"enabled": False}
-            path.write_text(json.dumps(data), encoding="utf-8")
-
-            self.assertIn(
-                "obsolete scene.landscape.water must be removed after water migration",
-                SceneConfig(path).validate(),
-            )
-
-    def test_obsolete_distant_hills_wrapper_is_rejected(self):
-        with tempfile.TemporaryDirectory() as directory:
-            path, _ = self.make_config(directory)
-            data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["distant_hills"] = {
-                "enabled": False,
-                "layers": [],
-            }
-            path.write_text(json.dumps(data), encoding="utf-8")
-
-            self.assertIn(
-                "obsolete scene.landscape.distant_hills must be removed "
-                "after distant-ridge migration",
-                SceneConfig(path).validate(),
-            )
 
     def test_invalid_stage_one_paths_are_reported_at_new_locations(self):
         with tempfile.TemporaryDirectory() as directory:

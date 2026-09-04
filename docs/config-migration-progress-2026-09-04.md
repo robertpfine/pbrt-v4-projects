@@ -1,6 +1,6 @@
 # Live Configuration Migration Progress — 2026-09-04
 
-Status: Stages 1–9 implementation and validation complete
+Status: Migration complete through Stage 10
 
 ## Authority and starting point
 
@@ -1616,3 +1616,77 @@ errors, the JSON parses cleanly, Python compilation and shell syntax checks
 pass, and no production render was launched. Stage 10 removes the now-empty
 legacy `scene` wrapper and audits the entire migrated configuration and every
 remaining compatibility reference.
+
+The Stage 9 water commit is `c5a4d80` (`Migrate water placeholder`) and is
+pushed to `origin/pbrt-v4-art-studio`. Its Google Drive continuity copy
+succeeded at `gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md`.
+
+## Stage 10 — obsolete wrapper removal and final migration audit
+
+Status: implementation and validation complete from pushed water checkpoint
+`c5a4d80`
+
+The empty final `scene.geometry[]` array and its containing top-level `scene`
+object were removed. The authoritative configuration now has exactly five
+ordered roots:
+
+```text
+file_names
+file_paths
+camera_settings
+render_settings
+scene_description
+```
+
+Within `scene_description`, the final order is `mode`, `name`,
+`scene_context`, `landforms`, `objects`, `sky`, `atmosphere`, and `water`.
+There are four landforms, three independent objects, three clouds, one fog
+object, one rain object, and the enabled-only water placeholder. No second JSON
+or compatibility copy exists.
+
+The general builder no longer merges legacy generic geometry. The
+shaft-composite configuration no longer traverses a legacy scene tree. Both
+configuration validators now reject the obsolete root as a whole instead of
+carrying hundreds of lines of nested migration-only validation. The associated
+old-path tests were consolidated into root-rejection coverage.
+
+A final executable-source audit found and corrected four less-visible legacy
+consumers: the standalone space-colonization entry point and the poppy,
+pistil, and reproductive diagnostic builders. They now resolve migrated
+landform surface objects. Stale builder docstrings and the Qt Landscape help
+text were corrected as well. Repository-wide searches find no configuration
+read from the old root; the remaining string `scene` in the Qt source is only
+the human-facing Scene page identifier.
+
+Final mechanical audit:
+
+```text
+root order             ['file_names', 'file_paths', 'camera_settings',
+                        'render_settings', 'scene_description']
+root count             5
+legacy scene present   False
+landforms              4
+independent objects    3
+cloud objects          3
+fog objects            1
+rain objects           1
+water                  {'enabled': False}
+```
+
+The final migrated configuration was rebuilt in memory using the same bounded
+`020525` diagnostic values, without creating another JSON or launching PBRT:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 10 size:       117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The retained proof workspace is `/tmp/pbrt-final-stage10.s9sLvs`. After
+removing migration-only tests, the complete `.venv` suite runs 119 tests (109
+passed, ten dependency-aware skips), and system Python passes all 104 non-GUI
+tests. Live validation reports zero errors, the JSON parses cleanly, all active
+Python entry points compile, shell syntax checks pass, and no production render
+was launched. Every approved migration stage is implemented and structurally
+validated.

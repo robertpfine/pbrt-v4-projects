@@ -86,7 +86,7 @@ class ArtStudioTests(unittest.TestCase):
         self.assertEqual(
             data["scene_description"]["scene_context"]["longitude"], -75.5
         )
-        self.assertNotIn("name", data["scene"])
+        self.assertNotIn("scene", data)
 
     def test_control_change_saves_to_the_single_configuration(self):
         path = (
@@ -187,7 +187,7 @@ class ArtStudioTests(unittest.TestCase):
         self.assertTrue(self.window.save_config())
         data = json.loads(self.config_path.read_text(encoding="utf-8"))
         self.assertEqual(data["camera_settings"]["fov"], 47.5)
-        self.assertNotIn("camera", data["scene"])
+        self.assertNotIn("scene", data)
 
     def test_render_page_uses_root_render_settings(self):
         sampler = self.window.findChild(
@@ -218,8 +218,7 @@ class ArtStudioTests(unittest.TestCase):
         self.assertEqual(data["render_settings"]["backend"]["type"], "cpu")
         self.assertNotIn("runtime", data)
         self.assertNotIn("pipeline", data)
-        for obsolete in ("film", "sampler", "integrator"):
-            self.assertNotIn(obsolete, data["scene"])
+        self.assertNotIn("scene", data)
 
     def test_latest_render_uses_configured_local_archive(self):
         archive = Path(self.temporary_directory.name) / "ConfiguredArchive"

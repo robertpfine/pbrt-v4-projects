@@ -471,15 +471,12 @@ The active artist-accepted high-resolution master is render `093054`, with
 restore the disabled `broad_rise`. The next session should proceed in this
 order:
 
-1. **Validate the ground-level new-scene schema.** The approved, non-runnable
-   architectural design is `docs/config-schema-new-scene.md`. All fourteen
-   review issues are resolved. Its engineering translation is
-   `docs/config-schema-new-scene-ground-level.md`; it defines fields,
-   validation, generator ownership, current-to-proposed paths, and the
-   normalized C++ cloud-grid contract. It is documentation, not a second live
-   configuration, and does not require the artist to audit every generator
-   leaf. Escalate only choices that change visible terminology, artistic-control
-   location, or scene-building workflow.
+1. **The ground-level new-scene schema is validated and migrated.** The
+   approved architectural design remains `docs/config-schema-new-scene.md`,
+   with its engineering translation in
+   `docs/config-schema-new-scene-ground-level.md`. All fourteen review issues
+   are resolved and all ten migration stages are complete in the single live
+   configuration.
 2. **Preserve the accepted sunrise master.** `093054` is the active visual
    master at `8000 x 5800`, 512 samples per pixel, and integrator depth `200`.
    Its warm cloud illumination, dark dew-coated field, and low horizon mist are
@@ -495,35 +492,14 @@ order:
    Manual live-JSON edits during a render affect only the next run. Failed runs
    retain their temporary workspace for diagnosis; successful runs remove it
    only after local archival and configured remote synchronization.
-4. **Migrate only after the prototype schema is approved.** Tackle accumulated
-   size, repetition,
-   naming, and organization in the single authoritative
-   `scene_workspace/config.json`. Preserve direct manual editing, do not create
-   a second live scene configuration, and refactor the working file in tested,
-   usable stages rather than building a disconnected replacement. Move one
-   complete artistic object at a time without keeping duplicate live values;
-   update its builder, GUI, validation, and all operational consumers together.
-   Preserve the artist's earlier C++ configuration mental model: camera and
-   render controls are immediately discoverable, and each visible object's
-   geometry, placement, material, color, and surface objects remain
-   adjacent. Begin from the landform-first principle: choose a landform, then
-   decide its relief, appearance, and surface objects.
-   The first four live migration stages and Stage 5A are complete: `file_names`,
-   `file_paths`, `camera_settings`, `render_settings`, and the
-   `scene_description` shell/context are active; the foreground terrain
-   alternatives, their geometry/topography, material, and texture now live in
-   `scene_description.landforms`. Their old paths are absent, every known
-   consumer uses the new locations, and bounded rebuilds reproduced the
-   pre-migration PBRT scene byte for byte. Stage 5B is complete: grass, poppies,
-   litter, rocks, and undergrowth are migrated and the empty legacy ground
-   wrapper is removed. Stage 5C is complete: the vista plane and `broad_rise`
-   are independent landforms. Stage 5D is complete: L-system and
-   space-colonization trees are landform surface objects, and the grove is folded
-   into its selected tree population. Stage 6.1 is complete: the disabled
-   planar-phyllotaxis sunflower is the first `scene_description.objects` entry.
-   Stage 6.2 is also complete: the disabled legacy sphere and box volume
-   experiments are self-contained objects with owned media. Stage 7 begins sky
-   migration; `fog_volume` remains for the atmosphere stage.
+4. **The live configuration migration is complete.** The sole authoritative
+   `scene_workspace/config.json` now has exactly `file_names`, `file_paths`,
+   `camera_settings`, `render_settings`, and `scene_description` at its root.
+   Landforms own their surfaces and placed generators; independent objects,
+   sky, atmosphere, and water have the approved self-contained ownership. The
+   obsolete `scene` root and compatibility consumers are gone. Every staged
+   bounded rebuild reproduced the archived control PBRT byte for byte. Preserve
+   direct manual editing and this landform-first organization in future work.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -859,6 +835,21 @@ remains byte-identical at 117,462,947 bytes with SHA-256
 The complete `.venv` suite runs 148 tests (138 passed, ten skips), and all 133
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 10 removes
 the now-empty legacy `scene` wrapper and performs the final migration audit.
+
+Stage 10 and the live configuration migration are complete in the working
+implementation. The empty legacy `scene` wrapper is gone; the authoritative
+JSON has exactly five roots: `file_names`, `file_paths`, `camera_settings`,
+`render_settings`, and `scene_description`. The standard builder, composite
+workflow, immutable snapshot, validator, Qt inspector, standalone tree entry
+point, and three poppy diagnostic builders all use migrated ownership. Obsolete
+nested compatibility validation was replaced by whole-root rejection. The
+final archived `020525` proof remains byte-identical at 117,462,947 bytes with
+SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+After removal of migration-only tests, the complete `.venv` suite runs 119
+tests (109 passed, ten skips), and all 104 system-Python non-GUI tests pass. No
+PBRT render was launched. Detailed final audit evidence is in
+`docs/config-migration-progress-2026-09-04.md`.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 
