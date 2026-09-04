@@ -517,9 +517,9 @@ order:
    pre-migration PBRT scene byte for byte. Stage 5B is complete: grass, poppies,
    litter, rocks, and undergrowth are migrated and the empty legacy ground
    wrapper is removed. Stage 5C is complete: the vista plane and `broad_rise`
-   are independent landforms. Stage 5D is migrating the remaining tree surface
-   objects before Stage 6 begins independent objects; L-system trees are done
-   and space-colonization trees are next.
+   are independent landforms. Stage 5D is complete: L-system and
+   space-colonization trees are landform surface objects, and the grove is folded
+   into its selected tree population. Stage 6 begins independent objects next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -745,6 +745,21 @@ absent and rejected. The archived `020525` proof remains byte-identical at
 The complete `.venv` suite runs 128 tests (119 passed, nine skips), and all 114
 system-Python non-GUI tests pass. No PBRT render was launched. The next bounded
 Stage 5D move is the `space_colonization_tree` generator and grove placement.
+
+Stage 5D space-colonization migration is complete in the working
+implementation. Both disabled alternatives moved from `scene.trees[]` to
+ordered `space_colonization_tree` surface objects under `flat_landform`. Their
+complete growth and foliage inputs are under `construction`; root placement and
+explicit instances are under `population`. The first object owns the former
+seven-placement grove with its disabled state preserved, and the separate
+`scene.grove` path is gone. The builder, standalone generator, render-pipeline
+enable checks, Qt inspector, validation, snapshot safeguards, and tests all use
+the new structure. The archived `020525` proof remains byte-identical at
+117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 132 tests (123 passed, nine skips), and all 118
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 5D is
+complete; Stage 6 begins independently placed objects.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

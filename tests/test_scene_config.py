@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from scene_config import SceneConfig, SceneConfigConflictError, SceneConfigError
+from generate import configured_space_colonization_trees
 
 
 class SceneConfigTests(unittest.TestCase):
@@ -146,8 +147,7 @@ class SceneConfigTests(unittest.TestCase):
       "clouds": { "enabled": false }
     },
     "fog": { "enabled": false },
-    "lights": [{ "label": "shaft_sun", "enabled": false }],
-    "trees": []
+    "lights": [{ "label": "shaft_sun", "enabled": false }]
   }
 }
 '''
@@ -448,6 +448,8 @@ class SceneConfigTests(unittest.TestCase):
             self.assertNotIn(obsolete, data)
         self.assertNotIn("terrain", data)
         self.assertNotIn("lsystem_trees", data)
+        self.assertNotIn("trees", data)
+        self.assertNotIn("grove", data)
         self.assertEqual(
             [
                 landform["name"]
@@ -490,6 +492,29 @@ class SceneConfigTests(unittest.TestCase):
             ],
             ["live_oak", "fractal_tree"],
         )
+        self.assertEqual(
+            [
+                item["name"]
+                for item in flat["surface_objects"]
+                if item["generator"] == "space_colonization_tree"
+            ],
+            ["space_colonization_tree_1", "space_colonization_tree_2"],
+        )
+
+    def test_space_colonization_generator_reads_landform_surface_objects(self):
+        root = Path(__file__).resolve().parents[1]
+        config = json.loads(
+            (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
+        )
+
+        trees = configured_space_colonization_trees(config)
+
+        self.assertEqual(len(trees), 2)
+        self.assertEqual([tree["enabled"] for tree in trees], [False, False])
+        self.assertEqual(
+            [len(tree["instances"]["placements"]) for tree in trees],
+            [7, 0],
+        )
 
     def test_obsolete_lsystem_tree_array_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -502,6 +527,26 @@ class SceneConfigTests(unittest.TestCase):
                 "obsolete scene.lsystem_trees must be removed after "
                 "L-system tree migration",
                 SceneConfig(path).validate(),
+            )
+
+    def test_obsolete_space_tree_and_grove_paths_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["trees"] = []
+            data["scene"]["grove"] = {"enabled": False}
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+
+            self.assertIn(
+                "obsolete scene.trees must be removed after "
+                "space-colonization tree migration",
+                errors,
+            )
+            self.assertIn(
+                "obsolete scene.grove must be removed after "
+                "space-colonization tree migration",
+                errors,
             )
 
     def test_obsolete_geometry_vista_plane_is_rejected(self):

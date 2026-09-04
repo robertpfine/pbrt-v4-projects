@@ -1189,3 +1189,67 @@ is away. The complete `.venv` suite ran 128 tests (119 passed, nine skips);
 system Python passed all 114 non-GUI tests. Live validation reports zero errors.
 No production render was launched. Stage 5D.2 migrates space-colonization trees
 and folds the separate grove population into its selected tree.
+
+The L-system tree commit is `9f60e2a` (`Migrate L-system tree surface objects`)
+and is pushed to `origin/pbrt-v4-art-studio`. Its single Google Drive continuity
+attempt immediately rate-limited and was not retried.
+
+## Stage 5D.2 — space-colonization trees and grove population
+
+Status: implementation and validation complete from pushed L-system checkpoint
+`9f60e2a`
+
+Both disabled entries from `scene.trees[]` moved in stable order beneath
+`flat_landform.surface_objects[]` with generator `space_colonization_tree`.
+Their complete growth, attraction, thickening, topology, material, and foliage
+controls moved to `construction`. Root placement and explicit instances moved
+to `population`.
+
+The separate disabled `scene.grove` block selected tree index zero. Its seven
+ordered placements are therefore now owned by
+`space_colonization_tree_1.population.instances`, whose explicit `enabled:
+false` retains the dormant grove state. The second tree owns an explicit empty
+placement list. The old `scene.trees` and `scene.grove` paths are absent.
+
+The existing tree writer and standalone `generate.py` orchestrator flatten the
+new construction/population boundary in stable source order, preserving
+generated filenames and PBRT object indices. `render_pipeline.sh` checks the
+new generator and nested foliage path. Configuration and snapshot validation
+reject both old paths. The Qt tree inspector now enumerates only landform-owned
+L-system and space-colonization objects. A lazy generator import keeps the new
+configuration-routing helper testable without loading optional numerical tree
+dependencies when no tree generation is requested.
+
+Two focused failures were found and resolved before the proof: snapshot legacy
+path validation reused the variable holding the scene name, causing archive
+names to become `grove`, and the frozen-pipeline integration fixture still
+inserted an empty old `scene.trees` array. The variable and fixture were
+corrected, and the frozen-render integration passed afterward.
+
+Mechanical ownership audit:
+
+```text
+space_tree_names ['space_colonization_tree_1', 'space_colonization_tree_2']
+enabled_space_trees []
+population_instance_enabled [False, False]
+population_placement_counts [7, 0]
+legacy_trees_present False
+legacy_grove_present False
+```
+
+The archived `020525` diagnostic migration was built in memory without a second
+JSON or PBRT launch:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5D.2 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The proof workspace remains at `/tmp/pbrt-space-tree-stage5d.xCB0Af` to avoid a
+destructive cleanup prompt while unattended. The complete `.venv` suite ran
+132 tests (123 passed, nine skips); system Python passed all 118 non-GUI tests.
+Live validation reports zero errors, and `render_pipeline.sh` passes `bash -n`.
+No production render was launched. Stage 5D is complete; Stage 6 begins with
+independently placed objects.

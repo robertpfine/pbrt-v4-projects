@@ -3430,12 +3430,12 @@ def write_scene(cfg, scene_root, medium_rel_path):
         terrain,
     )
 
-    grove_cfg = scene.get("grove", {})
-    grove_tree_index = grove_cfg.get("tree_index", 0)
-
     # Define each generated tree once, then place either one ordinary
-    # instance or the configured grove instances.
-    for i, tree_cfg in enumerate(cfg["scene"].get("trees", [])):
+    # instance or its configured explicit population.
+    space_colonization_trees = configured_surface_objects(
+        terrain_landform, "space_colonization_tree"
+    )
+    for i, tree_cfg in enumerate(space_colonization_trees):
         if not tree_cfg.get("enabled", False):
             continue
         lines += [
@@ -3450,9 +3450,12 @@ def write_scene(cfg, scene_root, medium_rel_path):
                 f'Include "{scene_files_relative}/foliage_defs_{i}.pbrt"'
             )
 
-        instances = [{}]
-        if grove_cfg.get("enabled", False) and i == grove_tree_index:
-            instances = grove_cfg.get("instances", [])
+        instance_config = tree_cfg.get("instances", {})
+        instances = (
+            instance_config.get("placements", [])
+            if instance_config.get("enabled", False)
+            else [{}]
+        )
 
         for instance in instances:
             position = instance.get("position", [0.0, 0.0, 0.0])

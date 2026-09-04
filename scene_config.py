@@ -716,10 +716,12 @@ class SceneConfig:
                                 "rock_scatter",
                                 "undergrowth",
                                 "lsystem_tree",
+                                "space_colonization_tree",
                             }:
                                 errors.append(
                                     f"{object_prefix}.generator must be grass, poppy, "
-                                    "litter, rock_scatter, undergrowth, or lsystem_tree"
+                                    "litter, rock_scatter, undergrowth, lsystem_tree, "
+                                    "or space_colonization_tree"
                                 )
                             construction = item.get("construction")
                             population = item.get("population")
@@ -939,6 +941,85 @@ class SceneConfig:
                                             errors.append(
                                                 f"{instance_prefix}.scale must be positive"
                                             )
+                            elif generator == "space_colonization_tree":
+                                for field in ("num_leaves", "max_loops"):
+                                    value = construction.get(field)
+                                    if not isinstance(value, int) or value < 0:
+                                        errors.append(
+                                            "space_colonization_tree.construction."
+                                            f"{field} must be non-negative"
+                                        )
+                                if not isinstance(construction.get("foliage"), dict):
+                                    errors.append(
+                                        "space_colonization_tree.construction.foliage "
+                                        "must be an object"
+                                    )
+                                if population.get("method") != "explicit":
+                                    errors.append(
+                                        "space_colonization_tree.population.method "
+                                        "must be explicit"
+                                    )
+                                root_position = population.get("root_position")
+                                if (
+                                    not isinstance(root_position, list)
+                                    or len(root_position) != 3
+                                    or not all(
+                                        isinstance(value, (int, float))
+                                        and not isinstance(value, bool)
+                                        for value in root_position
+                                    )
+                                ):
+                                    errors.append(
+                                        "space_colonization_tree.population."
+                                        "root_position must contain three numbers"
+                                    )
+                                instances = population.get("instances")
+                                if not isinstance(instances, dict):
+                                    errors.append(
+                                        "space_colonization_tree.population.instances "
+                                        "must be an object"
+                                    )
+                                else:
+                                    if not isinstance(instances.get("enabled"), bool):
+                                        errors.append(
+                                            "space_colonization_tree.population.instances."
+                                            "enabled must be boolean"
+                                        )
+                                    placements = instances.get("placements")
+                                    if not isinstance(placements, list):
+                                        errors.append(
+                                            "space_colonization_tree.population.instances."
+                                            "placements must be an array"
+                                        )
+                                    else:
+                                        for placement_index, tree_placement in enumerate(placements):
+                                            placement_prefix = (
+                                                "space_colonization_tree.population."
+                                                f"instances.placements.{placement_index}"
+                                            )
+                                            if not isinstance(tree_placement, dict):
+                                                errors.append(
+                                                    f"{placement_prefix} must be an object"
+                                                )
+                                                continue
+                                            position = tree_placement.get("position")
+                                            if (
+                                                not isinstance(position, list)
+                                                or len(position) != 3
+                                            ):
+                                                errors.append(
+                                                    f"{placement_prefix}.position must "
+                                                    "contain three values"
+                                                )
+                                            scale = tree_placement.get("scale")
+                                            if not isinstance(
+                                                scale, (int, float)
+                                            ) or isinstance(
+                                                scale, bool
+                                            ) or scale <= 0:
+                                                errors.append(
+                                                    f"{placement_prefix}.scale must be positive"
+                                                )
                         if len(object_names) != len(set(object_names)):
                             errors.append(f"{prefix}.surface object names must be unique")
 
@@ -966,6 +1047,12 @@ class SceneConfig:
                     "obsolete scene.lsystem_trees must be removed after "
                     "L-system tree migration"
                 )
+            for name in ("trees", "grove"):
+                if name in scene_root:
+                    errors.append(
+                        f"obsolete scene.{name} must be removed after "
+                        "space-colonization tree migration"
+                    )
             geometry = scene_root.get("geometry", [])
             if isinstance(geometry, list) and any(
                 isinstance(item, dict) and item.get("label") == "vista_plane"

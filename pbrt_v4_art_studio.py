@@ -645,24 +645,22 @@ class Inspector(QtWidgets.QWidget):
         for index, item in enumerate(
             self.config.get(terrain_root + ("surface_objects",), [])
         ):
-            if item.get("generator") != "lsystem_tree":
-                continue
             root = terrain_root + ("surface_objects", index)
-            label = item.get("construction", {}).get(
-                "preset", f"procedural tree {index + 1}"
-            )
-            entries.append((
-                f"{label} (rule-based)",
-                root,
-                root + ("construction", "scale"),
-            ))
-        for index, _tree in enumerate(self.config.get(("scene", "trees"), [])):
-            root = ("scene", "trees", index)
-            entries.append((
-                f"space-colonization tree {index + 1}",
-                root,
-                root + ("scale",),
-            ))
+            if item.get("generator") == "lsystem_tree":
+                label = item.get("construction", {}).get(
+                    "preset", f"procedural tree {index + 1}"
+                )
+                entries.append((
+                    f"{label} (rule-based)",
+                    root,
+                    root + ("construction", "scale"),
+                ))
+            elif item.get("generator") == "space_colonization_tree":
+                entries.append((
+                    item.get("name", f"space-colonization tree {index + 1}"),
+                    root,
+                    root + ("construction", "scale"),
+                ))
         selector = QtWidgets.QComboBox()
         for label, _path, _scale_path in entries:
             selector.addItem(label)

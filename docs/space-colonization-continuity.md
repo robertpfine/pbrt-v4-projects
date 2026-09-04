@@ -2,6 +2,16 @@
 
 Last updated: 2026-08-20
 
+## 2026-09-04 live migration update
+
+This remains a subordinate artistic history; the active branch and next steps
+come from `docs/continuity.md`. On `pbrt-v4-art-studio`, both retained
+space-colonization alternatives now live as disabled
+`generator: "space_colonization_tree"` entries under
+`flat_landform.surface_objects[]`. Complete growth and foliage inputs are under
+`construction`; `population` owns root placement and optional explicit
+instances. The former `scene.trees` and `scene.grove` paths are absent.
+
 ## Current checkpoint
 
 - Branch: `space-colonization`
@@ -31,7 +41,7 @@ The project has since expanded from a single Figure 8-inspired tree into:
 
 ## Accepted tree architecture
 
-The active tree configuration is in `scene_workspace/config.json`. Important choices
+The retained tree construction is in `scene_workspace/config.json`. Important choices
 include:
 
 - `D = 1.0`
@@ -73,11 +83,12 @@ the same foliage can inherit each grove instance's transform.
 
 ## Grove
 
-`scene_workspace/build_scene.py` defines generated wood once and instances it using
-the `scene.grove` configuration. Seven placements currently vary translation,
-Y rotation, and uniform scale. Foliage placements inherit the same instance
-transform. The grove is intentionally compact; the user did not want the crowns
-expanded farther merely to increase apparent density.
+`scene_workspace/build_scene.py` defines generated wood once and instances it
+using the first tree object's `population.instances`. Seven retained placements
+vary translation, Y rotation, and uniform scale, but the population switch is
+currently disabled. Foliage placements inherit the same instance transform.
+The grove is intentionally compact; the user did not want the crowns expanded
+farther merely to increase apparent density.
 
 ## Accepted lighting, water, and camera state
 

@@ -471,6 +471,20 @@ The former `scene.lsystem_trees` array is absent and rejected. Multiple objects
 may use the same registered generator; stable object names, rather than an
 artificial generator-uniqueness rule, distinguish them.
 
+### Space-colonization trees
+
+Two disabled `generator: "space_colonization_tree"` surface objects follow the
+L-system trees under `flat_landform`. `construction` owns every growth,
+thickening, topology, material, and foliage field. `population` owns the root
+position and an explicitly enabled or disabled placement collection. The first
+tree contains the former seven-entry grove with its population switch preserved
+as disabled; the second contains an explicit empty placement list.
+
+The former `scene.trees` and `scene.grove` paths are absent and rejected. Both
+the standalone generation orchestrator and the scene writer flatten the new
+objects in stable order so generated filenames and PBRT object indices remain
+unchanged.
+
 ### Ecological layering
 
 The layers deliberately use different fields and spatial rules:

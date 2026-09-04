@@ -221,6 +221,24 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "lsystem_tree requires construction and explicit population"
         )
+    space_trees = [
+        item
+        for landform in landforms
+        if isinstance(landform, dict)
+        for item in landform.get("surface_objects", [])
+        if isinstance(item, dict)
+        and item.get("generator") == "space_colonization_tree"
+    ]
+    if any(
+        not isinstance(item.get("construction"), dict)
+        or not isinstance(item.get("population"), dict)
+        or item["population"].get("method") != "explicit"
+        or not isinstance(item["population"].get("instances"), dict)
+        for item in space_trees
+    ):
+        raise RenderSnapshotError(
+            "space_colonization_tree requires construction and explicit population"
+        )
     vista_landforms = [
         landform
         for landform in landforms
@@ -272,6 +290,11 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 "obsolete scene.lsystem_trees is not supported"
             )
+        for legacy_name in ("trees", "grove"):
+            if legacy_name in scene:
+                raise RenderSnapshotError(
+                    f"obsolete scene.{legacy_name} is not supported"
+                )
         geometry = scene.get("geometry", [])
         if isinstance(geometry, list) and any(
             isinstance(item, dict) and item.get("label") == "vista_plane"
