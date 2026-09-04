@@ -43,6 +43,15 @@ Run from the repository root:
 python3 render_shaft_composite.py
 ```
 
+At launch, the composite renderer freezes the JSON and all participating
+generator sources into `scene_workspace/.render_runs/<timestamp>/repository`.
+Both PBRT passes are built and rendered from that immutable mirror. Manual
+edits to the live JSON while a render is underway therefore apply only to the
+next render. On success, the local Archive receives the frozen JSON, generated
+PBRT files, source bundle, and SHA-256 manifest before optional Google Drive
+synchronization. A failed build, render, or archive step retains the temporary
+run directory for diagnosis.
+
 The base and shaft PNGs are retained as internal diagnostic passes, while the
 composite PNG is the final image presented for evaluation. `Archive/` also
 receives the config, scene builder, standard render pipeline, composite script,

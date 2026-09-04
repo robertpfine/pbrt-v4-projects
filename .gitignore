@@ -16,6 +16,8 @@ SessionArchive/
 **/scene_files/*.pbrt
 **/scene_files/volumes/
 **/scene_files/meshes/*.ply
+scene_workspace/.render_runs/
+build/
 
 # --- Python ---
 __pycache__/

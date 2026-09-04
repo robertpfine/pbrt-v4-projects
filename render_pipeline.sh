@@ -12,17 +12,30 @@ if [ -d "$CONFIG_INPUT" ]; then
 fi
 ARCHIVE_DIR="${REPO_ROOT}/Archive"
 
-# --- 1. VALIDATE AND RESOLVE THE WORKING SCENE ---
+# --- 1. RESOLVE AND FREEZE THE WORKING SCENE ---
 if [ ! -f "$CONFIG_INPUT" ]; then
     echo "ERROR: Scene configuration not found: $CONFIG_INPUT"
     exit 1
 fi
-CONFIG_FILE="$(realpath "$CONFIG_INPUT")"
-SCENE_ROOT="$(dirname "$CONFIG_FILE")"
+SOURCE_CONFIG_FILE="$(realpath "$CONFIG_INPUT")"
+TS=$(date +%Y%m%d_%H%M%S)
+SNAPSHOT_INFO=$(python3 "${REPO_ROOT}/render_snapshot.py" create \
+    --repository-root "$REPO_ROOT" \
+    --config "$SOURCE_CONFIG_FILE" \
+    --timestamp "$TS")
+if [ $? -ne 0 ]; then
+    echo "ERROR: Could not create immutable render-input snapshot."
+    exit 1
+fi
+CONFIG_FILE=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.config')
+SCENE_ROOT=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.scene_root')
+SNAPSHOT_REPO_ROOT=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.repository_root')
+RUN_DIRECTORY=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.run_directory')
+echo "Render inputs frozen: $RUN_DIRECTORY"
 
 # --- 2. PARSE CONFIG VIA JQ ---
 SCENE_NAME=$(jq -r '.scene.name // "untitled_scene"' "$CONFIG_FILE")
-ARCHIVE_STEM=$(printf '%s' "$SCENE_NAME" | tr -cs 'A-Za-z0-9._-' '_')
+ARCHIVE_STEM=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.archive_stem')
 REMOTE_PATH=$(jq -r '.archive.remote_path'          "$CONFIG_FILE")
 PBRT_BIN=$(jq    -r '.runtime.pbrt_binary'         "$CONFIG_FILE")
 USE_GPU=$(jq     -r '.runtime.use_gpu'             "$CONFIG_FILE")
@@ -53,7 +66,7 @@ fi
 TREE_ENABLED=$(jq -r '[.scene.trees[]? | select(.enabled == true)] | length > 0' "$CONFIG_FILE")
 FOLIAGE_ENABLED=$(jq -r '[.scene.trees[]? | select(.foliage.enabled == true)] | length > 0' "$CONFIG_FILE")
 if [ "$TREE_ENABLED" = "true" ] || [ "$FOLIAGE_ENABLED" = "true" ]; then
-    GENERATE="${REPO_ROOT}/generate.py"
+    GENERATE="${SNAPSHOT_REPO_ROOT}/generate.py"
     if [ ! -f "$GENERATE" ]; then
         echo "ERROR: generate.py not found in repo root."
         exit 1
@@ -81,7 +94,6 @@ CMD_FLAGS=""
 if [ "$USE_GPU"    = "true" ]; then CMD_FLAGS="$CMD_FLAGS --gpu";   fi
 if [ "$SHOW_STATS" = "true" ]; then CMD_FLAGS="$CMD_FLAGS --stats"; fi
 
-TS=$(date +%Y%m%d_%H%M%S)
 mkdir -p "$ARCHIVE_DIR"
 FINAL_BASE="${ARCHIVE_DIR}/${ARCHIVE_STEM}_${TS}"
 
@@ -104,34 +116,25 @@ fi
 # marker so it can display the image while archival and remote sync continue.
 echo "ART_STUDIO_RENDER_READY=${FINAL_BASE}.png"
 
-# --- 8. ARCHIVE REPRODUCIBILITY BUNDLE ---
+# --- 8. ARCHIVE THE FROZEN REPRODUCIBILITY BUNDLE ---
 echo "Archiving reproducibility files..."
-cp "$SCENE_PATH"                    "${FINAL_BASE}.pbrt"
-cp "$CONFIG_FILE"                   "${FINAL_BASE}_config.json"
-cp "${SCENE_ROOT}/build_scene.py" "${FINAL_BASE}_build_scene.py" 2>/dev/null || true
-cp "${REPO_ROOT}/clouds.py" "${FINAL_BASE}_clouds.py" 2>/dev/null || true
-cp "${REPO_ROOT}/rain.py" "${FINAL_BASE}_rain.py" 2>/dev/null || true
-cp "${REPO_ROOT}/distant_hills.py" "${FINAL_BASE}_distant_hills.py" 2>/dev/null || true
-cp "${REPO_ROOT}/vista_surface_texture.py" "${FINAL_BASE}_vista_surface_texture.py" 2>/dev/null || true
-cp "${REPO_ROOT}/render_pipeline.sh" "${FINAL_BASE}_render_pipeline.sh" 2>/dev/null || true
-
-# Update metadata headers in archived .pbrt copy
-sed -i "s|^# FILE:.*|# FILE: scene.pbrt|"          "${FINAL_BASE}.pbrt"
-sed -i "s|^# SCENE:.*|# SCENE: $SCENE_NAME|" "${FINAL_BASE}.pbrt"
+python3 "${SNAPSHOT_REPO_ROOT}/render_snapshot.py" finalize \
+    --run-directory "$RUN_DIRECTORY" \
+    --archive-prefix "$FINAL_BASE" \
+    --artifact ".png=${FINAL_BASE}.png" \
+    --artifact ".pbrt=${SCENE_PATH}"
+if [ $? -ne 0 ]; then
+    echo "ERROR: Render completed, but immutable local archive finalization failed."
+    echo "       Frozen inputs remain in: $RUN_DIRECTORY"
+    exit 1
+fi
 
 # --- 9. RCLONE SYNC (if enabled) ---
 if [ "$RUN_SYNC" = "true" ]; then
     echo "Syncing archive bundle to Google Drive..."
     rclone copy "$ARCHIVE_DIR" "$REMOTE_PATH" \
-        --include "${ARCHIVE_STEM}_${TS}.png" \
-        --include "${ARCHIVE_STEM}_${TS}.pbrt" \
-        --include "${ARCHIVE_STEM}_${TS}_config.json" \
-        --include "${ARCHIVE_STEM}_${TS}_build_scene.py" \
-        --include "${ARCHIVE_STEM}_${TS}_clouds.py" \
-        --include "${ARCHIVE_STEM}_${TS}_rain.py" \
-        --include "${ARCHIVE_STEM}_${TS}_distant_hills.py" \
-        --include "${ARCHIVE_STEM}_${TS}_vista_surface_texture.py" \
-        --include "${ARCHIVE_STEM}_${TS}_render_pipeline.sh" \
+        --filter "+ ${ARCHIVE_STEM}_${TS}*" \
+        --filter "- **" \
         --drive-chunk-size=64M \
         --low-level-retries=5
 
@@ -144,6 +147,11 @@ if [ "$RUN_SYNC" = "true" ]; then
 else
     echo "Skipping rclone sync (disabled in config)."
 fi
+
+python3 "${SNAPSHOT_REPO_ROOT}/render_snapshot.py" cleanup \
+    --repository-root "$REPO_ROOT" \
+    --run-directory "$RUN_DIRECTORY" || \
+    echo "WARNING: Temporary render workspace remains at: $RUN_DIRECTORY"
 
 echo "----------------------------------------------------------------"
 echo "Pipeline complete: $SCENE_NAME"

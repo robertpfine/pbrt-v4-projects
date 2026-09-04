@@ -1,0 +1,406 @@
+#!/usr/bin/env python3
+"""Create and archive immutable PBRT-v4 Art Studio render inputs."""
+
+from __future__ import annotations
+
+import argparse
+from datetime import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import tarfile
+from typing import Iterable
+
+
+RUN_DIRECTORY = Path("scene_workspace") / ".render_runs"
+SCENE_DIRECTORY = Path("scene_workspace")
+SCENE_FILE_DIRECTORY = SCENE_DIRECTORY / "scene_files"
+TIMESTAMP_PATTERN = re.compile(r"^\d{8}_\d{6}$")
+ARTIFACT_SUFFIX_PATTERN = re.compile(r"^[._][A-Za-z0-9][A-Za-z0-9_.-]*$")
+
+
+class RenderSnapshotError(RuntimeError):
+    """Raised when a render snapshot cannot be created safely."""
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def archive_stem(scene_name: str) -> str:
+    value = re.sub(r"[^A-Za-z0-9._-]+", "_", scene_name).strip("_")
+    return value or "untitled_scene"
+
+
+def _copy_file(source: Path, destination: Path) -> None:
+    if not source.is_file():
+        raise RenderSnapshotError(f"required render input is missing: {source}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+
+
+def _source_files(repository_root: Path, scene_root: Path) -> Iterable[tuple[Path, Path]]:
+    """Yield source files and their paths inside the mirrored repository."""
+
+    for pattern in ("*.py", "*.sh"):
+        for source in sorted(repository_root.glob(pattern)):
+            if source.is_file():
+                yield source, Path(source.name)
+
+    for pattern in ("*.py", "*.json", "*.sh"):
+        for source in sorted(scene_root.glob(pattern)):
+            if source.is_file() and source.name != "config.json":
+                yield source, SCENE_DIRECTORY / source.name
+
+    documentation = repository_root / "docs" / "shaft-compositing.md"
+    if documentation.is_file():
+        yield documentation, Path("docs") / documentation.name
+
+    cpp_root = repository_root / "cpp"
+    if cpp_root.is_dir():
+        for source in sorted(cpp_root.rglob("*")):
+            if source.is_file():
+                yield source, source.relative_to(repository_root)
+
+
+def _validate_config(path: Path) -> dict:
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            config = json.load(handle)
+    except (OSError, json.JSONDecodeError) as error:
+        raise RenderSnapshotError(f"invalid scene configuration {path}: {error}") from error
+    if not isinstance(config, dict) or not isinstance(config.get("scene"), dict):
+        raise RenderSnapshotError("scene configuration requires a scene object")
+    master_file = config["scene"].get("master_file")
+    if not isinstance(master_file, str) or not master_file.strip():
+        raise RenderSnapshotError("scene.master_file requires a relative path")
+    master_path = Path(master_file)
+    if master_path.is_absolute() or ".." in master_path.parts:
+        raise RenderSnapshotError(
+            "scene.master_file must remain inside the frozen scene workspace"
+        )
+    return config
+
+
+def create_snapshot(
+    repository_root: Path,
+    config_path: Path,
+    timestamp: str | None = None,
+) -> dict[str, str]:
+    """Freeze the configuration and render sources in a mirrored repository."""
+
+    repository_root = repository_root.resolve()
+    config_path = config_path.resolve()
+    scene_root = config_path.parent
+    timestamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+    if not TIMESTAMP_PATTERN.fullmatch(timestamp):
+        raise RenderSnapshotError(f"invalid render timestamp: {timestamp!r}")
+
+    run_parent = repository_root / RUN_DIRECTORY
+    run_parent.mkdir(parents=True, exist_ok=True)
+    run_directory = run_parent / timestamp
+    try:
+        run_directory.mkdir()
+    except FileExistsError as error:
+        raise RenderSnapshotError(
+            f"render snapshot already exists for timestamp {timestamp}"
+        ) from error
+
+    snapshot_root = run_directory / "repository"
+    snapshot_scene_root = snapshot_root / SCENE_DIRECTORY
+    snapshot_config = snapshot_scene_root / "config.json"
+
+    try:
+        # The configuration is copied first and all subsequent reads use this
+        # copy. Direct edits after this point cannot change the render inputs.
+        _copy_file(config_path, snapshot_config)
+        config = _validate_config(snapshot_config)
+
+        scene_name = str(config["scene"].get("name", "untitled_scene"))
+        prefix_name = f"{archive_stem(scene_name)}_{timestamp}"
+        archive_directory = repository_root / "Archive"
+        if archive_directory.is_dir() and any(archive_directory.glob(f"{prefix_name}*")):
+            raise RenderSnapshotError(
+                f"archive output already exists for render {prefix_name}"
+            )
+
+        copied_paths = [snapshot_config]
+        for source, relative_path in _source_files(repository_root, scene_root):
+            destination = snapshot_root / relative_path
+            _copy_file(source, destination)
+            copied_paths.append(destination)
+
+        cloud_grid = (
+            config.get("scene", {})
+            .get("sky", {})
+            .get("clouds", {})
+            .get("grid_builder", {})
+        )
+        if cloud_grid.get("backend") == "cpp":
+            executable_relative = Path(
+                cloud_grid.get(
+                    "executable", "build/cloud_grid_builder/cloud_grid_builder"
+                )
+            )
+            if executable_relative.is_absolute() or ".." in executable_relative.parts:
+                raise RenderSnapshotError(
+                    "cloud grid-builder executable must be relative to repository root"
+                )
+            executable_source = repository_root / executable_relative
+            executable_destination = snapshot_root / executable_relative
+            if executable_source.is_file():
+                _copy_file(executable_source, executable_destination)
+                copied_paths.append(executable_destination)
+                try:
+                    import noise._perlin as native_perlin
+                except ModuleNotFoundError as error:
+                    if not cloud_grid.get("fallback_to_python", True):
+                        raise RenderSnapshotError(
+                            "native Python noise library is required by the "
+                            "compiled cloud grid builder"
+                        ) from error
+                else:
+                    perlin_source = Path(native_perlin.__file__).resolve()
+                    perlin_destination = (
+                        snapshot_root / "render_dependencies" / "cloud_perlin.so"
+                    )
+                    _copy_file(perlin_source, perlin_destination)
+                    copied_paths.append(perlin_destination)
+            elif not cloud_grid.get("fallback_to_python", True):
+                raise RenderSnapshotError(
+                    f"required cloud grid-builder executable is missing: "
+                    f"{executable_source}"
+                )
+
+        build_enabled = bool(
+            config.get("pipeline", {}).get("build_scene", {}).get("enabled", True)
+        )
+        source_scene_files = scene_root / "scene_files"
+        if not build_enabled and source_scene_files.is_dir():
+            snapshot_scene_files = snapshot_scene_root / "scene_files"
+            shutil.copytree(source_scene_files, snapshot_scene_files)
+            copied_paths.extend(
+                path for path in snapshot_scene_files.rglob("*") if path.is_file()
+            )
+
+        for path in copied_paths:
+            path.chmod(path.stat().st_mode & ~0o222)
+
+        manifest = {
+            "snapshot_version": 1,
+            "timestamp": timestamp,
+            "scene_name": scene_name,
+            "source_config": str(config_path),
+            "files": {
+                str(path.relative_to(snapshot_root)): sha256_file(path)
+                for path in sorted(copied_paths)
+            },
+        }
+        manifest_path = run_directory / "input_manifest.json"
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        manifest_path.chmod(manifest_path.stat().st_mode & ~0o222)
+    except Exception:
+        # Preserve a partially created run directory for diagnosis. Never hide
+        # the evidence by deleting it automatically.
+        raise
+
+    return {
+        "timestamp": timestamp,
+        "scene_name": scene_name,
+        "archive_stem": archive_stem(scene_name),
+        "run_directory": str(run_directory),
+        "repository_root": str(snapshot_root),
+        "scene_root": str(snapshot_scene_root),
+        "config": str(snapshot_config),
+    }
+
+
+def _parse_artifact(value: str) -> tuple[str, Path]:
+    try:
+        suffix, filename = value.split("=", 1)
+    except ValueError as error:
+        raise RenderSnapshotError(
+            "artifact must use SUFFIX=/absolute/or/relative/path syntax"
+        ) from error
+    if not ARTIFACT_SUFFIX_PATTERN.fullmatch(suffix) or ".." in suffix:
+        raise RenderSnapshotError(f"invalid artifact suffix: {suffix!r}")
+    return suffix, Path(filename).resolve()
+
+
+def _tar_filter(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
+    parts = Path(info.name).parts
+    if "scene_files" in parts or "__pycache__" in parts:
+        return None
+    return info
+
+
+def finalize_snapshot(
+    run_directory: Path,
+    archive_prefix: Path,
+    artifacts: Iterable[tuple[str, Path]],
+) -> Path:
+    """Archive the exact frozen inputs and completed render artifacts."""
+
+    run_directory = run_directory.resolve()
+    archive_prefix = archive_prefix.resolve()
+    snapshot_root = run_directory / "repository"
+    snapshot_scene_root = snapshot_root / SCENE_DIRECTORY
+    if not snapshot_root.is_dir():
+        raise RenderSnapshotError(f"snapshot repository is missing: {snapshot_root}")
+
+    archive_prefix.parent.mkdir(parents=True, exist_ok=True)
+    input_manifest_path = run_directory / "input_manifest.json"
+    input_manifest = json.loads(input_manifest_path.read_text(encoding="utf-8"))
+
+    compatibility_sources = {
+        snapshot_scene_root / "config.json": Path(str(archive_prefix) + "_config.json"),
+        snapshot_scene_root / "build_scene.py": Path(
+            str(archive_prefix) + "_build_scene.py"
+        ),
+        snapshot_root / "render_pipeline.sh": Path(
+            str(archive_prefix) + "_render_pipeline.sh"
+        ),
+    }
+    for filename in (
+        "clouds.py",
+        "rain.py",
+        "distant_hills.py",
+        "vista_surface_texture.py",
+        "render_snapshot.py",
+        "cloud_grid_contract.py",
+    ):
+        source = snapshot_root / filename
+        if source.is_file():
+            compatibility_sources[source] = Path(
+                str(archive_prefix) + f"_{filename}"
+            )
+    cloud_jobs = snapshot_scene_root / "scene_files" / "cloud_grid_jobs"
+    if cloud_jobs.is_dir():
+        for source in sorted(cloud_jobs.glob("*.json")):
+            compatibility_sources[source] = Path(
+                str(archive_prefix) + f"_cloud_job_{source.name}"
+            )
+    for source, destination in compatibility_sources.items():
+        _copy_file(source, destination)
+
+    for suffix, source in artifacts:
+        if not source.is_file():
+            raise RenderSnapshotError(f"completed render artifact is missing: {source}")
+        destination = Path(f"{archive_prefix}{suffix}")
+        if destination.exists() and destination.resolve() != source:
+            raise RenderSnapshotError(f"archive artifact already exists: {destination}")
+        if destination.resolve() != source:
+            _copy_file(source, destination)
+
+    source_archive = Path(str(archive_prefix) + "_snapshot_sources.tar.gz")
+    if source_archive.exists():
+        raise RenderSnapshotError(f"snapshot archive already exists: {source_archive}")
+    with tarfile.open(source_archive, "w:gz") as archive:
+        archive.add(snapshot_root, arcname="repository", filter=_tar_filter)
+        archive.add(input_manifest_path, arcname="input_manifest.json")
+
+    prefix_name = archive_prefix.name
+    archived_files = sorted(
+        path
+        for path in archive_prefix.parent.iterdir()
+        if path.is_file()
+        and path.name.startswith(prefix_name)
+        and not path.name.endswith("_manifest.json")
+    )
+    final_manifest = {
+        **input_manifest,
+        "archive_prefix": str(archive_prefix),
+        "artifacts": {
+            path.name: sha256_file(path)
+            for path in archived_files
+        },
+    }
+    final_manifest_path = Path(str(archive_prefix) + "_manifest.json")
+    if final_manifest_path.exists():
+        raise RenderSnapshotError(f"render manifest already exists: {final_manifest_path}")
+    final_manifest_path.write_text(
+        json.dumps(final_manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return final_manifest_path
+
+
+def cleanup_snapshot(repository_root: Path, run_directory: Path) -> None:
+    """Remove one finalized temporary run directory after strict path checks."""
+
+    repository_root = repository_root.resolve()
+    run_directory = run_directory.resolve()
+    allowed_parent = (repository_root / RUN_DIRECTORY).resolve()
+    if run_directory.parent != allowed_parent or not run_directory.name:
+        raise RenderSnapshotError(
+            f"refusing to remove non-render workspace: {run_directory}"
+        )
+    if not (run_directory / "input_manifest.json").is_file():
+        raise RenderSnapshotError(
+            f"refusing to remove render workspace without manifest: {run_directory}"
+        )
+    shutil.rmtree(run_directory)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    create = subparsers.add_parser("create", help="freeze render inputs")
+    create.add_argument("--repository-root", type=Path, required=True)
+    create.add_argument("--config", type=Path, required=True)
+    create.add_argument("--timestamp")
+
+    finalize = subparsers.add_parser("finalize", help="archive frozen inputs")
+    finalize.add_argument("--run-directory", type=Path, required=True)
+    finalize.add_argument("--archive-prefix", type=Path, required=True)
+    finalize.add_argument(
+        "--artifact",
+        action="append",
+        default=[],
+        help="archive artifact as SUFFIX=PATH; repeat as needed",
+    )
+
+    cleanup = subparsers.add_parser("cleanup", help="remove a finalized run workspace")
+    cleanup.add_argument("--repository-root", type=Path, required=True)
+    cleanup.add_argument("--run-directory", type=Path, required=True)
+    return parser
+
+
+def main() -> int:
+    arguments = _build_parser().parse_args()
+    try:
+        if arguments.command == "create":
+            result = create_snapshot(
+                arguments.repository_root,
+                arguments.config,
+                arguments.timestamp,
+            )
+            print(json.dumps(result, sort_keys=True))
+        elif arguments.command == "finalize":
+            manifest = finalize_snapshot(
+                arguments.run_directory,
+                arguments.archive_prefix,
+                (_parse_artifact(value) for value in arguments.artifact),
+            )
+            print(manifest)
+        else:
+            cleanup_snapshot(arguments.repository_root, arguments.run_directory)
+    except (OSError, RenderSnapshotError, json.JSONDecodeError) as error:
+        print(f"ERROR: {error}", file=os.sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

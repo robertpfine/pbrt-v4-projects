@@ -131,6 +131,12 @@
       },
       "clouds": {
         "enabled": true,
+        "grid_builder": {
+          "backend": "cpp",
+          "executable": "build/cloud_grid_builder/cloud_grid_builder",
+          "threads": 0,
+          "fallback_to_python": true
+        },
         "appearance": {
           "density": 0.90,
           "scattering": [0.0028, 0.0030, 0.0032],

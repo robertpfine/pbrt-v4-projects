@@ -458,18 +458,25 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Immediate follow-up work
 
+Detailed implementation notes, exact benchmark results, test coverage, and the
+remaining pre-migration gate are recorded in
+`docs/engineering-progress-2026-09-04.md`.
+
 The active artist-accepted high-resolution master is render `093054`, with
 `091401` retained as its accepted development-resolution checkpoint and
 `054517` as the accepted clear-atmosphere predecessor. Do not automatically
 restore the disabled `broad_rise`. The next session should proceed in this
 order:
 
-1. **Resume the new-scene schema review.** The standalone, non-runnable design
-   document is `docs/config-schema-new-scene.md`. Issues 1 through 9 are
-   resolved. Resume with Issue 10, concerning astronomical context versus
-   explicit sun direction, then address the four remaining issues: neutral
-   new-scene camera/sky values, multi-pass render controls, archive destinations
-   versus mandatory immutable snapshots, and the exact migration sequence.
+1. **Validate the ground-level new-scene schema.** The approved, non-runnable
+   architectural design is `docs/config-schema-new-scene.md`. All fourteen
+   review issues are resolved. Its engineering translation is
+   `docs/config-schema-new-scene-ground-level.md`; it defines fields,
+   validation, generator ownership, current-to-proposed paths, and the
+   normalized C++ cloud-grid contract. It is documentation, not a second live
+   configuration, and does not require the artist to audit every generator
+   leaf. Escalate only choices that change visible terminology, artistic-control
+   location, or scene-building workflow.
 2. **Preserve the accepted sunrise master.** `093054` is the active visual
    master at `8000 x 5800`, 512 samples per pixel, and integrator depth `200`.
    Its warm cloud illumination, dark dew-coated field, and low horizon mist are
@@ -478,11 +485,13 @@ order:
    off-screen buffers at the left and right frustum borders, analogous to the
    existing bottom margin; preserve the accepted composition while making that
    bounded correction.
-3. **Fix render-input snapshotting.** `051939` and `054050` exposed that the
-   current pipeline can build from configuration/source already loaded in one
-   process and later archive files edited while that render was running. Take
-   immutable snapshots of the JSON and relevant generator sources at pipeline
-   start, build from the JSON snapshot, and archive those same snapshots.
+3. **Render-input snapshotting is implemented.** `render_snapshot.py` now
+   freezes the JSON and participating generator sources before any build begins.
+   Both the standard and shaft-composite paths build and render from that frozen
+   repository mirror, then archive those exact inputs with SHA-256 manifests.
+   Manual live-JSON edits during a render affect only the next run. Failed runs
+   retain their temporary workspace for diagnosis; successful runs remove it
+   only after local archival and optional remote synchronization.
 4. **Migrate only after the prototype schema is approved.** Tackle accumulated
    size, repetition,
    naming, and organization in the single authoritative
@@ -504,14 +513,22 @@ order:
    editing, discoverable scene inspection, rendering, progress visibility, and
    comparison of accepted images. Do not infer that every JSON value needs a
    permanent control.
-7. **Compiled cloud-grid accelerator.** A targeted standalone C++ density-grid
-   generator is a priority; do not rewrite the Python application. Establish a
-   deterministic CPU implementation first, test it against small Python grids,
-   add multithreading and streamed PBRT output, then retain that interface for a
-   CUDA backend. Keep the Python implementation as a reference/fallback and add
-   caching for unchanged cloud grids. This helper must remain separate from the
-   PBRT-v4/CUDA renderer build unless the artist explicitly authorizes renderer
-   build work.
+7. **The compiled cloud-grid accelerator is implemented.** The standalone C++
+   helper receives a normalized versioned job from Python, supports both
+   current cloud forms, writes `uniformgrid` or `rgbgrid` PBRT declarations,
+   and uses deterministic CPU multithreading. Small-grid density and optical
+   parity tests pass against the Python reference at the existing five-decimal
+   PBRT precision, and Python remains the configured fallback. The live legacy
+   cloud block has only a small adjacent technical `grid_builder` switch; no
+   artistic cloud values moved. The current 160×40×120 overcast grid builds
+   768,000 voxels in about 0.55 seconds automatically threaded versus about
+   5.77 seconds in the Python reference before text formatting. A frozen full
+   scene build took about 208.70 seconds and produced a 1.044 GB PBRT file,
+   confirming that current vegetation/scene expansion is now the larger build
+   cost. Do not confuse either build time with PBRT `volpath` render time.
+   Before live schema migration, perform only the required limited visual
+   comparison with the artist's awareness; do not automatically render or tune
+   the unaccepted overcast scene.
 
 Additional continuity requirements:
 
@@ -582,13 +599,49 @@ The following schema decisions are approved:
   implemented systems whose controls move intact. Haze and mist remain empty
   placeholders until developed. Clouds remain exclusively under sky.
 
-Issue 10 is proposed but not yet approved. The recommendation is a
-`scene_context` holding date, local time, time zone, latitude, longitude, and
-world north. A sun-direction source would explicitly select either
-`astronomical` or `explicit`; color temperature, sun scale, and infinite-sky
-color/scale remain artistic controls. The remaining Issues 11–14 are the exact
-neutral camera/sky initialization values, multi-pass render controls, archive
-and mandatory snapshot boundaries, and migration order.
+Issue 10 is approved. `scene_context` holds date, local time, IANA time-zone
+name, latitude, longitude, and world north. The boolean
+`sun.use_astronomical_direction` selects the sole active direction source:
+`true` derives it from the scene context, while `false` uses the explicit PBRT
+`from` and `to` values. Existing scenes initially migrate in explicit mode to
+preserve their appearance. Sun color/temperature and scale, and infinite-sky
+color and scale, remain explicit artistic controls.
+
+Issue 11 is approved. A blank scene initializes an enabled perspective camera
+at `[0,2,10]`, looking at the origin with positive Y up and a 50-degree field of
+view. Its enabled PBRT `infinite` background uses neutral RGB `[1,1,1]` at scale
+`1`, and its directional sun begins disabled. These initialization values do
+not replace the camera or sky settings of migrated scenes. Issues 12–14 were
+subsequently resolved as recorded below.
+
+Issue 12 is approved for the prototype, subject to validation during migration.
+The existing `shaft_composite` pass and combination controls move under
+`render_settings`; light and aperture construction remain with the sun under
+`scene_description.sky`. Disabling the block produces an ordinary single PBRT
+render. Enabling it produces the base pass, shaft pass, and final composite,
+with both diagnostic passes retained as mandatory reproducibility evidence.
+Issues 13–14 were subsequently resolved as recorded below.
+
+Issue 13 is approved. A render receives one timestamp and identifier, and its
+configuration and required source inputs are frozen before the builder reads
+them. The local archive receives the completed reproducibility bundle first;
+that bundle is then copied to the configured Google Drive archive. Snapshotting
+is mandatory application behavior without a disable switch. GitHub remains a
+separate development checkpoint destination for source, JSON, and documentation
+only—not rendered PNG or generated PBRT files. Issue 14 is resolved below.
+
+Issue 14 is approved, completing the architectural review. Before live paths
+move, complete the ground-level schema, implement mandatory input snapshotting,
+and implement the standalone CPU C++ cloud density-grid generator through
+deterministic Python equivalence and limited visual validation. Migration then
+moves filenames and paths, camera, render settings, the `scene_description`
+shell, individual landforms and surface-object generators, independent objects,
+sky components, atmosphere components, and the disabled water placeholder.
+Obsolete legacy paths and temporary compatibility code are removed last. The
+single live config remains authoritative; every stage moves rather than
+duplicates values, updates the builder, validator, and Qt inspector together,
+preserves existing appearance, and receives testing, structural PBRT comparison,
+and a stable Git checkpoint.
 
 The rain-curtain implementation in `rain.py` is present and disabled in the
 live configuration. It uses vertically coherent 3D fractal noise, bounded

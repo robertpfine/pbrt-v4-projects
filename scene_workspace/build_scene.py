@@ -24,6 +24,9 @@ import sys
 import json
 import math
 import random
+import subprocess
+import time
+from pathlib import Path
 from noise import pnoise2, pnoise3
 
 REPOSITORY_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,6 +35,11 @@ if REPOSITORY_ROOT not in sys.path:
 
 from phyllotaxis import area_dome_points, dome_height, vogel_points
 from clouds import create_clouds
+from cloud_grid_contract import (
+    normalized_cloud_job,
+    run_compiled_builder,
+    write_job,
+)
 from rain import create_rain_curtains
 from distant_hills import (
     create_distant_hill_grass,
@@ -360,11 +368,28 @@ def _cloud_medium_name(index, formation):
     return f"cloud_{index}_{safe_name}"
 
 
-def write_cloud_media(lines, cloud_config):
+def write_cloud_media(lines, cloud_config, scene_root):
     """Declare bounded heterogeneous media for enabled sky formations."""
 
     formations = create_clouds(cloud_config)
-    for index, formation in enumerate(formations):
+    enabled_configs = [
+        item
+        for item in cloud_config.get("formations", [])
+        if item.get("enabled", True)
+    ]
+    grid_builder = cloud_config.get("grid_builder", {})
+    backend = str(grid_builder.get("backend", "python"))
+    if backend not in ("python", "cpp"):
+        raise ValueError(f"unsupported cloud grid-builder backend: {backend!r}")
+    executable = Path(REPOSITORY_ROOT) / grid_builder.get(
+        "executable", "build/cloud_grid_builder/cloud_grid_builder"
+    )
+    threads = int(grid_builder.get("threads", 1))
+    fallback = bool(grid_builder.get("fallback_to_python", True))
+
+    for index, (formation, formation_config) in enumerate(
+        zip(formations, enabled_configs)
+    ):
         nx, ny, nz = formation.resolution
         optical = formation.optical
         sigma_a = optical.get("sigma_a", [0.00015, 0.00015, 0.00015])
@@ -372,6 +397,39 @@ def write_cloud_media(lines, cloud_config):
         if len(sigma_a) != 3 or len(sigma_s) != 3:
             raise ValueError(f"{formation.name}: cloud sigma values require RGB triples")
         medium_name = _cloud_medium_name(index, formation)
+
+        if backend == "cpp":
+            generated_root = Path(scene_root) / "scene_files" / "cloud_grid_jobs"
+            job_path = generated_root / f"{medium_name}.json"
+            output_path = generated_root / f"{medium_name}.pbrt"
+            job = normalized_cloud_job(cloud_config, formation_config, index)
+            write_job(job, job_path)
+            started = time.perf_counter()
+            try:
+                completed = run_compiled_builder(
+                    job_path, output_path, executable, threads
+                )
+                elapsed = time.perf_counter() - started
+                print(
+                    f"  Compiled cloud grid {formation.name}: "
+                    f"{nx}x{ny}x{nz} in {elapsed:.2f}s"
+                )
+                if completed.stderr.strip():
+                    print(f"  {completed.stderr.strip()}")
+                lines.extend(output_path.read_text(encoding="utf-8").splitlines())
+                continue
+            except (
+                OSError,
+                RuntimeError,
+                subprocess.CalledProcessError,
+            ) as error:
+                if not fallback:
+                    raise
+                print(
+                    f"  WARNING: compiled cloud grid failed for {formation.name}; "
+                    f"using Python reference ({error})"
+                )
+
         lines += [
             f'# Cloud medium: {formation.name}',
             f'MakeNamedMedium "{medium_name}"',
@@ -3082,7 +3140,9 @@ def write_scene(cfg, scene_root, medium_rel_path):
     lines += ["WorldBegin", ""]
     write_fog_boundary(lines, scene.get("fog"))
     sky_config = scene.get("sky", {})
-    cloud_formations = write_cloud_media(lines, sky_config.get("clouds", {}))
+    cloud_formations = write_cloud_media(
+        lines, sky_config.get("clouds", {}), scene_root
+    )
     rain_curtains = write_rain_media(lines, scene.get("rain", {}))
     
     if medium_rel_path is not None:

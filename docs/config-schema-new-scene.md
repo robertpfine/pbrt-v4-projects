@@ -1,6 +1,6 @@
 # Proposed Config Schema: Create a New Scene
 
-Status: working design for artist review
+Status: approved architectural design
 Scope: `scene_description.mode: "new"` only
 Active configuration: `scene_workspace/config.json` remains the one authoritative
 live scene configuration
@@ -12,10 +12,11 @@ conversation transcript so it can be found, reviewed, and edited directly.
 It is a schema proposal, not a second scene configuration and not an input to
 the renderer.
 
-This is the 20,000-foot architectural draft. It must be reviewed before a
-ground-level draft enumerates every field, valid value, generator input, and
-current-to-proposed configuration path. Neither draft becomes active merely by
-being documented.
+This is the approved 20,000-foot architectural design. Its engineering
+translation is
+`docs/config-schema-new-scene-ground-level.md`, which enumerates fields,
+validation, generator ownership, and current-to-proposed paths. Neither
+document becomes active merely by being documented.
 
 The immediate goal is to make every active setup value easy to locate while
 preserving direct manual JSON editing. The eventual migration must occur in the
@@ -120,6 +121,15 @@ for review; this block is not a runnable configuration.
     "mode": "new",
     "name": "Poppy Field Overcast 8AM Study",
 
+    "scene_context": {
+      "date": "2026-06-21",
+      "local_time": "08:00:00",
+      "time_zone": "America/New_York",
+      "latitude": 43.0,
+      "longitude": -76.0,
+      "world_north": [0.0, 0.0, 1.0]
+    },
+
     "landforms": [
       {
         "name": "foreground_meadow",
@@ -182,6 +192,7 @@ for review; this block is not a runnable configuration.
       "sun": {
         "enabled": true,
         "type": "distant",
+        "use_astronomical_direction": true,
         "from": [63.5, 60.7, -47.8],
         "to": [0.0, 0.0, 0.0],
         "color_mode": "blackbody",
@@ -447,22 +458,12 @@ The artist uses the following review notation:
 - A permanent taxonomy or grouping system for grass, flora, trees, weeds,
   undergrowth, rocks, stones, litter, and other landform surface objects.
 
-## Ground-level details still requiring review
+## Ground-level review status
 
-The scope decisions above establish what belongs in this generation. The
-following details still need to be resolved in the ground-level draft:
-
-- how date, time, latitude, and view orientation coexist with explicit sun and
-  sky values without creating two competing sources of truth;
-- the exact neutral camera and sky values used to initialize a blank scene;
-- the fields and location for multi-pass light-shaft compositing and other
-  render-pipeline controls;
-- archive paths, naming rules, and the implementation boundary between
-  configured archive destinations and mandatory input snapshotting; and
-- the exact migration sequence from the current live paths.
-
-These details should be reviewed section by section. They must not be answered
-indirectly by adding hidden defaults or by creating a disconnected replacement
+All fourteen architectural issues identified for this review are resolved.
+The approved decisions must now be expressed in a ground-level draft that
+enumerates exact fields, valid values, and current-to-proposed paths. That draft
+must not introduce hidden defaults or become a disconnected replacement
 configuration.
 
 ## Resolved ground-level decisions
@@ -832,6 +833,184 @@ volume owns its placement, dimensions, density construction, and medium optical
 controls. No separate generic `volumetrics` category is introduced. Proposed
 generator names used in schema discussion are not treated as registered
 functionality unless corresponding code actually exists.
+
+### Issue 10: astronomical context and explicit sun direction
+
+`scene_description.scene_context` records the date, local time, IANA time-zone
+name, latitude, longitude, and the world-space vector that represents north.
+These values make the scene's intended place, time, and orientation explicit.
+
+The sun contains the boolean `use_astronomical_direction`:
+
+- when `true`, the application calculates the sun direction from
+  `scene_context`; and
+- when `false`, the configured PBRT-v4 `from` and `to` values determine the
+  sun direction.
+
+The boolean is the sole selector between the two modes. The inactive direction
+source must not override or modify the active one. Existing scenes initially
+migrate with `use_astronomical_direction: false` so their rendered appearance
+is preserved exactly.
+
+Sun color mode, temperature or color, and scale remain explicit artistic
+controls in either mode. The infinite-sky color and scale also remain explicit;
+they are not calculated silently from the astronomical context. Camera
+orientation remains defined by its `look_at` values and can be interpreted
+relative to `world_north` without adding a second competing view-direction
+control.
+
+### Issue 11: neutral blank-scene camera and sky
+
+A genuinely new blank scene begins with an enabled perspective camera using
+these explicit diagnostic values:
+
+```json
+"camera_settings": {
+  "enabled": true,
+  "type": "perspective",
+  "look_at": {
+    "eye": [0.0, 2.0, 10.0],
+    "look": [0.0, 0.0, 0.0],
+    "up": [0.0, 1.0, 0.0]
+  },
+  "fov": 50.0
+}
+```
+
+It starts above the ground, looks toward the origin, and uses positive Y as up.
+The blank sky supplies neutral white illumination without an assumed time of
+day or directional sun:
+
+```json
+"background": {
+  "enabled": true,
+  "type": "infinite",
+  "color_mode": "rgb",
+  "color": [1.0, 1.0, 1.0],
+  "scale": 1.0
+},
+"sun": {
+  "enabled": false
+}
+```
+
+These are initialization values only. Migrated scenes preserve their existing
+camera, infinite-sky, and sun settings.
+
+### Issue 12: multi-pass light-shaft rendering
+
+The implemented light-shaft workflow is an optional rendering and compositing
+method, so its pass and image-combination controls move from the vague
+top-level `pipeline` block to `render_settings.shaft_composite`:
+
+```json
+"shaft_composite": {
+  "enabled": false,
+  "shaft_light": "shaft_sun",
+  "base_opacity": 1.0,
+  "shaft_opacity": 0.40,
+  "surface_reflectance_scale": 0.08,
+  "terrain_reflectance_scale": 0.015,
+  "blur_radius": 2.0
+}
+```
+
+When disabled, the application produces one ordinary PBRT render. When enabled,
+it produces the base pass, shaft pass, and final composite. Both diagnostic
+passes are always retained; reproducibility is mandatory pipeline behavior and
+not an optional artistic switch.
+
+The physical and artistic formation of the shaft—its light and cloud-aperture
+construction—belongs with the sun under `scene_description.sky`. Only the
+multi-pass execution and image-combination values belong under
+`render_settings`. All currently implemented composite values move intact.
+This organization is approved for the prototype and must be validated during
+staged migration rather than treated as irreversible.
+
+### Issue 13: local archive, Google Drive, and immutable snapshots
+
+Archive naming remains under `file_names`, while the two archive destinations
+remain explicit under `file_paths`:
+
+```json
+"file_names": {
+  "archive_image": "{scene_name}_{timestamp}.png"
+},
+"file_paths": {
+  "local_archive": "Archive",
+  "remote_archive": "gdrive:wipImages/pbrt-v4"
+}
+```
+
+Starting a render creates one timestamp and render identifier, then immediately
+freezes the authoritative `config.json` and every generator or source file
+needed for that render. The PBRT scene must be built from those frozen inputs,
+not from live files that could be edited while the process is running.
+
+The completed bundle contains the final image, exact input snapshots, generated
+PBRT files, required scripts, diagnostic passes, and a manifest of filenames
+and hashes. The bundle is saved to the local archive first and then copied to
+the configured Google Drive archive without overwriting another render.
+
+Snapshotting is mandatory application behavior and has no configuration switch.
+GitHub is separate from both render archives: development checkpoints may
+commit source code, JSON, and documentation, but rendered PNGs and generated
+PBRT files do not belong in the repository.
+
+### Issue 14: staged migration of the authoritative configuration
+
+Migration proceeds in this order:
+
+1. Complete the ground-level schema, including the exact cloud
+   `density_field` contract, without changing the live configuration.
+2. Implement mandatory render-input snapshotting.
+3. Implement and validate the standalone CPU-based C++ cloud density-grid
+   generator described below.
+4. Move `file_names` and `file_paths`.
+5. Move camera controls into `camera_settings`.
+6. Move film, sampler, integrator, backend, and shaft-compositing controls into
+   `render_settings`.
+7. Establish `scene_description` with `mode`, `name`, and `scene_context`.
+8. Migrate landforms one at a time: first their geometry, placement,
+   topography, material, and texture, then their grass, flowers, trees, and
+   other `surface_objects`, one generator at a time.
+9. Migrate independently placed `objects`.
+10. Migrate the sky: infinite background, sun, and then each cloud separately.
+11. Migrate atmosphere: fog, rain, and the empty haze and mist placeholders.
+12. Add the disabled water placeholder.
+13. Remove obsolete legacy paths and temporary compatibility code.
+
+`scene_workspace/config.json` remains the sole authoritative configuration
+throughout. Each stage moves values rather than copying them; the old path is
+removed when the new path becomes active. The builder, validation, and Qt
+inspector change together. Existing parameter values and rendered behavior are
+preserved, and tests plus a structural PBRT comparison precede the next stage.
+A Git checkpoint records each stable migration stage.
+
+The neutral initialization values from Issue 11 apply only when creating a
+genuinely new blank scene. They never replace the camera, sky, or other values
+of a migrated scene.
+
+#### Pre-migration C++ cloud density-grid generator
+
+The targeted compiled accelerator is a standalone C++ cloud density-grid
+generator, not a rewrite of the Python application or the PBRT-v4/CUDA renderer.
+Python supplies it with a small normalized grid specification rather than the
+C++ program reading the complete live `config.json`. This contract insulates
+the generator from both the legacy and proposed configuration layouts.
+
+The implemented helper has a deterministic single-CPU reference path verified
+on small grids against the existing Python generator. CPU multithreading is
+also deterministic and the helper streams its PBRT declaration to its output
+file. The current Python path remains available as the reference and fallback.
+Caching remains a later optimization because correctness and the measured
+compiled build time do not currently require it. A limited visual comparison
+still validates pipeline integration before live schema migration begins.
+
+Additional high-density cloud experiments are deferred until this accelerator
+is connected. Grid-construction time and PBRT volumetric render time must be
+measured separately: compiled grid construction cannot by itself correct an
+expensive `volpath` render caused by a very large or dense volume.
 
 ## Migration rule
 

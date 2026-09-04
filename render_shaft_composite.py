@@ -5,13 +5,20 @@ import copy
 import importlib.util
 import json
 import os
-import shutil
+from pathlib import Path
 import subprocess
 import sys
 from datetime import datetime
 
 import numpy as np
 from PIL import Image, ImageFilter
+
+from render_snapshot import (
+    archive_stem as normalized_archive_stem,
+    cleanup_snapshot,
+    create_snapshot,
+    finalize_snapshot,
+)
 
 
 def load_scene_builder(scene_root):
@@ -102,28 +109,6 @@ def composite(base_path, shaft_path, output_path, base_opacity, shaft_opacity,
     Image.fromarray(np.round(encoded * 255.0).astype(np.uint8), "RGB").save(output_path)
 
 
-def archive_supporting_files(prefix, repository_root, scene_root):
-    """Preserve the inputs needed to reproduce a composite render."""
-    sources = {
-        os.path.join(scene_root, "config.json"): prefix + "_config.json",
-        os.path.join(scene_root, "build_scene.py"): prefix + "_build_scene.py",
-        os.path.join(repository_root, "distant_hills.py"):
-            prefix + "_distant_hills.py",
-        os.path.join(repository_root, "render_pipeline.sh"):
-            prefix + "_render_pipeline.sh",
-        os.path.join(repository_root, "render_shaft_composite.py"):
-            prefix + "_render_shaft_composite.py",
-        os.path.join(scene_root, "scene_files", "scene_base.pbrt"):
-            prefix + "_base.pbrt",
-        os.path.join(scene_root, "scene_files", "scene_shaft.pbrt"):
-            prefix + "_shaft.pbrt",
-        os.path.join(repository_root, "docs", "shaft-compositing.md"):
-            prefix + "_shaft-compositing.md",
-    }
-    for source, destination in sources.items():
-        shutil.copy2(source, destination)
-
-
 def sync_archive_bundle(prefix, archive, remote_path):
     """Copy one completed composite bundle to its configured remote archive."""
     stem = os.path.basename(prefix)
@@ -139,6 +124,33 @@ def sync_archive_bundle(prefix, archive, remote_path):
     print("Google Drive composite sync complete.", flush=True)
 
 
+def activate_snapshot(repository_root, config_path):
+    """Re-execute this entry point from an immutable source/config snapshot."""
+
+    active_run = os.environ.get("PBRT_RENDER_SNAPSHOT_DIR")
+    if active_run:
+        return (
+            Path(os.environ["PBRT_LIVE_REPOSITORY_ROOT"]).resolve(),
+            Path(active_run).resolve(),
+            os.environ["PBRT_RENDER_TIMESTAMP"],
+        )
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    result = create_snapshot(Path(repository_root), Path(config_path), timestamp)
+    print("Render inputs frozen:", result["run_directory"], flush=True)
+    environment = os.environ.copy()
+    environment["PBRT_RENDER_SNAPSHOT_DIR"] = result["run_directory"]
+    environment["PBRT_LIVE_REPOSITORY_ROOT"] = str(Path(repository_root).resolve())
+    environment["PBRT_RENDER_TIMESTAMP"] = timestamp
+    snapshot_script = Path(result["repository_root"]) / "render_shaft_composite.py"
+    os.execve(
+        sys.executable,
+        [sys.executable, str(snapshot_script), result["config"]],
+        environment,
+    )
+    raise AssertionError("os.execve returned unexpectedly")
+
+
 def main():
     repository_root = os.path.dirname(os.path.abspath(__file__))
     config_path = (
@@ -149,6 +161,10 @@ def main():
     if os.path.isdir(config_path):
         config_path = os.path.join(config_path, "config.json")
     config_path = os.path.abspath(config_path)
+    live_repository_root, run_directory, stamp = activate_snapshot(
+        repository_root, config_path
+    )
+    repository_root = os.path.dirname(os.path.abspath(__file__))
     scene_root = os.path.dirname(config_path)
     with open(config_path, "r") as handle:
         cfg = json.load(handle)
@@ -162,15 +178,10 @@ def main():
     if cfg["runtime"].get("show_stats", False):
         flags.append("--stats")
 
-    archive = os.path.join(repository_root, "Archive")
+    archive = os.path.join(live_repository_root, "Archive")
     os.makedirs(archive, exist_ok=True)
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     scene_name = cfg["scene"].get("name", "untitled_scene")
-    archive_stem = "".join(
-        character if character.isalnum() or character in "._-" else "_"
-        for character in scene_name
-    )
-    prefix = os.path.join(archive, f"{archive_stem}_{stamp}")
+    prefix = os.path.join(archive, f"{normalized_archive_stem(scene_name)}_{stamp}")
     base_path = prefix + "_base.png"
     shaft_path = prefix + "_shaft.png"
     composite_path = prefix + "_composite.png"
@@ -189,14 +200,40 @@ def main():
               float(options.get("base_opacity", 1.0)),
               float(options.get("shaft_opacity", 0.65)),
               float(options.get("blur_radius", 1.0)))
-    archive_supporting_files(prefix, repository_root, scene_root)
+    finalize_snapshot(
+        run_directory,
+        Path(prefix),
+        (
+            ("_base.png", Path(base_path)),
+            ("_shaft.png", Path(shaft_path)),
+            ("_composite.png", Path(composite_path)),
+            ("_base.pbrt", Path(scene_root) / "scene_files" / "scene_base.pbrt"),
+            ("_shaft.pbrt", Path(scene_root) / "scene_files" / "scene_shaft.pbrt"),
+            (
+                "_render_shaft_composite.py",
+                Path(repository_root) / "render_shaft_composite.py",
+            ),
+            (
+                "_shaft-compositing.md",
+                Path(repository_root) / "docs" / "shaft-compositing.md",
+            ),
+        ),
+    )
     sync_options = cfg.get("pipeline", {}).get("rclone_sync", {})
     if sync_options.get("enabled", False):
-        sync_archive_bundle(
-            prefix,
-            archive,
-            cfg["archive"]["remote_path"],
-        )
+        try:
+            sync_archive_bundle(
+                prefix,
+                archive,
+                cfg["archive"]["remote_path"],
+            )
+        except subprocess.CalledProcessError:
+            print(
+                "WARNING: Composite succeeded locally, but Google Drive sync failed.",
+                flush=True,
+            )
+            print("         Files are preserved in:", archive, flush=True)
+    cleanup_snapshot(live_repository_root, run_directory)
     print("Composite complete:", composite_path, flush=True)
 
 
