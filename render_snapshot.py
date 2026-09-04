@@ -17,7 +17,6 @@ from typing import Iterable
 
 RUN_DIRECTORY = Path("scene_workspace") / ".render_runs"
 SCENE_DIRECTORY = Path("scene_workspace")
-SCENE_FILE_DIRECTORY = SCENE_DIRECTORY / "scene_files"
 TIMESTAMP_PATTERN = re.compile(r"^\d{8}_\d{6}$")
 ARTIFACT_SUFFIX_PATTERN = re.compile(r"^[._][A-Za-z0-9][A-Za-z0-9_.-]*$")
 
@@ -37,6 +36,66 @@ def sha256_file(path: Path) -> str:
 def archive_stem(scene_name: str) -> str:
     value = re.sub(r"[^A-Za-z0-9._-]+", "_", scene_name).strip("_")
     return value or "untitled_scene"
+
+
+def _filename(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise RenderSnapshotError(f"{label} requires a non-empty filename")
+    path = Path(value)
+    if (
+        path.is_absolute()
+        or value in (".", "..")
+        or len(path.parts) != 1
+        or path.name != value
+    ):
+        raise RenderSnapshotError(f"{label} must be a filename without a directory")
+    return value
+
+
+def scene_files_relative(config: dict) -> Path:
+    value = config.get("file_paths", {}).get("scene_files")
+    if not isinstance(value, str) or not value.strip():
+        raise RenderSnapshotError("file_paths.scene_files requires a repository-relative path")
+    path = Path(value)
+    if path == Path(".") or path.is_absolute() or ".." in path.parts:
+        raise RenderSnapshotError(
+            "file_paths.scene_files must remain inside the frozen repository"
+        )
+    return path
+
+
+def resolve_local_archive(config: dict, repository_root: Path) -> Path:
+    value = config.get("file_paths", {}).get("local_archive")
+    if not isinstance(value, str) or not value.strip():
+        raise RenderSnapshotError("file_paths.local_archive requires a path")
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        if ".." in path.parts:
+            raise RenderSnapshotError(
+                "relative file_paths.local_archive must remain inside the repository"
+            )
+        path = repository_root / path
+    return path.resolve()
+
+
+def archive_image_name(config: dict, timestamp: str) -> str:
+    pattern = config.get("file_names", {}).get("archive_image")
+    pattern = _filename(pattern, "file_names.archive_image")
+    if "{scene_name}" not in pattern or "{timestamp}" not in pattern:
+        raise RenderSnapshotError(
+            "file_names.archive_image must contain {scene_name} and {timestamp}"
+        )
+    name = pattern.replace(
+        "{scene_name}", archive_stem(str(config["scene"].get("name", "untitled_scene")))
+    ).replace("{timestamp}", timestamp)
+    if "{" in name or "}" in name:
+        raise RenderSnapshotError(
+            "file_names.archive_image contains an unsupported placeholder"
+        )
+    _filename(name, "resolved file_names.archive_image")
+    if Path(name).suffix != ".png":
+        raise RenderSnapshotError("file_names.archive_image must resolve to a PNG filename")
+    return name
 
 
 def _copy_file(source: Path, destination: Path) -> None:
@@ -78,14 +137,34 @@ def _validate_config(path: Path) -> dict:
         raise RenderSnapshotError(f"invalid scene configuration {path}: {error}") from error
     if not isinstance(config, dict) or not isinstance(config.get("scene"), dict):
         raise RenderSnapshotError("scene configuration requires a scene object")
-    master_file = config["scene"].get("master_file")
-    if not isinstance(master_file, str) or not master_file.strip():
-        raise RenderSnapshotError("scene.master_file requires a relative path")
-    master_path = Path(master_file)
-    if master_path.is_absolute() or ".." in master_path.parts:
-        raise RenderSnapshotError(
-            "scene.master_file must remain inside the frozen scene workspace"
-        )
+    file_names = config.get("file_names")
+    file_paths = config.get("file_paths")
+    if not isinstance(file_names, dict):
+        raise RenderSnapshotError("scene configuration requires file_names")
+    if not isinstance(file_paths, dict):
+        raise RenderSnapshotError("scene configuration requires file_paths")
+    _filename(file_names.get("pbrt_scene"), "file_names.pbrt_scene")
+    _filename(file_names.get("working_image"), "file_names.working_image")
+    scene_files_relative(config)
+    resolve_local_archive(config, path.parent.parent)
+    remote_archive = file_paths.get("remote_archive")
+    if not isinstance(remote_archive, str) or not remote_archive.strip():
+        raise RenderSnapshotError("file_paths.remote_archive requires a path")
+    pbrt_executable = file_paths.get("pbrt_executable")
+    if not isinstance(pbrt_executable, str) or not Path(pbrt_executable).is_absolute():
+        raise RenderSnapshotError("file_paths.pbrt_executable requires an absolute path")
+    archive_image_name(config, "20000101_000000")
+    if "archive" in config:
+        raise RenderSnapshotError("obsolete archive root is not supported")
+    runtime = config.get("runtime", {})
+    if isinstance(runtime, dict) and "pbrt_binary" in runtime:
+        raise RenderSnapshotError("obsolete runtime.pbrt_binary is not supported")
+    pipeline = config.get("pipeline", {})
+    if isinstance(pipeline, dict) and "rclone_sync" in pipeline:
+        raise RenderSnapshotError("obsolete pipeline.rclone_sync is not supported")
+    for name in ("master_file", "output_filename", "generated_medium"):
+        if name in config["scene"]:
+            raise RenderSnapshotError(f"obsolete scene.{name} is not supported")
     return config
 
 
@@ -124,9 +203,12 @@ def create_snapshot(
         config = _validate_config(snapshot_config)
 
         scene_name = str(config["scene"].get("name", "untitled_scene"))
-        prefix_name = f"{archive_stem(scene_name)}_{timestamp}"
-        archive_directory = repository_root / "Archive"
-        if archive_directory.is_dir() and any(archive_directory.glob(f"{prefix_name}*")):
+        archive_directory = resolve_local_archive(config, repository_root)
+        archive_image = archive_image_name(config, timestamp)
+        prefix_name = str(Path(archive_image).with_suffix(""))
+        if archive_directory.is_dir() and any(
+            path.name.startswith(prefix_name) for path in archive_directory.iterdir()
+        ):
             raise RenderSnapshotError(
                 f"archive output already exists for render {prefix_name}"
             )
@@ -182,9 +264,10 @@ def create_snapshot(
         build_enabled = bool(
             config.get("pipeline", {}).get("build_scene", {}).get("enabled", True)
         )
-        source_scene_files = scene_root / "scene_files"
+        relative_scene_files = scene_files_relative(config)
+        source_scene_files = repository_root / relative_scene_files
         if not build_enabled and source_scene_files.is_dir():
-            snapshot_scene_files = snapshot_scene_root / "scene_files"
+            snapshot_scene_files = snapshot_root / relative_scene_files
             shutil.copytree(source_scene_files, snapshot_scene_files)
             copied_paths.extend(
                 path for path in snapshot_scene_files.rglob("*") if path.is_file()
@@ -218,9 +301,12 @@ def create_snapshot(
         "timestamp": timestamp,
         "scene_name": scene_name,
         "archive_stem": archive_stem(scene_name),
+        "archive_directory": str(archive_directory),
+        "archive_image": str(archive_directory / archive_image),
         "run_directory": str(run_directory),
         "repository_root": str(snapshot_root),
         "scene_root": str(snapshot_scene_root),
+        "scene_files": str(snapshot_root / relative_scene_files),
         "config": str(snapshot_config),
     }
 
@@ -237,11 +323,20 @@ def _parse_artifact(value: str) -> tuple[str, Path]:
     return suffix, Path(filename).resolve()
 
 
-def _tar_filter(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
-    parts = Path(info.name).parts
-    if "scene_files" in parts or "__pycache__" in parts:
-        return None
-    return info
+def _tar_filter_for(relative_scene_files: Path):
+    """Exclude generated scene output wherever file_paths places it."""
+
+    generated_prefix = ("repository", *relative_scene_files.parts)
+
+    def tar_filter(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
+        parts = Path(info.name).parts
+        if "__pycache__" in parts:
+            return None
+        if parts[:len(generated_prefix)] == generated_prefix:
+            return None
+        return info
+
+    return tar_filter
 
 
 def finalize_snapshot(
@@ -284,7 +379,9 @@ def finalize_snapshot(
             compatibility_sources[source] = Path(
                 str(archive_prefix) + f"_{filename}"
             )
-    cloud_jobs = snapshot_scene_root / "scene_files" / "cloud_grid_jobs"
+    frozen_config = _validate_config(snapshot_scene_root / "config.json")
+    relative_scene_files = scene_files_relative(frozen_config)
+    cloud_jobs = snapshot_root / relative_scene_files / "cloud_grid_jobs"
     if cloud_jobs.is_dir():
         for source in sorted(cloud_jobs.glob("*.json")):
             compatibility_sources[source] = Path(
@@ -306,7 +403,11 @@ def finalize_snapshot(
     if source_archive.exists():
         raise RenderSnapshotError(f"snapshot archive already exists: {source_archive}")
     with tarfile.open(source_archive, "w:gz") as archive:
-        archive.add(snapshot_root, arcname="repository", filter=_tar_filter)
+        archive.add(
+            snapshot_root,
+            arcname="repository",
+            filter=_tar_filter_for(relative_scene_files),
+        )
         archive.add(input_manifest_path, arcname="input_manifest.json")
 
     prefix_name = archive_prefix.name

@@ -22,7 +22,37 @@ except ModuleNotFoundError:
         generate_vista_surface_mottle=lambda *_args, **_kwargs: None
     )
 
-from scene_workspace.build_scene import write_geometry, write_lsystem_trees
+from scene_workspace.build_scene import (
+    configured_filename,
+    configured_scene_files,
+    write_geometry,
+    write_lsystem_trees,
+)
+
+
+class ConfiguredFileLayoutTests(unittest.TestCase):
+    def test_scene_builder_resolves_repository_relative_scene_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scene_root = Path(directory) / "working_scene"
+            scene_root.mkdir()
+            config = {"file_paths": {"scene_files": "generated/scenes"}}
+            self.assertEqual(
+                configured_scene_files(config, scene_root),
+                Path(directory) / "generated" / "scenes",
+            )
+
+    def test_scene_builder_rejects_escaping_scene_files_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scene_root = Path(directory) / "working_scene"
+            scene_root.mkdir()
+            config = {"file_paths": {"scene_files": "../outside"}}
+            with self.assertRaisesRegex(ValueError, "inside the repository"):
+                configured_scene_files(config, scene_root)
+
+    def test_scene_builder_rejects_escaping_configured_filename(self):
+        config = {"file_names": {"pbrt_scene": "../outside.pbrt"}}
+        with self.assertRaisesRegex(ValueError, "filename without a directory"):
+            configured_filename(config, "pbrt_scene")
 
 
 class GeometryMaterialTests(unittest.TestCase):

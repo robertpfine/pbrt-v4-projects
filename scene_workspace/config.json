@@ -1,17 +1,24 @@
 {
-  "archive": {
-    "remote_path": "gdrive:wipImages/pbrt-v4"
+  "file_names": {
+    "pbrt_scene": "scene.pbrt",
+    "working_image": "working_scene.png",
+    "archive_image": "{scene_name}_{timestamp}.png"
+  },
+
+  "file_paths": {
+    "scene_files": "scene_workspace/scene_files",
+    "local_archive": "Archive",
+    "remote_archive": "gdrive:wipImages/pbrt-v4",
+    "pbrt_executable": "/home/rpf4/pbrt-v4/build/pbrt"
   },
 
   "runtime": {
-    "pbrt_binary": "/home/rpf4/pbrt-v4/build/pbrt",
     "use_gpu": true,
     "show_stats": true
   },
 
   "pipeline": {
     "build_scene": { "enabled": true },
-    "rclone_sync": { "enabled": true },
     "shaft_composite": {
       "enabled": false,
       "shaft_light": "shaft_sun",
@@ -25,9 +32,6 @@
 
   "scene": {
     "name":             "Poppy Field Overcast 8AM Study",
-    "master_file":      "scene_files/scene.pbrt",
-    "generated_medium": "scene_files/volumes/rgbgrid.pbrt",
-    "output_filename":  "working_scene.png",
 
     "camera": {
       "enabled": true,

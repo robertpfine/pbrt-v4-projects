@@ -215,7 +215,6 @@ captured terminal log prevents reconstructing PBRT's exact last internal phase.
   validation log and the continuity/progress updates are the only intended
   tracked changes in the checkpoint.
 
-The pre-migration cloud-grid gate is satisfied. The next engineering task is
-the approved first live migration stage: move `file_names` and `file_paths`
-without retaining duplicate legacy paths, updating all consumers and tests
-together.
+The pre-migration cloud-grid gate is satisfied. The first live migration stage
+was subsequently completed and is recorded in
+`docs/config-migration-progress-2026-09-04.md`.

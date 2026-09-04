@@ -67,8 +67,9 @@ Implemented `render_snapshot.py` and connected it to both render paths.
   from the same immutable inputs.
 - Composite remote-sync failure is non-destructive: the complete local archive
   remains available.
-- `scene.master_file` is rejected if absolute or if it escapes the frozen scene
-  workspace with `..`.
+- The active Stage 1 schema rejects directory components in
+  `file_names.pbrt_scene` and rejects a `file_paths.scene_files` path that is
+  absolute or escapes the frozen repository with `..`.
 - Compiled helper paths are constrained to the repository. Missing compiled
   executables are permitted only when the explicit Python fallback remains on.
 
@@ -214,10 +215,19 @@ cost were temporarily removed. The Python control `020525` and C++ comparison
 byte-for-byte identical PNGs. The live configuration was then restored exactly
 to its committed pre-test contents.
 
-The compiled cloud-grid validation gate is complete. The next implementation
-stage is the approved migration of file names and file paths in the sole live
-JSON, with all consumers and tests updated together and no duplicate legacy
-paths.
+The compiled cloud-grid validation gate is complete. The first live migration
+stage—file names and file paths—is also complete and recorded in
+`docs/config-migration-progress-2026-09-04.md`. Its bounded structural rebuild
+is byte-identical to the pre-migration PBRT scene. The next implementation stage
+is `camera_settings`.
+
+Stage 1 final verification ran 86 tests in the project virtual environment:
+79 passed and seven dependency-aware tests were skipped. The explicit
+system-Python non-GUI suite passed all 75 tests, including NumPy/Pillow-backed
+composite and atmosphere coverage. The live JSON validator reports no errors,
+the exact migration-only comparison against `1346745` reports true, and the
+retained bounded PBRT artifact is 117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
 
 The native-Perlin snapshot boundary has now been verified directly: when the
 frozen adapter is executed from its snapshot repository, it resolves

@@ -1,7 +1,9 @@
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import unittest
 from unittest import mock
@@ -33,10 +35,18 @@ class RenderSnapshotTests(unittest.TestCase):
         self.config.write_text(
             json.dumps(
                 {
-                    "scene": {
-                        "name": "Original Scene",
-                        "master_file": "scene_files/scene.pbrt",
-                    }
+                    "file_names": {
+                        "pbrt_scene": "scene.pbrt",
+                        "working_image": "working.png",
+                        "archive_image": "{scene_name}_{timestamp}.png",
+                    },
+                    "file_paths": {
+                        "scene_files": "scene_workspace/scene_files",
+                        "local_archive": "Archive",
+                        "remote_archive": "unused:",
+                        "pbrt_executable": "/usr/bin/false",
+                    },
+                    "scene": {"name": "Original Scene"},
                 }
             )
             + "\n",
@@ -63,11 +73,50 @@ class RenderSnapshotTests(unittest.TestCase):
             "Original Scene",
         )
 
+    def test_snapshot_resolves_configured_archive_pattern_and_directory(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["file_names"]["archive_image"] = (
+            "proof-{scene_name}-{timestamp}.png"
+        )
+        config["file_paths"]["local_archive"] = "SavedRenders"
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+
+        result = create_snapshot(self.root, self.config, "20260904_010212")
+
+        self.assertEqual(
+            Path(result["archive_directory"]),
+            self.root / "SavedRenders",
+        )
+        self.assertEqual(
+            Path(result["archive_image"]),
+            self.root
+            / "SavedRenders"
+            / "proof-Original_Scene-20260904_010212.png",
+        )
+
+    def test_snapshot_rejects_pbrt_scene_with_directory(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["file_names"]["pbrt_scene"] = "scene_files/scene.pbrt"
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(
+            RenderSnapshotError, "filename without a directory"
+        ):
+            create_snapshot(self.root, self.config, "20260904_010213")
+
+    def test_snapshot_rejects_dot_dot_as_a_filename(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["file_names"]["working_image"] = ".."
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(
+            RenderSnapshotError, "filename without a directory"
+        ):
+            create_snapshot(self.root, self.config, "20260904_010214")
+
     def test_finalize_archives_frozen_config_sources_artifacts_and_hashes(self):
         result = create_snapshot(self.root, self.config, "20260904_010204")
         archive = self.root / "Archive"
         prefix = archive / "Original_Scene_20260904_010204"
-        rendered_scene = Path(result["scene_root"]) / "scene_files" / "scene.pbrt"
+        rendered_scene = Path(result["scene_files"]) / "scene.pbrt"
         rendered_scene.parent.mkdir(parents=True)
         rendered_scene.write_text("WorldBegin\n", encoding="utf-8")
         rendered_image = Path(str(prefix) + ".png")
@@ -100,22 +149,33 @@ class RenderSnapshotTests(unittest.TestCase):
             cleanup_snapshot(self.root, unrelated)
         self.assertTrue(unrelated.is_dir())
 
-    def test_snapshot_rejects_master_file_outside_frozen_workspace(self):
-        self.config.write_text(
-            json.dumps(
-                {
-                    "scene": {
-                        "name": "Unsafe Scene",
-                        "master_file": "../live_scene.pbrt",
-                    }
-                }
-            ),
-            encoding="utf-8",
-        )
+    def test_snapshot_rejects_scene_files_outside_frozen_repository(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["name"] = "Unsafe Scene"
+        config["file_paths"]["scene_files"] = "../live_scene"
+        self.config.write_text(json.dumps(config), encoding="utf-8")
         with self.assertRaisesRegex(
-            RenderSnapshotError, "inside the frozen scene workspace"
+            RenderSnapshotError, "inside the frozen repository"
         ):
             create_snapshot(self.root, self.config, "20260904_010206")
+
+    def test_snapshot_rejects_repository_root_as_scene_files(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["file_paths"]["scene_files"] = "."
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(
+            RenderSnapshotError, "inside the frozen repository"
+        ):
+            create_snapshot(self.root, self.config, "20260904_010215")
+
+    def test_snapshot_rejects_obsolete_stage_one_keys(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["master_file"] = "scene_files/scene.pbrt"
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(
+            RenderSnapshotError, "obsolete scene.master_file"
+        ):
+            create_snapshot(self.root, self.config, "20260904_010216")
 
     def test_snapshot_freezes_configured_cloud_grid_executable(self):
         executable = self.root / "build" / "cloud_grid_builder" / "cloud_grid_builder"
@@ -123,28 +183,20 @@ class RenderSnapshotTests(unittest.TestCase):
         executable.write_bytes(b"compiled cloud builder")
         executable.chmod(0o755)
         shutil.copy2(Path("cloud_grid_contract.py"), self.root / "cloud_grid_contract.py")
-        self.config.write_text(
-            json.dumps(
-                {
-                    "scene": {
-                        "name": "Compiled Scene",
-                        "master_file": "scene_files/scene.pbrt",
-                        "sky": {
-                            "clouds": {
-                                "grid_builder": {
-                                    "backend": "cpp",
-                                    "executable": (
-                                        "build/cloud_grid_builder/cloud_grid_builder"
-                                    ),
-                                    "fallback_to_python": False,
-                                }
-                            }
-                        },
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"] = {
+            "name": "Compiled Scene",
+            "sky": {
+                "clouds": {
+                    "grid_builder": {
+                        "backend": "cpp",
+                        "executable": "build/cloud_grid_builder/cloud_grid_builder",
+                        "fallback_to_python": False,
                     }
                 }
-            ),
-            encoding="utf-8",
-        )
+            },
+        }
+        self.config.write_text(json.dumps(config), encoding="utf-8")
 
         result = create_snapshot(self.root, self.config, "20260904_010207")
         frozen = (
@@ -243,14 +295,19 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
             )
             fake_pbrt.chmod(0o755)
 
+            fake_rclone = root / "rclone"
+            fake_rclone.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+            fake_rclone.chmod(0o755)
+
             builder = scene_root / "build_scene.py"
             builder.write_text(
                 "import json, os, sys, time\n"
                 "config_path = sys.argv[1]\n"
                 "with open(config_path) as handle: config = json.load(handle)\n"
                 "time.sleep(0.2)\n"
-                "root = os.path.dirname(config_path)\n"
-                "path = os.path.join(root, config['scene']['master_file'])\n"
+                "root = os.path.dirname(os.path.dirname(config_path))\n"
+                "path = os.path.join(root, config['file_paths']['scene_files'], "
+                "config['file_names']['pbrt_scene'])\n"
                 "os.makedirs(os.path.dirname(path), exist_ok=True)\n"
                 "with open(path, 'w') as handle: "
                 "handle.write('# SCENE: ' + config['scene']['name'] + '\\nWorldBegin\\n')\n",
@@ -259,27 +316,37 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
 
             config_path = scene_root / "config.json"
             config = {
-                "archive": {"remote_path": "unused:"},
+                "file_names": {
+                    "pbrt_scene": "scene.pbrt",
+                    "working_image": "working.png",
+                    "archive_image": "proof-{scene_name}-{timestamp}.png",
+                },
+                "file_paths": {
+                    "scene_files": "generated/scenes",
+                    "local_archive": "SavedRenders",
+                    "remote_archive": "unused:",
+                    "pbrt_executable": str(fake_pbrt),
+                },
                 "runtime": {
-                    "pbrt_binary": str(fake_pbrt),
                     "use_gpu": False,
                     "show_stats": False,
                 },
                 "pipeline": {
                     "build_scene": {"enabled": True},
-                    "rclone_sync": {"enabled": False},
                 },
                 "scene": {
                     "name": "Original Scene",
-                    "master_file": "scene_files/scene.pbrt",
                     "trees": [],
                 },
             }
             config_path.write_text(json.dumps(config), encoding="utf-8")
 
+            environment = os.environ.copy()
+            environment["PATH"] = f"{root}{os.pathsep}{environment['PATH']}"
             process = subprocess.Popen(
                 [str(root / "render_pipeline.sh"), str(config_path)],
                 cwd=root,
+                env=environment,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
@@ -299,13 +366,34 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
             output = "".join(output_lines) + remaining
 
             self.assertEqual(process.returncode, 0, output)
-            archived_configs = list((root / "Archive").glob("Original_Scene_*_config.json"))
+            archived_configs = list(
+                (root / "SavedRenders").glob(
+                    "proof-Original_Scene-*_config.json"
+                )
+            )
             self.assertEqual(len(archived_configs), 1)
             archived_config = json.loads(archived_configs[0].read_text(encoding="utf-8"))
             self.assertEqual(archived_config["scene"]["name"], "Original Scene")
-            archived_scenes = list((root / "Archive").glob("Original_Scene_*.pbrt"))
+            archived_scenes = list(
+                (root / "SavedRenders").glob("proof-Original_Scene-*.pbrt")
+            )
             self.assertEqual(len(archived_scenes), 1)
             self.assertIn("# SCENE: Original Scene", archived_scenes[0].read_text())
+            source_archives = list(
+                (root / "SavedRenders").glob(
+                    "proof-Original_Scene-*_snapshot_sources.tar.gz"
+                )
+            )
+            self.assertEqual(len(source_archives), 1)
+            with tarfile.open(source_archives[0], "r:gz") as archive:
+                archived_names = archive.getnames()
+            self.assertFalse(
+                any(
+                    name == "repository/generated/scenes"
+                    or name.startswith("repository/generated/scenes/")
+                    for name in archived_names
+                )
+            )
             self.assertEqual(
                 list((scene_root / ".render_runs").iterdir()),
                 [],
@@ -317,6 +405,24 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
     "shaft-composite NumPy/Pillow dependencies are unavailable",
 )
 class ShaftCompositeSnapshotTests(unittest.TestCase):
+    def test_composite_passes_use_migrated_scene_filenames(self):
+        config = {
+            "file_names": {"pbrt_scene": "scene.pbrt"},
+            "scene": {
+                "sun_aperture": {"enabled": True},
+                "lights": [{"label": "shaft_sun", "enabled": True}],
+                "landscape": {"ground": {}},
+            },
+        }
+        base = render_shaft_composite.configure_base(config, "shaft_sun")
+        shaft = render_shaft_composite.configure_shaft(
+            config, "shaft_sun", 0.0, 0.0
+        )
+        self.assertEqual(base["file_names"]["pbrt_scene"], "scene_base.pbrt")
+        self.assertEqual(shaft["file_names"]["pbrt_scene"], "scene_shaft.pbrt")
+        self.assertNotIn("master_file", base["scene"])
+        self.assertNotIn("master_file", shaft["scene"])
+
     def test_entry_point_reexecutes_the_frozen_script_and_config(self):
         result = {
             "run_directory": "/repo/scene_workspace/.render_runs/20260904_010205",

@@ -112,6 +112,48 @@ class ArtStudioTests(unittest.TestCase):
         buttons = self.window.findChildren(QtWidgets.QAbstractButton)
         self.assertNotIn("Add", {button.text() for button in buttons})
 
+    def test_render_page_exposes_migrated_file_names_and_paths(self):
+        expected = {
+            "pbrt_scene_filename": "scene.pbrt",
+            "working_image_filename": "working_scene.png",
+            "archive_image_pattern": "{scene_name}_{timestamp}.png",
+            "scene_files_path": "scene_workspace/scene_files",
+            "local_archive_path": "Archive",
+            "remote_archive_path": "gdrive:wipImages/pbrt-v4",
+            "pbrt_executable_path": "/home/rpf4/pbrt-v4/build/pbrt",
+        }
+        for object_name, value in expected.items():
+            widget = self.window.findChild(QtWidgets.QLineEdit, object_name)
+            self.assertIsNotNone(widget, object_name)
+            self.assertEqual(widget.text(), value)
+
+    def test_latest_render_uses_configured_local_archive(self):
+        archive = Path(self.temporary_directory.name) / "ConfiguredArchive"
+        archive.mkdir()
+        image_path = archive / "configured_20260904_030000.png"
+        image_path.write_bytes(b"diagnostic image")
+        self.window.config.set(
+            ("file_paths", "local_archive"), str(archive)
+        )
+        with mock.patch.object(self.window.image, "load", return_value=True) as load:
+            self.window._load_latest_render()
+        load.assert_called_once_with(image_path)
+
+    def test_migrated_path_control_saves_authoritative_json(self):
+        widget = self.window.findChild(
+            QtWidgets.QLineEdit, "remote_archive_path"
+        )
+        self.assertIsNotNone(widget)
+        widget.setText("gdrive:wipImages/pbrt-v4/path-control-test")
+        widget.editingFinished.emit()
+        self.assertTrue(self.window.save_config())
+        data = json.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            data["file_paths"]["remote_archive"],
+            "gdrive:wipImages/pbrt-v4/path-control-test",
+        )
+        self.assertNotIn("archive", data)
+
     def test_carriage_return_progress_is_recorded_line_by_line(self):
         before = self.window.log.blockCount()
         self.window._feed_render_output("Rendering [++++      ]\r")

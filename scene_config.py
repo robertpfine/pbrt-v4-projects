@@ -246,6 +246,90 @@ class SceneConfig:
                     "must be in [0, 1]"
                 )
 
+        file_names = require(("file_names",), dict)
+        if file_names is not None:
+            for name in ("pbrt_scene", "working_image", "archive_image"):
+                value = file_names.get(name)
+                if (
+                    not isinstance(value, str)
+                    or not value.strip()
+                    or Path(value).is_absolute()
+                    or value in (".", "..")
+                    or len(Path(value).parts) != 1
+                    or Path(value).name != value
+                ):
+                    errors.append(
+                        f"file_names.{name} must be a filename without a directory"
+                    )
+            archive_image = file_names.get("archive_image")
+            if isinstance(archive_image, str):
+                if "{scene_name}" not in archive_image or "{timestamp}" not in archive_image:
+                    errors.append(
+                        "file_names.archive_image must contain {scene_name} and {timestamp}"
+                    )
+                resolved_archive = archive_image.replace(
+                    "{scene_name}", "scene"
+                ).replace("{timestamp}", "20000101_000000")
+                if "{" in resolved_archive or "}" in resolved_archive:
+                    errors.append(
+                        "file_names.archive_image contains an unsupported placeholder"
+                    )
+                if Path(archive_image).suffix != ".png":
+                    errors.append("file_names.archive_image must be a PNG filename")
+
+        file_paths = require(("file_paths",), dict)
+        if file_paths is not None:
+            scene_files = file_paths.get("scene_files")
+            if (
+                not isinstance(scene_files, str)
+                or not scene_files.strip()
+                or Path(scene_files) == Path(".")
+                or Path(scene_files).is_absolute()
+                or ".." in Path(scene_files).parts
+            ):
+                errors.append(
+                    "file_paths.scene_files must be a repository-relative path"
+                )
+            local_archive = file_paths.get("local_archive")
+            if not isinstance(local_archive, str) or not local_archive.strip():
+                errors.append("file_paths.local_archive must be a non-empty path")
+            elif not Path(local_archive).is_absolute() and ".." in Path(local_archive).parts:
+                errors.append(
+                    "relative file_paths.local_archive must remain inside the repository"
+                )
+            remote_archive = file_paths.get("remote_archive")
+            if not isinstance(remote_archive, str) or not remote_archive.strip():
+                errors.append("file_paths.remote_archive must be a non-empty path")
+            pbrt_executable = file_paths.get("pbrt_executable")
+            if (
+                not isinstance(pbrt_executable, str)
+                or not Path(pbrt_executable).is_absolute()
+            ):
+                errors.append(
+                    "file_paths.pbrt_executable must be an absolute path"
+                )
+
+        if "archive" in self.data:
+            errors.append("obsolete archive root must be removed after file_paths migration")
+        runtime = self.get(("runtime",), {})
+        if isinstance(runtime, dict) and "pbrt_binary" in runtime:
+            errors.append(
+                "obsolete runtime.pbrt_binary must be removed after file_paths migration"
+            )
+        pipeline = self.get(("pipeline",), {})
+        if isinstance(pipeline, dict) and "rclone_sync" in pipeline:
+            errors.append(
+                "obsolete pipeline.rclone_sync must be removed; "
+                "file_paths.remote_archive enables synchronization"
+            )
+        scene_root = self.get(("scene",), {})
+        if isinstance(scene_root, dict):
+            for name in ("master_file", "output_filename", "generated_medium"):
+                if name in scene_root:
+                    errors.append(
+                        f"obsolete scene.{name} must be removed after file_names migration"
+                    )
+
         landscape = require(("scene", "landscape"), dict)
         ground = require(GROUND_PATH, dict) if landscape is not None else None
         if landscape is not None:

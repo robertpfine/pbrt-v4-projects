@@ -19,6 +19,7 @@ import os
 import math
 import random
 import json
+from pathlib import Path
 import numpy as np
 from scipy.spatial import KDTree
 
@@ -1259,7 +1260,7 @@ class Tree3D:
 # 5. write_tree — outputs pbrt Include file
 # =============================================================================
 
-def write_tree(cfg, cylinders, joints, project_root, index=0):
+def write_tree(cfg, cylinders, joints, scene_files_root, index=0):
     """
     Writes scene_files/tree.pbrt — an Include file for scene.pbrt.
     Contains cylinders for branch segments and spheres for joints.
@@ -1271,7 +1272,7 @@ def write_tree(cfg, cylinders, joints, project_root, index=0):
     trunk_r   = cfg['trunk_material']['reflectance']
     joint_r   = cfg['joint_material']['reflectance']
 
-    out_path  = os.path.join(project_root, 'scene_files', f'tree_{index}.pbrt')
+    out_path = os.path.join(scene_files_root, f'tree_{index}.pbrt')
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
     lines = []
@@ -1357,7 +1358,7 @@ def write_tree(cfg, cylinders, joints, project_root, index=0):
     print(f"  Written: {out_path}")
     print(f"  Cylinders: {len(cylinders)}  Joints: {len(joints)}")
 
-    return f'scene_files/tree_{index}.pbrt'
+    return out_path
 
 
 
@@ -1365,14 +1366,14 @@ def write_tree(cfg, cylinders, joints, project_root, index=0):
 # 6. run — entry point called from build_scene.py
 # =============================================================================
 
-def run(cfg, project_root):
+def run(cfg, scene_files_root):
     """
     Entry point for space colonization tree generation.
     Called from build_scene.py when tree.enabled is true.
 
     Args:
         cfg          — full scene config dictionary
-        project_root — absolute path to project directory
+        scene_files_root — configured absolute scene-files directory
 
     Returns:
         relative path to tree.pbrt for use as Include directive,
@@ -1395,7 +1396,7 @@ def run(cfg, project_root):
     joints    = tree.get_joints()
 
     # Write pbrt Include file
-    return write_tree(tree_cfg, cylinders, joints, project_root)
+    return write_tree(tree_cfg, cylinders, joints, scene_files_root)
 
 
 
@@ -1410,13 +1411,22 @@ if __name__ == "__main__":
         print("Usage: python3 space_col.py <config.json path>")
         sys.exit(1)
 
-    config_path  = sys.argv[1]
-    project_root = os.path.dirname(config_path)
+    config_path = os.path.abspath(sys.argv[1])
 
     with open(config_path, 'r') as f:
         cfg = json.load(f)
 
-    result = run(cfg, project_root)
+    repository_root = os.path.dirname(os.path.dirname(config_path))
+    scene_files_relative = Path(cfg['file_paths']['scene_files'])
+    if (
+        scene_files_relative == Path('.')
+        or scene_files_relative.is_absolute()
+        or '..' in scene_files_relative.parts
+    ):
+        raise ValueError('file_paths.scene_files must remain inside the repository')
+    scene_files_root = os.path.join(repository_root, str(scene_files_relative))
+
+    result = run(cfg, scene_files_root)
 
     if result:
         print(f"  Tree Include file: {result}")

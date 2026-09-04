@@ -2,14 +2,15 @@
 """
 build_scene.py  —  working-scene builder for PBRT-v4 Art Studio
 ========================================================
-Reads config.json and generates two files:
+Reads config.json and generates two files beneath the configured scene-files
+directory:
 
-  1. scene_files/volumes/rgbgrid.pbrt
+  1. volumes/rgbgrid.pbrt
      The MakeNamedMedium block containing the voxel grid
      sigma_s and sigma_a arrays. Must be Included in the
      scene before WorldBegin.
 
-  2. scene_files/scene.pbrt
+  2. The configured file_names.pbrt_scene filename
      The complete pbrt-v4 scene description, assembled
      from all enabled objects in config.json.
 
@@ -73,6 +74,43 @@ def fmt_floats(values, per_line=9):
         chunk = values[i:i + per_line]
         lines.append("        " + " ".join(f"{v:.5f}" for v in chunk))
     return "\n".join(lines)
+
+
+def configured_scene_files(cfg, scene_root):
+    """Resolve the configured repository-relative scene-files directory."""
+
+    configured = Path(cfg["file_paths"]["scene_files"])
+    if configured == Path(".") or configured.is_absolute() or ".." in configured.parts:
+        raise ValueError(
+            "file_paths.scene_files must remain inside the repository"
+        )
+    repository_root = Path(scene_root).resolve().parent
+    return repository_root / configured
+
+
+def configured_filename(cfg, name):
+    """Return one configured filename after rejecting directory traversal."""
+
+    value = cfg["file_names"][name]
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"file_names.{name} must be a filename without a directory")
+    path = Path(value)
+    if (
+        value in (".", "..")
+        or path.is_absolute()
+        or len(path.parts) != 1
+        or path.name != value
+    ):
+        raise ValueError(
+            f"file_names.{name} must be a filename without a directory"
+        )
+    return value
+
+
+def scene_relative_path(path, scene_root):
+    """Return a portable PBRT include/texture path from the scene workspace."""
+
+    return Path(os.path.relpath(path, scene_root)).as_posix()
 
 
 # ==============================================================
@@ -232,7 +270,7 @@ def compute_rgbgrid(grid_cfg, zones):
 
 
 # ==============================================================
-# SECTION 4 — WRITE MEDIUM FILE (scene_files/volumes/rgbgrid.pbrt)
+# SECTION 4 — WRITE GENERATOR-OWNED MEDIUM FILE
 # ==============================================================
 
 def write_fog_medium(cfg, lines):
@@ -368,7 +406,7 @@ def _cloud_medium_name(index, formation):
     return f"cloud_{index}_{safe_name}"
 
 
-def write_cloud_media(lines, cloud_config, scene_root):
+def write_cloud_media(lines, cloud_config, scene_root, scene_files_root):
     """Declare bounded heterogeneous media for enabled sky formations."""
 
     formations = create_clouds(cloud_config)
@@ -399,7 +437,7 @@ def write_cloud_media(lines, cloud_config, scene_root):
         medium_name = _cloud_medium_name(index, formation)
 
         if backend == "cpp":
-            generated_root = Path(scene_root) / "scene_files" / "cloud_grid_jobs"
+            generated_root = Path(scene_files_root) / "cloud_grid_jobs"
             job_path = generated_root / f"{medium_name}.json"
             output_path = generated_root / f"{medium_name}.pbrt"
             job = normalized_cloud_job(cloud_config, formation_config, index)
@@ -600,7 +638,7 @@ def write_medium(cfg, scene_root):
     Config reads:
       scene.grid            — grid dimensions, bounds, sigma_a
       scene.zones           — spectral zone definitions
-      scene.generated_medium — output path (relative to working-scene root)
+      file_paths.scene_files — generator output directory
 
     Output file: the MakeNamedMedium "rgb_vol" block with
                  fully expanded sigma_s and sigma_a arrays.
@@ -614,7 +652,7 @@ def write_medium(cfg, scene_root):
         print("  Grid disabled — skipping rgbgrid generation.")
         return None
     zones  = scene["zones"]
-    out    = os.path.join(scene_root, scene["generated_medium"])
+    out = configured_scene_files(cfg, scene_root) / "volumes" / "rgbgrid.pbrt"
 
     print(f"  Building {g_cfg['nx']}x{g_cfg['ny']}x{g_cfg['nz']} rgbgrid "
           f"(axis={g_cfg['axis']}, sigma_a={g_cfg['sigma_a']})...")
@@ -655,7 +693,7 @@ def write_medium(cfg, scene_root):
         f.write(content)
     print(f"  Written: {out}")
 
-    return scene["generated_medium"]   # relative path for Include directive
+    return scene_relative_path(out, scene_root)
 
 
 # ==============================================================
@@ -727,7 +765,7 @@ def write_film(lines, film, output_filename):
     """
     Write the Film directive.
     Config reads: scene.film (enabled, x_resolution, y_resolution)
-                  scene.output_filename
+                  file_names.working_image
     """
     if not film.get("enabled", True):
         return
@@ -984,7 +1022,7 @@ def write_sun_aperture(lines, aperture, lights):
     ]
 
 
-def write_geometry(lines, geometry, scene_root=None):
+def write_geometry(lines, geometry, scene_root=None, scene_files_root=None):
     """
     Write all enabled geometry objects as AttributeBegin/AttributeEnd blocks.
     Must appear after WorldBegin.
@@ -1029,6 +1067,8 @@ def write_geometry(lines, geometry, scene_root=None):
             if surface_mottle_enabled:
                 if scene_root is None:
                     raise ValueError("surface_mottle requires a scene root")
+                if scene_files_root is None:
+                    scene_files_root = os.path.join(scene_root, "scene_files")
                 label = str(obj.get("label", "geometry"))
                 identifier = "".join(
                     character if character.isalnum() or character == "_" else "_"
@@ -1036,8 +1076,7 @@ def write_geometry(lines, geometry, scene_root=None):
                 )
                 texture_name = f"{identifier}_surface_mottle"
                 texture_path = os.path.join(
-                    scene_root,
-                    "scene_files",
+                    scene_files_root,
                     "textures",
                     f"{texture_name}.png",
                 )
@@ -1507,7 +1546,7 @@ def write_lsystem_leaf(lines, start, end, width, reflectance):
     ]
 
 
-def write_terrain(lines, terrain, config, scene_root):
+def write_terrain(lines, terrain, config, scene_root, scene_files_root):
     """Write a procedural terrain as one PBRT triangle mesh."""
 
     if terrain is None:
@@ -1534,7 +1573,7 @@ def write_terrain(lines, terrain, config, scene_root):
     ]
     if surface.get("enabled", False) and surface.get("mode") == "terrain_surface_texture":
         surface_texture = surface.get("terrain_surface_texture", {})
-        texture_directory = os.path.join(scene_root, "scene_files", "textures")
+        texture_directory = os.path.join(scene_files_root, "textures")
         albedo_path, bump_path = generate_terrain_surface_maps(
             surface_texture, texture_directory
         )
@@ -3108,22 +3147,24 @@ def write_planar_phyllotaxis(lines, patterns):
 
 
 # ==============================================================
-# SECTION 6 — WRITE SCENE FILE (scene_files/scene.pbrt)
+# SECTION 6 — WRITE CONFIGURED SCENE FILE
 # ==============================================================
 
 def write_scene(cfg, scene_root, medium_rel_path):
     """
-    Assemble and write scene_files/scene.pbrt from config.json.
+    Assemble and write the configured PBRT scene file from config.json.
 
     Calls each section writer in the correct pbrt-v4 order:
       Pre-world:  header, camera, sampler, integrator, film, medium Include
       World:      WorldBegin, lights, geometry
 
-    Config reads: all of scene.*
-    Output file:  scene.master_file (relative to working-scene root)
+    Config reads: all of scene.*, file_names.*, and file_paths.scene_files
+    Output file:  file_paths.scene_files/file_names.pbrt_scene
     """
     scene    = cfg["scene"]
-    out_path = os.path.join(scene_root, scene["master_file"])
+    scene_files_root = configured_scene_files(cfg, scene_root)
+    out_path = scene_files_root / configured_filename(cfg, "pbrt_scene")
+    scene_files_relative = scene_relative_path(scene_files_root, scene_root)
     lines    = []
 
     # --- Pre-world section ---
@@ -3133,7 +3174,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_sampler(lines, scene["sampler"])
     write_integrator(lines, scene["integrator"])
     lines.append("")
-    write_film(lines, scene["film"], scene["output_filename"])
+    write_film(lines, scene["film"], configured_filename(cfg, "working_image"))
     
 
     # --- World section ---
@@ -3141,7 +3182,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_fog_boundary(lines, scene.get("fog"))
     sky_config = scene.get("sky", {})
     cloud_formations = write_cloud_media(
-        lines, sky_config.get("clouds", {}), scene_root
+        lines, sky_config.get("clouds", {}), scene_root, scene_files_root
     )
     rain_curtains = write_rain_media(lines, scene.get("rain", {}))
     
@@ -3168,8 +3209,10 @@ def write_scene(cfg, scene_root, medium_rel_path):
         exterior_medium="fog" if fog_enabled else "",
     )
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
-    write_geometry(lines, scene.get("geometry", []), scene_root)
-    write_terrain(lines, terrain, ground_config, scene_root)
+    write_geometry(
+        lines, scene.get("geometry", []), scene_root, scene_files_root
+    )
+    write_terrain(lines, terrain, ground_config, scene_root, scene_files_root)
     write_terrain_details(
         lines,
         terrain,
@@ -3196,13 +3239,15 @@ def write_scene(cfg, scene_root, medium_rel_path):
             continue
         lines += [
             f'ObjectBegin "tree_{i}_wood"',
-            f'Include "scene_files/tree_{i}.pbrt"',
+            f'Include "{scene_files_relative}/tree_{i}.pbrt"',
             'ObjectEnd',
             ''
         ]
         foliage_cfg = tree_cfg.get("foliage", {})
         if foliage_cfg.get("enabled", False):
-            lines.append(f'Include "scene_files/foliage_defs_{i}.pbrt"')
+            lines.append(
+                f'Include "{scene_files_relative}/foliage_defs_{i}.pbrt"'
+            )
 
         instances = [{}]
         if grove_cfg.get("enabled", False) and i == grove_tree_index:
@@ -3220,7 +3265,9 @@ def write_scene(cfg, scene_root, medium_rel_path):
                 f'    ObjectInstance "tree_{i}_wood"'
             ]
             if foliage_cfg.get("enabled", False):
-                lines.append(f'    Include "scene_files/foliage_{i}.pbrt"')
+                lines.append(
+                    f'    Include "{scene_files_relative}/foliage_{i}.pbrt"'
+                )
             lines += ['AttributeEnd', '']
 
     os.makedirs(os.path.dirname(out_path), exist_ok=True)

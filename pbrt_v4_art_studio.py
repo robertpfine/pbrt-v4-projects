@@ -150,6 +150,25 @@ class Inspector(QtWidgets.QWidget):
         )
         return widget
 
+    def _text(
+        self,
+        form: QtWidgets.QFormLayout,
+        label: str,
+        path: tuple[str | int, ...],
+        object_name: str = "",
+    ) -> QtWidgets.QLineEdit:
+        widget = QtWidgets.QLineEdit(str(self.config.get(path)))
+        if object_name:
+            widget.setObjectName(object_name)
+        widget.editingFinished.connect(
+            lambda p=path, w=widget: self._set(p, w.text().strip())
+        )
+        form.addRow(label, widget)
+        self.refreshers.append(
+            lambda w=widget, p=path: self._blocked(w, str(self.config.get(p)))
+        )
+        return widget
+
     def _integer(
         self,
         form: QtWidgets.QFormLayout,
@@ -277,6 +296,8 @@ class Inspector(QtWidgets.QWidget):
                 widget.setCurrentIndex(value)
             else:
                 widget.setCurrentText(str(value))
+        elif isinstance(widget, QtWidgets.QLineEdit):
+            widget.setText(str(value))
         else:
             widget.setValue(value)
         del blocker
@@ -826,6 +847,48 @@ class Inspector(QtWidgets.QWidget):
             1,
             1_000_000,
         )
+        self._text(
+            form,
+            "PBRT scene file",
+            ("file_names", "pbrt_scene"),
+            "pbrt_scene_filename",
+        )
+        self._text(
+            form,
+            "Working image file",
+            ("file_names", "working_image"),
+            "working_image_filename",
+        )
+        self._text(
+            form,
+            "Archive image pattern",
+            ("file_names", "archive_image"),
+            "archive_image_pattern",
+        )
+        self._text(
+            form,
+            "Scene files path",
+            ("file_paths", "scene_files"),
+            "scene_files_path",
+        )
+        self._text(
+            form,
+            "Local archive path",
+            ("file_paths", "local_archive"),
+            "local_archive_path",
+        )
+        self._text(
+            form,
+            "Remote archive path",
+            ("file_paths", "remote_archive"),
+            "remote_archive_path",
+        )
+        self._text(
+            form,
+            "PBRT executable",
+            ("file_paths", "pbrt_executable"),
+            "pbrt_executable_path",
+        )
 
 
 class StudioWindow(QtWidgets.QMainWindow):
@@ -1103,7 +1166,12 @@ class StudioWindow(QtWidgets.QMainWindow):
             self._update_status("Render failed or stopped")
 
     def _load_latest_render(self) -> None:
-        archive = ROOT / "Archive"
+        configured_archive = Path(self.config.get(("file_paths", "local_archive")))
+        archive = (
+            configured_archive
+            if configured_archive.is_absolute()
+            else ROOT / configured_archive
+        )
         candidates = [
             path
             for path in archive.glob("*.png")

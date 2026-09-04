@@ -9,6 +9,17 @@ from scene_config import SceneConfig, SceneConfigConflictError, SceneConfigError
 class SceneConfigTests(unittest.TestCase):
     def make_config(self, directory):
         source = '''{
+  "file_names": {
+    "pbrt_scene": "scene.pbrt",
+    "working_image": "working.png",
+    "archive_image": "{scene_name}_{timestamp}.png"
+  },
+  "file_paths": {
+    "scene_files": "scene_workspace/scene_files",
+    "local_archive": "Archive",
+    "remote_archive": "unused:",
+    "pbrt_executable": "/usr/bin/false"
+  },
   "scene": {
     "landscape": {
       "ground": {
@@ -147,9 +158,19 @@ class SceneConfigTests(unittest.TestCase):
 
     def test_current_scene_uses_explicit_landscape_and_sky_boundaries(self):
         root = Path(__file__).resolve().parents[1]
-        data = json.loads(
+        config = json.loads(
             (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
-        )["scene"]
+        )
+        self.assertEqual(
+            list(config)[:2],
+            ["file_names", "file_paths"],
+        )
+        self.assertNotIn("archive", config)
+        self.assertNotIn("pbrt_binary", config["runtime"])
+        self.assertNotIn("rclone_sync", config["pipeline"])
+        data = config["scene"]
+        for obsolete in ("master_file", "output_filename", "generated_medium"):
+            self.assertNotIn(obsolete, data)
         self.assertNotIn("terrain", data)
         self.assertEqual(
             set(data["landscape"]),
@@ -158,6 +179,56 @@ class SceneConfigTests(unittest.TestCase):
         self.assertEqual(set(data["sky"]), {"background", "clouds"})
         self.assertEqual(data["sky"]["background"]["type"], "infinite")
         self.assertTrue(all(light.get("type") != "infinite" for light in data["lights"]))
+
+    def test_invalid_stage_one_paths_are_reported_at_new_locations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["file_names"]["archive_image"] = "render.png"
+            data["file_paths"]["scene_files"] = "../outside"
+            data["file_paths"]["pbrt_executable"] = "relative/pbrt"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+            self.assertIn(
+                "file_names.archive_image must contain {scene_name} and {timestamp}",
+                errors,
+            )
+            self.assertIn(
+                "file_paths.scene_files must be a repository-relative path",
+                errors,
+            )
+            self.assertIn(
+                "file_paths.pbrt_executable must be an absolute path",
+                errors,
+            )
+
+    def test_invalid_stage_one_filenames_and_placeholders_are_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["file_names"]["working_image"] = ".."
+            data["file_names"]["archive_image"] = (
+                "{scene_name}_{timestamp}_{unsupported}.PNG"
+            )
+            data["file_paths"]["scene_files"] = "."
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+            self.assertIn(
+                "file_names.working_image must be a filename without a directory",
+                errors,
+            )
+            self.assertIn(
+                "file_names.archive_image contains an unsupported placeholder",
+                errors,
+            )
+            self.assertIn(
+                "file_names.archive_image must be a PNG filename",
+                errors,
+            )
+            self.assertIn(
+                "file_paths.scene_files must be a repository-relative path",
+                errors,
+            )
 
     def test_saved_json_remains_parseable(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -10,7 +10,6 @@ CONFIG_INPUT="${1:-${REPO_ROOT}/scene_workspace/config.json}"
 if [ -d "$CONFIG_INPUT" ]; then
     CONFIG_INPUT="${CONFIG_INPUT}/config.json"
 fi
-ARCHIVE_DIR="${REPO_ROOT}/Archive"
 
 # --- 1. RESOLVE AND FREEZE THE WORKING SCENE ---
 if [ ! -f "$CONFIG_INPUT" ]; then
@@ -29,21 +28,22 @@ if [ $? -ne 0 ]; then
 fi
 CONFIG_FILE=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.config')
 SCENE_ROOT=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.scene_root')
+SCENE_FILES=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.scene_files')
 SNAPSHOT_REPO_ROOT=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.repository_root')
 RUN_DIRECTORY=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.run_directory')
+ARCHIVE_DIR=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.archive_directory')
+FINAL_IMAGE=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.archive_image')
 echo "Render inputs frozen: $RUN_DIRECTORY"
 
 # --- 2. PARSE CONFIG VIA JQ ---
 SCENE_NAME=$(jq -r '.scene.name // "untitled_scene"' "$CONFIG_FILE")
-ARCHIVE_STEM=$(printf '%s' "$SNAPSHOT_INFO" | jq -r '.archive_stem')
-REMOTE_PATH=$(jq -r '.archive.remote_path'          "$CONFIG_FILE")
-PBRT_BIN=$(jq    -r '.runtime.pbrt_binary'         "$CONFIG_FILE")
+REMOTE_PATH=$(jq -r '.file_paths.remote_archive'   "$CONFIG_FILE")
+PBRT_BIN=$(jq    -r '.file_paths.pbrt_executable'  "$CONFIG_FILE")
 USE_GPU=$(jq     -r '.runtime.use_gpu'             "$CONFIG_FILE")
 SHOW_STATS=$(jq  -r '.runtime.show_stats'          "$CONFIG_FILE")
 RUN_BUILD=$(jq   -r '.pipeline.build_scene.enabled' "$CONFIG_FILE")
-RUN_SYNC=$(jq    -r '.pipeline.rclone_sync.enabled' "$CONFIG_FILE")
-SCENE_RELATIVE=$(jq -r '.scene.master_file'        "$CONFIG_FILE")
-SCENE_PATH="${SCENE_ROOT}/${SCENE_RELATIVE}"
+SCENE_FILENAME=$(jq -r '.file_names.pbrt_scene'    "$CONFIG_FILE")
+SCENE_PATH="${SCENE_FILES}/${SCENE_FILENAME}"
 
 # --- 3. RUN SCENE BUILDER (if enabled) ---
 if [ "$RUN_BUILD" = "true" ]; then
@@ -95,7 +95,8 @@ if [ "$USE_GPU"    = "true" ]; then CMD_FLAGS="$CMD_FLAGS --gpu";   fi
 if [ "$SHOW_STATS" = "true" ]; then CMD_FLAGS="$CMD_FLAGS --stats"; fi
 
 mkdir -p "$ARCHIVE_DIR"
-FINAL_BASE="${ARCHIVE_DIR}/${ARCHIVE_STEM}_${TS}"
+FINAL_BASE="${FINAL_IMAGE%.png}"
+ARCHIVE_PREFIX=$(basename "$FINAL_BASE")
 
 # --- 7. RUN PBRT ---
 echo "----------------------------------------------------------------"
@@ -105,7 +106,7 @@ echo "Output:    ${FINAL_BASE}.png"
 echo "----------------------------------------------------------------"
 cd "${SCENE_ROOT}" || exit 1
 
-$PBRT_BIN $CMD_FLAGS --outfile "${FINAL_BASE}.png" "$SCENE_PATH"
+$PBRT_BIN $CMD_FLAGS --outfile "$FINAL_IMAGE" "$SCENE_PATH"
 
 if [ $? -ne 0 ]; then
     echo "ERROR: pbrt execution failed."
@@ -114,14 +115,14 @@ fi
 
 # The local image is complete at this point. PBRT-v4 Art Studio watches this
 # marker so it can display the image while archival and remote sync continue.
-echo "ART_STUDIO_RENDER_READY=${FINAL_BASE}.png"
+echo "ART_STUDIO_RENDER_READY=${FINAL_IMAGE}"
 
 # --- 8. ARCHIVE THE FROZEN REPRODUCIBILITY BUNDLE ---
 echo "Archiving reproducibility files..."
 python3 "${SNAPSHOT_REPO_ROOT}/render_snapshot.py" finalize \
     --run-directory "$RUN_DIRECTORY" \
     --archive-prefix "$FINAL_BASE" \
-    --artifact ".png=${FINAL_BASE}.png" \
+    --artifact ".png=${FINAL_IMAGE}" \
     --artifact ".pbrt=${SCENE_PATH}"
 if [ $? -ne 0 ]; then
     echo "ERROR: Render completed, but immutable local archive finalization failed."
@@ -129,23 +130,19 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# --- 9. RCLONE SYNC (if enabled) ---
-if [ "$RUN_SYNC" = "true" ]; then
-    echo "Syncing archive bundle to Google Drive..."
-    rclone copy "$ARCHIVE_DIR" "$REMOTE_PATH" \
-        --filter "+ ${ARCHIVE_STEM}_${TS}*" \
-        --filter "- **" \
-        --drive-chunk-size=64M \
-        --low-level-retries=5
+# --- 9. RCLONE SYNC ---
+echo "Syncing archive bundle to configured remote archive..."
+rclone copy "$ARCHIVE_DIR" "$REMOTE_PATH" \
+    --filter "+ ${ARCHIVE_PREFIX}*" \
+    --filter "- **" \
+    --drive-chunk-size=64M \
+    --low-level-retries=5
 
-    if [ $? -eq 0 ]; then
-        echo "Google Drive sync complete."
-    else
-        echo "WARNING: Render succeeded locally, but Google Drive sync failed."
-        echo "         Files are preserved in: $ARCHIVE_DIR"
-    fi
+if [ $? -eq 0 ]; then
+    echo "Remote archive sync complete."
 else
-    echo "Skipping rclone sync (disabled in config)."
+    echo "WARNING: Render succeeded locally, but remote archive sync failed."
+    echo "         Files are preserved in: $ARCHIVE_DIR"
 fi
 
 python3 "${SNAPSHOT_REPO_ROOT}/render_snapshot.py" cleanup \

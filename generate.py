@@ -9,6 +9,7 @@
 import os
 import sys
 import json
+from pathlib import Path
 
 # Add repo root to path so space_col and foliage are importable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -21,11 +22,20 @@ def main():
         print("Usage: python3 generate.py <config.json path>")
         sys.exit(1)
 
-    config_path  = sys.argv[1]
-    project_root = os.path.dirname(config_path)
+    config_path = os.path.abspath(sys.argv[1])
 
     with open(config_path, 'r') as f:
         cfg = json.load(f)
+
+    repository_root = os.path.dirname(os.path.dirname(config_path))
+    scene_files_relative = Path(cfg['file_paths']['scene_files'])
+    if (
+        scene_files_relative == Path('.')
+        or scene_files_relative.is_absolute()
+        or '..' in scene_files_relative.parts
+    ):
+        raise ValueError('file_paths.scene_files must remain inside the repository')
+    scene_files_root = os.path.join(repository_root, str(scene_files_relative))
 
     scene_cfg = cfg.get('scene', {})
     trees_cfg = scene_cfg.get('trees', [])
@@ -43,12 +53,14 @@ def main():
         tree.grow()
         cylinders = tree.get_cylinders()
         joints    = tree.get_joints()
-        space_col.write_tree(tree_cfg, cylinders, joints, project_root, index=i)
+        space_col.write_tree(
+            tree_cfg, cylinders, joints, scene_files_root, index=i
+        )
 
         # --- Foliage ---
         foliage_cfg = tree_cfg.get('foliage', {})
         if foliage_cfg.get('enabled', False):
-            foliage.run(tree, foliage_cfg, project_root, index=i)
+            foliage.run(tree, foliage_cfg, scene_files_root, index=i)
         else:
             print(f"  Tree {i}: foliage disabled, skipping.")
 

@@ -1,6 +1,6 @@
 # PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-09-03
+Last updated: 2026-09-04
 
 ## Purpose
 
@@ -55,7 +55,9 @@ technical choices.
 The active configuration no longer contains a top-level `project` object:
 
 - `scene.name` identifies the current working scene for archive filenames.
-- `archive.remote_path` identifies the Google Drive render destination.
+- `file_names` now owns the PBRT, working-image, and archive-image names.
+- `file_paths` now owns scene outputs, local and remote archives, and the PBRT
+  executable.
 - `render_pipeline.sh` accepts an optional config path and defaults to
   `scene_workspace/config.json`.
 - The ordinary render command is now `./render_pipeline.sh`.
@@ -491,7 +493,7 @@ order:
    repository mirror, then archive those exact inputs with SHA-256 manifests.
    Manual live-JSON edits during a render affect only the next run. Failed runs
    retain their temporary workspace for diagnosis; successful runs remove it
-   only after local archival and optional remote synchronization.
+   only after local archival and configured remote synchronization.
 4. **Migrate only after the prototype schema is approved.** Tackle accumulated
    size, repetition,
    naming, and organization in the single authoritative
@@ -499,12 +501,16 @@ order:
    a second live scene configuration, and refactor the working file in tested,
    usable stages rather than building a disconnected replacement. Move one
    complete artistic object at a time without keeping duplicate live values;
-   update its builder, GUI, validation, and compatibility reader together.
+   update its builder, GUI, validation, and all operational consumers together.
    Preserve the artist's earlier C++ configuration mental model: camera and
    render controls are immediately discoverable, and each visible object's
    geometry, placement, material, color, and surface objects remain
    adjacent. Begin from the landform-first principle: choose a landform, then
    decide its relief, appearance, and surface objects.
+   The first live migration stage is complete: `file_names` and `file_paths`
+   are active, their old paths are absent, every known consumer uses the new
+   locations, and a bounded rebuild reproduced the pre-migration PBRT scene
+   byte for byte. The next stage moves camera controls to `camera_settings`.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -547,6 +553,32 @@ Additional continuity requirements:
    unchanged and reproducible.
 12. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
+
+## 2026-09-04 first live configuration-migration stage
+
+The first staged migration is implemented in the sole authoritative
+`scene_workspace/config.json`. Its first two root sections are now
+`file_names` and `file_paths`. The old top-level `archive` object,
+`runtime.pbrt_binary`, `pipeline.rclone_sync`, `scene.master_file`,
+`scene.output_filename`, and `scene.generated_medium` are absent; there are no
+duplicate compatibility readers. A configured remote archive now means that
+ordinary and composite workflows attempt synchronization only after the local
+bundle is complete, retaining local output on remote failure.
+
+The render pipeline, immutable snapshot transaction, standard builder,
+shaft-composite workflow, tree and foliage generators, validator, and Qt
+inspector all use the new paths. Exact filename and path values remain manually
+editable and are also exposed on the Qt Render page. A bounded migrated build
+using the archived `020525` diagnostic values produced the exact same
+117,462,947-byte PBRT scene and SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64` as the
+pre-migration builder. No PBRT render was launched for this structural check.
+See `docs/config-migration-progress-2026-09-04.md` for the detailed record.
+
+The next migration stage is camera settings. Preserve the existing camera
+values exactly, remove `scene.camera`, and update the builder, terrain-aware
+placement, validator, and Qt inspector together before proceeding to render
+settings.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

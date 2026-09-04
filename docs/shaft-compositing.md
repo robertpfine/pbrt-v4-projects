@@ -60,8 +60,9 @@ reproducible. Composite renders therefore retain the traditional five archive
 file types—PNG, PBRT, JSON, Python, and shell script—plus the extra files needed
 for the two-pass composite.
 
-When `pipeline.rclone_sync.enabled` is `true`, the completed timestamped
-composite bundle is copied automatically to `archive.remote_path`.
+The completed timestamped composite bundle is copied automatically to
+`file_paths.remote_archive` after it is finalized in
+`file_paths.local_archive`.
 The sync selects every file sharing that render's timestamp prefix: the base
 and shaft scenes, diagnostic PNGs, final composite, configuration, build and
 render scripts, and compositing documentation. It does not select, overwrite,

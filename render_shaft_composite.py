@@ -14,10 +14,12 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 from render_snapshot import (
-    archive_stem as normalized_archive_stem,
+    archive_image_name,
     cleanup_snapshot,
     create_snapshot,
     finalize_snapshot,
+    resolve_local_archive,
+    scene_files_relative,
 )
 
 
@@ -51,7 +53,7 @@ def scale_reflectances(value, scale):
 
 def configure_base(cfg, shaft_label):
     result = copy.deepcopy(cfg)
-    result["scene"]["master_file"] = "scene_files/scene_base.pbrt"
+    result["file_names"]["pbrt_scene"] = "scene_base.pbrt"
     result["scene"]["sun_aperture"]["enabled"] = False
     for light in result["scene"].get("lights", []):
         if light.get("label") == shaft_label:
@@ -61,7 +63,7 @@ def configure_base(cfg, shaft_label):
 
 def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
     result = copy.deepcopy(cfg)
-    result["scene"]["master_file"] = "scene_files/scene_shaft.pbrt"
+    result["file_names"]["pbrt_scene"] = "scene_shaft.pbrt"
     for light in result["scene"].get("lights", []):
         light["enabled"] = light.get("label") == shaft_label
     scale_reflectances(result["scene"], surface_scale)
@@ -73,10 +75,15 @@ def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
 
 
 def render(builder, cfg, scene_root, pbrt, flags, output_path):
-    print("Generating scene:", cfg["scene"]["master_file"], flush=True)
+    print("Generating scene:", cfg["file_names"]["pbrt_scene"], flush=True)
     medium_rel = builder.write_medium(cfg, scene_root)
     builder.write_scene(cfg, scene_root, medium_rel)
-    scene_path = os.path.join(scene_root, cfg["scene"]["master_file"])
+    repository_root = Path(scene_root).resolve().parent
+    scene_path = (
+        repository_root
+        / scene_files_relative(cfg)
+        / cfg["file_names"]["pbrt_scene"]
+    )
     command = [pbrt, *flags, "--outfile", output_path, scene_path]
     print("Rendering:", output_path, flush=True)
     subprocess.run(command, cwd=scene_root, check=True)
@@ -119,9 +126,9 @@ def sync_archive_bundle(prefix, archive, remote_path):
         "--drive-chunk-size=64M",
         "--low-level-retries=10",
     ]
-    print("Syncing composite bundle to Google Drive...", flush=True)
+    print("Syncing composite bundle to configured remote archive...", flush=True)
     subprocess.run(command, check=True)
-    print("Google Drive composite sync complete.", flush=True)
+    print("Remote composite sync complete.", flush=True)
 
 
 def activate_snapshot(repository_root, config_path):
@@ -171,17 +178,17 @@ def main():
 
     options = cfg["pipeline"]["shaft_composite"]
     shaft_label = options.get("shaft_light", "shaft_sun")
-    pbrt = cfg["runtime"]["pbrt_binary"]
+    pbrt = cfg["file_paths"]["pbrt_executable"]
     flags = []
     if cfg["runtime"].get("use_gpu", False):
         flags.append("--gpu")
     if cfg["runtime"].get("show_stats", False):
         flags.append("--stats")
 
-    archive = os.path.join(live_repository_root, "Archive")
+    archive = resolve_local_archive(cfg, Path(live_repository_root))
     os.makedirs(archive, exist_ok=True)
-    scene_name = cfg["scene"].get("name", "untitled_scene")
-    prefix = os.path.join(archive, f"{normalized_archive_stem(scene_name)}_{stamp}")
+    configured_image = archive / archive_image_name(cfg, stamp)
+    prefix = str(configured_image.with_suffix(""))
     base_path = prefix + "_base.png"
     shaft_path = prefix + "_shaft.png"
     composite_path = prefix + "_composite.png"
@@ -207,8 +214,18 @@ def main():
             ("_base.png", Path(base_path)),
             ("_shaft.png", Path(shaft_path)),
             ("_composite.png", Path(composite_path)),
-            ("_base.pbrt", Path(scene_root) / "scene_files" / "scene_base.pbrt"),
-            ("_shaft.pbrt", Path(scene_root) / "scene_files" / "scene_shaft.pbrt"),
+            (
+                "_base.pbrt",
+                Path(repository_root)
+                / scene_files_relative(cfg)
+                / "scene_base.pbrt",
+            ),
+            (
+                "_shaft.pbrt",
+                Path(repository_root)
+                / scene_files_relative(cfg)
+                / "scene_shaft.pbrt",
+            ),
             (
                 "_render_shaft_composite.py",
                 Path(repository_root) / "render_shaft_composite.py",
@@ -219,20 +236,18 @@ def main():
             ),
         ),
     )
-    sync_options = cfg.get("pipeline", {}).get("rclone_sync", {})
-    if sync_options.get("enabled", False):
-        try:
-            sync_archive_bundle(
-                prefix,
-                archive,
-                cfg["archive"]["remote_path"],
-            )
-        except subprocess.CalledProcessError:
-            print(
-                "WARNING: Composite succeeded locally, but Google Drive sync failed.",
-                flush=True,
-            )
-            print("         Files are preserved in:", archive, flush=True)
+    try:
+        sync_archive_bundle(
+            prefix,
+            archive,
+            cfg["file_paths"]["remote_archive"],
+        )
+    except subprocess.CalledProcessError:
+        print(
+            "WARNING: Composite succeeded locally, but remote archive sync failed.",
+            flush=True,
+        )
+        print("         Files are preserved in:", archive, flush=True)
     cleanup_snapshot(live_repository_root, run_directory)
     print("Composite complete:", composite_path, flush=True)
 
