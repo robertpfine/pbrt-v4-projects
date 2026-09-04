@@ -26,6 +26,21 @@ class SceneConfigTests(unittest.TestCase):
     "look_at": { "eye": [0, 1, 2], "look": [0, 0, 0], "up": [0, 1, 0] },
     "fov": 55.0
   },
+  "render_settings": {
+    "film": { "x_resolution": 100, "y_resolution": 100 },
+    "sampler": { "type": "halton", "pixel_samples": 4 },
+    "integrator": { "type": "volpath", "max_depth": 8 },
+    "backend": { "type": "cpu", "show_statistics": false },
+    "shaft_composite": {
+      "enabled": false,
+      "shaft_light": "shaft_sun",
+      "base_opacity": 1.0,
+      "shaft_opacity": 0.4,
+      "surface_reflectance_scale": 0.08,
+      "terrain_reflectance_scale": 0.015,
+      "blur_radius": 2.0
+    }
+  },
   "scene": {
     "landscape": {
       "ground": {
@@ -51,8 +66,8 @@ class SceneConfigTests(unittest.TestCase):
       "background": { "enabled": true, "type": "infinite" },
       "clouds": { "enabled": false }
     },
-    "film": { "x_resolution": 100, "y_resolution": 100 },
     "fog": { "enabled": false },
+    "lights": [{ "label": "shaft_sun", "enabled": false }],
     "lsystem_trees": [],
     "trees": []
   }
@@ -142,6 +157,22 @@ class SceneConfigTests(unittest.TestCase):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
+    def test_invalid_render_settings_are_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set("render_settings.backend.type", "vulkan")
+            config.set("render_settings.shaft_composite.blur_radius", -1.0)
+            with self.assertRaises(SceneConfigError) as context:
+                config.save()
+            message = str(context.exception)
+            self.assertIn("render_settings.backend.type must be cpu or gpu", message)
+            self.assertIn(
+                "render_settings.shaft_composite.blur_radius must be nonnegative",
+                message,
+            )
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
     def test_current_scene_is_valid_and_describable(self):
         root = Path(__file__).resolve().parents[1]
         config = SceneConfig(root / "scene_workspace" / "config.json")
@@ -175,14 +206,16 @@ class SceneConfigTests(unittest.TestCase):
             (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
         )
         self.assertEqual(
-            list(config)[:3],
-            ["file_names", "file_paths", "camera_settings"],
+            list(config)[:4],
+            ["file_names", "file_paths", "camera_settings", "render_settings"],
         )
         self.assertNotIn("archive", config)
-        self.assertNotIn("pbrt_binary", config["runtime"])
-        self.assertNotIn("rclone_sync", config["pipeline"])
+        self.assertNotIn("runtime", config)
+        self.assertNotIn("pipeline", config)
         data = config["scene"]
         self.assertNotIn("camera", data)
+        for obsolete in ("film", "sampler", "integrator"):
+            self.assertNotIn(obsolete, data)
         for obsolete in ("master_file", "output_filename", "generated_medium"):
             self.assertNotIn(obsolete, data)
         self.assertNotIn("terrain", data)

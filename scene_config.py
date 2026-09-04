@@ -312,17 +312,10 @@ class SceneConfig:
 
         if "archive" in self.data:
             errors.append("obsolete archive root must be removed after file_paths migration")
-        runtime = self.get(("runtime",), {})
-        if isinstance(runtime, dict) and "pbrt_binary" in runtime:
-            errors.append(
-                "obsolete runtime.pbrt_binary must be removed after file_paths migration"
-            )
-        pipeline = self.get(("pipeline",), {})
-        if isinstance(pipeline, dict) and "rclone_sync" in pipeline:
-            errors.append(
-                "obsolete pipeline.rclone_sync must be removed; "
-                "file_paths.remote_archive enables synchronization"
-            )
+        if "runtime" in self.data:
+            errors.append("obsolete runtime root must be removed after render migration")
+        if "pipeline" in self.data:
+            errors.append("obsolete pipeline root must be removed after render migration")
         scene_root = self.get(("scene",), {})
         if isinstance(scene_root, dict):
             for name in ("master_file", "output_filename", "generated_medium"):
@@ -659,12 +652,115 @@ class SceneConfig:
                 "obsolete scene.camera must be removed after camera_settings migration"
             )
 
-        film = require(("scene", "film"), dict)
+        render_settings = require(("render_settings",), dict)
+        film = (
+            require(("render_settings", "film"), dict)
+            if render_settings is not None else None
+        )
         if film is not None:
             for name in ("x_resolution", "y_resolution"):
                 value = film.get(name)
-                if not isinstance(value, int) or value <= 0:
-                    errors.append(f"film.{name} must be a positive integer")
+                if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                    errors.append(
+                        f"render_settings.film.{name} must be a positive integer"
+                    )
+
+        sampler = (
+            require(("render_settings", "sampler"), dict)
+            if render_settings is not None else None
+        )
+        if sampler is not None:
+            if sampler.get("type") != "halton":
+                errors.append("render_settings.sampler.type must be halton")
+            pixel_samples = sampler.get("pixel_samples")
+            if (
+                not isinstance(pixel_samples, int)
+                or isinstance(pixel_samples, bool)
+                or pixel_samples <= 0
+            ):
+                errors.append(
+                    "render_settings.sampler.pixel_samples must be a positive integer"
+                )
+
+        integrator = (
+            require(("render_settings", "integrator"), dict)
+            if render_settings is not None else None
+        )
+        if integrator is not None:
+            if integrator.get("type") != "volpath":
+                errors.append("render_settings.integrator.type must be volpath")
+            max_depth = integrator.get("max_depth")
+            if (
+                not isinstance(max_depth, int)
+                or isinstance(max_depth, bool)
+                or max_depth <= 0
+            ):
+                errors.append(
+                    "render_settings.integrator.max_depth must be a positive integer"
+                )
+
+        backend = (
+            require(("render_settings", "backend"), dict)
+            if render_settings is not None else None
+        )
+        if backend is not None:
+            if backend.get("type") not in {"cpu", "gpu"}:
+                errors.append("render_settings.backend.type must be cpu or gpu")
+            if not isinstance(backend.get("show_statistics"), bool):
+                errors.append(
+                    "render_settings.backend.show_statistics must be boolean"
+                )
+
+        shaft = (
+            require(("render_settings", "shaft_composite"), dict)
+            if render_settings is not None else None
+        )
+        if shaft is not None:
+            if not isinstance(shaft.get("enabled"), bool):
+                errors.append(
+                    "render_settings.shaft_composite.enabled must be boolean"
+                )
+            shaft_light = shaft.get("shaft_light")
+            if not isinstance(shaft_light, str) or not shaft_light.strip():
+                errors.append(
+                    "render_settings.shaft_composite.shaft_light must be a name"
+                )
+            else:
+                lights = self.get(("scene", "lights"), [])
+                labels = {
+                    light.get("label")
+                    for light in lights
+                    if isinstance(light, dict)
+                }
+                if shaft_light not in labels:
+                    errors.append(
+                        "render_settings.shaft_composite.shaft_light must resolve "
+                        "to a scene light"
+                    )
+            for name in (
+                "base_opacity",
+                "shaft_opacity",
+                "surface_reflectance_scale",
+                "terrain_reflectance_scale",
+                "blur_radius",
+            ):
+                value = shaft.get(name)
+                if (
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(value)
+                    or value < 0
+                ):
+                    errors.append(
+                        f"render_settings.shaft_composite.{name} must be nonnegative"
+                    )
+
+        if isinstance(scene_for_camera, dict):
+            for name in ("film", "sampler", "integrator"):
+                if name in scene_for_camera:
+                    errors.append(
+                        f"obsolete scene.{name} must be removed after render migration"
+                    )
 
         poppies = require(GROUND_PATH + ("details", "poppies"), dict)
         if poppies is not None:

@@ -26,8 +26,11 @@ from scene_workspace.build_scene import (
     configured_filename,
     configured_scene_files,
     write_camera,
+    write_film,
     write_geometry,
+    write_integrator,
     write_lsystem_trees,
+    write_sampler,
 )
 
 
@@ -72,6 +75,18 @@ class ConfiguredFileLayoutTests(unittest.TestCase):
         camera["type"] = "orthographic"
         with self.assertRaisesRegex(ValueError, "unsupported camera_settings.type"):
             write_camera([], camera)
+
+    def test_render_directive_writers_reject_unsupported_or_invalid_values(self):
+        with self.assertRaisesRegex(ValueError, "unsupported render_settings.sampler"):
+            write_sampler([], {"type": "random", "pixel_samples": 4})
+        with self.assertRaisesRegex(ValueError, "pixel_samples must be positive"):
+            write_sampler([], {"type": "halton", "pixel_samples": 0})
+        with self.assertRaisesRegex(ValueError, "unsupported render_settings.integrator"):
+            write_integrator([], {"type": "path", "max_depth": 8})
+        with self.assertRaisesRegex(ValueError, "max_depth must be positive"):
+            write_integrator([], {"type": "volpath", "max_depth": False})
+        with self.assertRaisesRegex(ValueError, "resolution must be positive"):
+            write_film([], {"x_resolution": 100, "y_resolution": 0}, "image.png")
 
 
 class GeometryMaterialTests(unittest.TestCase):

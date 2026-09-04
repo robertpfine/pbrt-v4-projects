@@ -4,6 +4,7 @@
 import copy
 import importlib.util
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -131,6 +132,55 @@ def sync_archive_bundle(prefix, archive, remote_path):
     print("Remote composite sync complete.", flush=True)
 
 
+def pbrt_flags(render_settings):
+    """Translate the validated configured backend into PBRT command flags."""
+
+    backend = render_settings["backend"]
+    backend_type = backend["type"]
+    if backend_type == "gpu":
+        flags = ["--gpu"]
+    elif backend_type == "cpu":
+        flags = []
+    else:
+        raise ValueError(f"unsupported render backend {backend_type!r}")
+    show_statistics = backend["show_statistics"]
+    if not isinstance(show_statistics, bool):
+        raise ValueError("render backend show_statistics must be boolean")
+    if show_statistics:
+        flags.append("--stats")
+    return flags
+
+
+def validate_composite_options(options, scene):
+    """Reject incomplete or unsafe composite controls before either pass."""
+
+    if not isinstance(options.get("enabled"), bool):
+        raise ValueError("shaft_composite.enabled must be boolean")
+    shaft_light = options.get("shaft_light")
+    labels = {
+        light.get("label")
+        for light in scene.get("lights", [])
+        if isinstance(light, dict)
+    }
+    if not isinstance(shaft_light, str) or shaft_light not in labels:
+        raise ValueError("shaft_composite.shaft_light must resolve to a scene light")
+    for name in (
+        "base_opacity",
+        "shaft_opacity",
+        "surface_reflectance_scale",
+        "terrain_reflectance_scale",
+        "blur_radius",
+    ):
+        value = options.get(name)
+        if (
+            not isinstance(value, (int, float))
+            or isinstance(value, bool)
+            or not math.isfinite(value)
+            or value < 0
+        ):
+            raise ValueError(f"shaft_composite.{name} must be nonnegative")
+
+
 def activate_snapshot(repository_root, config_path):
     """Re-execute this entry point from an immutable source/config snapshot."""
 
@@ -176,14 +226,12 @@ def main():
     with open(config_path, "r") as handle:
         cfg = json.load(handle)
 
-    options = cfg["pipeline"]["shaft_composite"]
-    shaft_label = options.get("shaft_light", "shaft_sun")
+    render_settings = cfg["render_settings"]
+    options = render_settings["shaft_composite"]
+    validate_composite_options(options, cfg["scene"])
+    shaft_label = options["shaft_light"]
     pbrt = cfg["file_paths"]["pbrt_executable"]
-    flags = []
-    if cfg["runtime"].get("use_gpu", False):
-        flags.append("--gpu")
-    if cfg["runtime"].get("show_stats", False):
-        flags.append("--stats")
+    flags = pbrt_flags(render_settings)
 
     archive = resolve_local_archive(cfg, Path(live_repository_root))
     os.makedirs(archive, exist_ok=True)
@@ -199,14 +247,14 @@ def main():
     render(builder, configure_shaft(
                cfg,
                shaft_label,
-               float(options.get("surface_reflectance_scale", 0.0)),
-               float(options.get("terrain_reflectance_scale", 0.0)),
+               float(options["surface_reflectance_scale"]),
+               float(options["terrain_reflectance_scale"]),
            ), scene_root,
            pbrt, flags, shaft_path)
     composite(base_path, shaft_path, composite_path,
-              float(options.get("base_opacity", 1.0)),
-              float(options.get("shaft_opacity", 0.65)),
-              float(options.get("blur_radius", 1.0)))
+              float(options["base_opacity"]),
+              float(options["shaft_opacity"]),
+              float(options["blur_radius"]))
     finalize_snapshot(
         run_directory,
         Path(prefix),

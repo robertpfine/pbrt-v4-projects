@@ -747,37 +747,60 @@ def write_camera(lines, cam):
 def write_sampler(lines, samp):
     """
     Write the Sampler directive.
-    Config reads: scene.sampler (enabled, type, pixel_samples)
+    Config reads: render_settings.sampler (type, pixel_samples)
     """
-    if not samp.get("enabled", True):
-        return
-    lines.append(f'Sampler "{samp["type"]}"  "integer pixelsamples" [ {samp["pixel_samples"]} ]')
+    sampler_type = samp["type"]
+    pixel_samples = samp["pixel_samples"]
+    if sampler_type != "halton":
+        raise ValueError(f"unsupported render_settings.sampler.type {sampler_type!r}")
+    if (
+        not isinstance(pixel_samples, int)
+        or isinstance(pixel_samples, bool)
+        or pixel_samples <= 0
+    ):
+        raise ValueError("render_settings.sampler.pixel_samples must be positive")
+    lines.append(
+        f'Sampler "{sampler_type}"  "integer pixelsamples" [ {pixel_samples} ]'
+    )
 
 
 def write_integrator(lines, intg):
     """
     Write the Integrator directive.
     Must be "volpath" for any scene containing a participating medium.
-    Config reads: scene.integrator (enabled, type, max_depth)
+    Config reads: render_settings.integrator (type, max_depth)
     """
-    if not intg.get("enabled", True):
-        return
-    lines.append(f'Integrator "{intg["type"]}"  "integer maxdepth" [ {intg["max_depth"]} ]')
+    integrator_type = intg["type"]
+    max_depth = intg["max_depth"]
+    if integrator_type != "volpath":
+        raise ValueError(
+            f"unsupported render_settings.integrator.type {integrator_type!r}"
+        )
+    if not isinstance(max_depth, int) or isinstance(max_depth, bool) or max_depth <= 0:
+        raise ValueError("render_settings.integrator.max_depth must be positive")
+    lines.append(
+        f'Integrator "{integrator_type}"  "integer maxdepth" [ {max_depth} ]'
+    )
 
 
 def write_film(lines, film, output_filename):
     """
     Write the Film directive.
-    Config reads: scene.film (enabled, x_resolution, y_resolution)
+    Config reads: render_settings.film (x_resolution, y_resolution)
                   file_names.working_image
     """
-    if not film.get("enabled", True):
-        return
+    x_resolution = film["x_resolution"]
+    y_resolution = film["y_resolution"]
+    if any(
+        not isinstance(value, int) or isinstance(value, bool) or value <= 0
+        for value in (x_resolution, y_resolution)
+    ):
+        raise ValueError("render_settings film resolution must be positive integers")
     lines += [
         f'Film "rgb"',
         f'     "string filename"     [ "{output_filename}" ]',
-        f'     "integer xresolution" [ {film["x_resolution"]} ]',
-        f'     "integer yresolution" [ {film["y_resolution"]} ]',
+        f'     "integer xresolution" [ {x_resolution} ]',
+        f'     "integer yresolution" [ {y_resolution} ]',
         "",
     ]
 
@@ -3162,12 +3185,13 @@ def write_scene(cfg, scene_root, medium_rel_path):
       Pre-world:  header, camera, sampler, integrator, film, medium Include
       World:      WorldBegin, lights, geometry
 
-    Config reads: camera_settings, scene.*, file_names.*, and
-                  file_paths.scene_files
+    Config reads: camera_settings, render_settings, scene.*, file_names.*,
+                  and file_paths.scene_files
     Output file:  file_paths.scene_files/file_names.pbrt_scene
     """
     scene    = cfg["scene"]
     camera_settings = cfg["camera_settings"]
+    render_settings = cfg["render_settings"]
     scene_files_root = configured_scene_files(cfg, scene_root)
     out_path = scene_files_root / configured_filename(cfg, "pbrt_scene")
     scene_files_relative = scene_relative_path(scene_files_root, scene_root)
@@ -3177,10 +3201,14 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_header(lines, scene.get("name", "untitled_scene"))
     write_fog_medium(cfg, lines)
     write_camera(lines, camera_settings)
-    write_sampler(lines, scene["sampler"])
-    write_integrator(lines, scene["integrator"])
+    write_sampler(lines, render_settings["sampler"])
+    write_integrator(lines, render_settings["integrator"])
     lines.append("")
-    write_film(lines, scene["film"], configured_filename(cfg, "working_image"))
+    write_film(
+        lines,
+        render_settings["film"],
+        configured_filename(cfg, "working_image"),
+    )
     
 
     # --- World section ---
@@ -3224,7 +3252,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
         terrain,
         ground_config,
         camera=camera_settings,
-        film=scene.get("film"),
+        film=render_settings["film"],
     )
     write_distant_hills(
         lines,

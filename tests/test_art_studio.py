@@ -141,6 +141,38 @@ class ArtStudioTests(unittest.TestCase):
         self.assertEqual(data["camera_settings"]["fov"], 47.5)
         self.assertNotIn("camera", data["scene"])
 
+    def test_render_page_uses_root_render_settings(self):
+        sampler = self.window.findChild(
+            QtWidgets.QComboBox, "render_sampler_type"
+        )
+        integrator = self.window.findChild(
+            QtWidgets.QComboBox, "render_integrator_type"
+        )
+        backend = self.window.findChild(
+            QtWidgets.QComboBox, "render_backend_type"
+        )
+        statistics = self.window.findChild(
+            QtWidgets.QCheckBox, "render_show_statistics"
+        )
+        shaft = self.window.findChild(
+            QtWidgets.QCheckBox, "shaft_composite_enabled"
+        )
+        self.assertEqual(sampler.currentData(), "halton")
+        self.assertEqual(integrator.currentData(), "volpath")
+        self.assertEqual(backend.currentData(), "gpu")
+        self.assertTrue(statistics.isChecked())
+        self.assertFalse(shaft.isChecked())
+
+        backend.setCurrentIndex(backend.findData("cpu"))
+        self.application.processEvents()
+        self.assertTrue(self.window.save_config())
+        data = json.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(data["render_settings"]["backend"]["type"], "cpu")
+        self.assertNotIn("runtime", data)
+        self.assertNotIn("pipeline", data)
+        for obsolete in ("film", "sampler", "integrator"):
+            self.assertNotIn(obsolete, data["scene"])
+
     def test_latest_render_uses_configured_local_archive(self):
         archive = Path(self.temporary_directory.name) / "ConfiguredArchive"
         archive.mkdir()

@@ -56,6 +56,21 @@ class RenderSnapshotTests(unittest.TestCase):
                         },
                         "fov": 50.0,
                     },
+                    "render_settings": {
+                        "film": {"x_resolution": 100, "y_resolution": 100},
+                        "sampler": {"type": "halton", "pixel_samples": 4},
+                        "integrator": {"type": "volpath", "max_depth": 8},
+                        "backend": {"type": "cpu", "show_statistics": False},
+                        "shaft_composite": {
+                            "enabled": False,
+                            "shaft_light": "shaft_sun",
+                            "base_opacity": 1.0,
+                            "shaft_opacity": 0.4,
+                            "surface_reflectance_scale": 0.08,
+                            "terrain_reflectance_scale": 0.015,
+                            "blur_radius": 2.0,
+                        },
+                    },
                     "scene": {"name": "Original Scene"},
                 }
             )
@@ -194,6 +209,13 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.camera"):
             create_snapshot(self.root, self.config, "20260904_010217")
 
+    def test_snapshot_rejects_obsolete_render_roots(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["runtime"] = {"use_gpu": False}
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "obsolete runtime root"):
+            create_snapshot(self.root, self.config, "20260904_010218")
+
     def test_snapshot_freezes_configured_cloud_grid_executable(self):
         executable = self.root / "build" / "cloud_grid_builder" / "cloud_grid_builder"
         executable.parent.mkdir(parents=True)
@@ -293,6 +315,106 @@ class RenderSnapshotTests(unittest.TestCase):
 
 
 class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
+    def test_pipeline_rejects_invalid_backend_before_scene_build(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scene_root = root / "scene_workspace"
+            scene_root.mkdir()
+            shutil.copy2(Path("render_pipeline.sh"), root / "render_pipeline.sh")
+            shutil.copy2(Path("render_snapshot.py"), root / "render_snapshot.py")
+            marker = root / "builder-ran"
+            builder = scene_root / "build_scene.py"
+            builder.write_text(
+                f"from pathlib import Path\nPath({str(marker)!r}).touch()\n",
+                encoding="utf-8",
+            )
+            config = {
+                "file_names": {
+                    "pbrt_scene": "scene.pbrt",
+                    "working_image": "working.png",
+                    "archive_image": "{scene_name}_{timestamp}.png",
+                },
+                "file_paths": {
+                    "scene_files": "scene_workspace/scene_files",
+                    "local_archive": "Archive",
+                    "remote_archive": "unused:",
+                    "pbrt_executable": "/usr/bin/false",
+                },
+                "camera_settings": {},
+                "render_settings": {
+                    "backend": {"type": "vulkan", "show_statistics": False},
+                    "shaft_composite": {"enabled": False},
+                },
+                "scene": {"name": "Invalid Backend"},
+            }
+            config_path = scene_root / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            completed = subprocess.run(
+                [str(root / "render_pipeline.sh"), str(config_path)],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn("Unsupported render backend: vulkan", completed.stdout)
+            self.assertFalse(marker.exists())
+
+    def test_pipeline_dispatches_composite_from_frozen_render_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scene_root = root / "scene_workspace"
+            scene_root.mkdir()
+            shutil.copy2(Path("render_pipeline.sh"), root / "render_pipeline.sh")
+            shutil.copy2(Path("render_snapshot.py"), root / "render_snapshot.py")
+            composite = root / "render_shaft_composite.py"
+            composite.write_text(
+                "import json, os, sys\n"
+                "with open(sys.argv[1]) as handle: config = json.load(handle)\n"
+                "print('COMPOSITE_DISPATCH=' + "
+                "str(config['render_settings']['shaft_composite']['enabled']))\n"
+                "print('FROZEN_CONFIG=' + sys.argv[1])\n"
+                "print('SNAPSHOT_RUN=' + os.environ['PBRT_RENDER_SNAPSHOT_DIR'])\n",
+                encoding="utf-8",
+            )
+            config = {
+                "file_names": {
+                    "pbrt_scene": "scene.pbrt",
+                    "working_image": "working.png",
+                    "archive_image": "{scene_name}_{timestamp}.png",
+                },
+                "file_paths": {
+                    "scene_files": "scene_workspace/scene_files",
+                    "local_archive": "Archive",
+                    "remote_archive": "unused:",
+                    "pbrt_executable": "/usr/bin/false",
+                },
+                "camera_settings": {},
+                "render_settings": {
+                    "backend": {"type": "cpu", "show_statistics": False},
+                    "shaft_composite": {"enabled": True},
+                },
+                "scene": {"name": "Composite Dispatch"},
+            }
+            config_path = scene_root / "config.json"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+
+            completed = subprocess.run(
+                [str(root / "render_pipeline.sh"), str(config_path)],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+            self.assertIn("COMPOSITE_DISPATCH=True", completed.stdout)
+            self.assertIn("/repository/scene_workspace/config.json", completed.stdout)
+            self.assertIn("SNAPSHOT_RUN=", completed.stdout)
+            self.assertNotIn("Building scene:", completed.stdout)
+
     def test_pipeline_builds_and_archives_from_frozen_config(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -354,12 +476,20 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                     },
                     "fov": 50.0,
                 },
-                "runtime": {
-                    "use_gpu": False,
-                    "show_stats": False,
-                },
-                "pipeline": {
-                    "build_scene": {"enabled": True},
+                "render_settings": {
+                    "film": {"x_resolution": 100, "y_resolution": 100},
+                    "sampler": {"type": "halton", "pixel_samples": 4},
+                    "integrator": {"type": "volpath", "max_depth": 8},
+                    "backend": {"type": "cpu", "show_statistics": False},
+                    "shaft_composite": {
+                        "enabled": False,
+                        "shaft_light": "shaft_sun",
+                        "base_opacity": 1.0,
+                        "shaft_opacity": 0.4,
+                        "surface_reflectance_scale": 0.08,
+                        "terrain_reflectance_scale": 0.015,
+                        "blur_radius": 2.0,
+                    },
                 },
                 "scene": {
                     "name": "Original Scene",
@@ -432,6 +562,47 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
     "shaft-composite NumPy/Pillow dependencies are unavailable",
 )
 class ShaftCompositeSnapshotTests(unittest.TestCase):
+    def test_composite_uses_migrated_backend_settings(self):
+        settings = {
+            "backend": {"type": "gpu", "show_statistics": True}
+        }
+        self.assertEqual(
+            render_shaft_composite.pbrt_flags(settings),
+            ["--gpu", "--stats"],
+        )
+        settings["backend"]["type"] = "cpu"
+        self.assertEqual(render_shaft_composite.pbrt_flags(settings), ["--stats"])
+        settings["backend"]["type"] = "vulkan"
+        with self.assertRaisesRegex(ValueError, "unsupported render backend"):
+            render_shaft_composite.pbrt_flags(settings)
+
+        settings["backend"]["type"] = "cpu"
+        settings["backend"]["show_statistics"] = 1
+        with self.assertRaisesRegex(ValueError, "show_statistics must be boolean"):
+            render_shaft_composite.pbrt_flags(settings)
+
+    def test_composite_options_require_valid_light_and_nonnegative_values(self):
+        scene = {"lights": [{"label": "shaft_sun"}]}
+        options = {
+            "enabled": True,
+            "shaft_light": "shaft_sun",
+            "base_opacity": 1.0,
+            "shaft_opacity": 0.4,
+            "surface_reflectance_scale": 0.08,
+            "terrain_reflectance_scale": 0.015,
+            "blur_radius": 2.0,
+        }
+        render_shaft_composite.validate_composite_options(options, scene)
+
+        options["shaft_light"] = "missing"
+        with self.assertRaisesRegex(ValueError, "must resolve to a scene light"):
+            render_shaft_composite.validate_composite_options(options, scene)
+
+        options["shaft_light"] = "shaft_sun"
+        options["blur_radius"] = -1.0
+        with self.assertRaisesRegex(ValueError, "blur_radius must be nonnegative"):
+            render_shaft_composite.validate_composite_options(options, scene)
+
     def test_composite_passes_use_migrated_scene_filenames(self):
         config = {
             "file_names": {"pbrt_scene": "scene.pbrt"},

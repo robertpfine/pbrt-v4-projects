@@ -308,3 +308,113 @@ gitignored generated scene was not rebuilt or altered.
 All Stage 2 acceptance requirements are satisfied. The next approved stage is
 the exact move of film, sampler, integrator, backend, and shaft-compositing
 controls into root `render_settings`.
+
+## Stage 3 — render settings
+
+Status: implementation and validation complete from pushed Stage 2 checkpoint
+`184eb02`
+
+### Exact target and value mapping
+
+The approved root `render_settings` block owns film, sampler, integrator,
+backend, and shaft-compositing controls. Current values move as follows:
+
+- `scene.film.x_resolution/y_resolution` move unchanged; the currently true
+  `enabled` switch is removed because film emission is a required render phase.
+- `scene.sampler.type/pixel_samples` move unchanged; its currently true
+  `enabled` switch is removed for the same reason.
+- `scene.integrator.type/max_depth` move unchanged; its currently true
+  `enabled` switch is removed.
+- `runtime.use_gpu: true` becomes `render_settings.backend.type: "gpu"` and
+  `runtime.show_stats` becomes `backend.show_statistics` unchanged.
+- `pipeline.shaft_composite` moves unchanged beneath `render_settings`.
+- `pipeline.build_scene.enabled`, currently true, is removed because building
+  from frozen inputs is mandatory behavior rather than an artistic option.
+- The obsolete `runtime` and `pipeline` roots are removed completely.
+
+### Consumer inventory
+
+- `render_pipeline.sh` owns mandatory building, CPU/GPU flags, statistics, and
+  ordinary-versus-composite workflow selection.
+- `render_shaft_composite.py` consumes backend flags and all pass/compositing
+  controls.
+- `scene_workspace/build_scene.py` emits film, sampler, and integrator PBRT and
+  passes film dimensions to camera-frustum placement.
+- `render_snapshot.py` previously supported the obsolete optional-build switch
+  when deciding whether to copy prebuilt generated files.
+- `scene_config.py` and the Qt Render page validate and expose exact render
+  values.
+- Snapshot/pipeline, composite, builder, placement, configuration, and Qt tests
+  form the regression boundary.
+
+The standard pipeline must honor `shaft_composite.enabled` without reading
+mutable live settings after snapshot creation. It will freeze inputs first,
+then dispatch the frozen composite script and frozen config when enabled.
+
+### Progress record
+
+- Inserted `render_settings` after `camera_settings` in the sole live JSON and
+  moved every approved value without changing its artistic or numeric meaning.
+  Removed the obsolete `runtime` and `pipeline` roots and the old render blocks
+  beneath `scene`; no compatibility copies or fallback readers remain.
+- Made scene construction mandatory in the standard immutable pipeline. CPU or
+  GPU selection, statistics, and ordinary-versus-composite dispatch are read
+  from the frozen `render_settings` before an expensive scene build begins.
+- Connected the enabled composite workflow to the already-created frozen
+  transaction, so it uses the same timestamp, source mirror, and frozen JSON
+  instead of snapshotting mutable live settings a second time.
+- Updated the standard builder to emit required film, Halton sampler, and
+  volume-path integrator directives from `render_settings`, and to pass the
+  migrated film dimensions to terrain-detail camera-frustum placement.
+- Updated the direct composite entry point, immutable snapshot boundary,
+  validator, and Qt Render page. Direct builder and composite calls now reject
+  unsupported backend, non-boolean statistics, invalid light references,
+  negative composite controls, unsupported sampler/integrator types, and
+  invalid render dimensions before doing render work.
+- Updated pipeline, snapshot, composite, builder, configuration, and Qt tests,
+  plus the shaft-compositing operator documentation. An operational search
+  found no remaining live reads of the obsolete render paths.
+- Focused virtual-environment verification ran 55 tests: 51 passed and four
+  NumPy/Pillow-dependent tests were skipped. The matching system-Python subset
+  passed all 42 tests, including the composite coverage.
+- The complete `.venv` suite ran 98 tests: 89 passed and nine dependency-aware
+  tests were skipped. System Python passed all 85 non-GUI tests.
+- Live validation reports zero errors. Python byte-compilation, shell syntax,
+  and `git diff --check` all pass.
+
+### Exact Stage 3 migration audit
+
+A mechanical comparison starts from `184eb02`, applies only the approved value
+moves and removals, and compares that result with the sole live JSON. It
+reports:
+
+```text
+stage_three_only True
+root_order ['file_names', 'file_paths', 'camera_settings', 'render_settings', 'scene']
+obsolete_roots_present []
+obsolete_scene_fields_present []
+```
+
+### Stage 3 structural PBRT comparison
+
+The archived `020525` configuration was migrated through Stages 1–3 entirely
+in memory and built with the current builder in a temporary `/tmp` workspace.
+No second scene JSON was created and PBRT was not launched. The emitted scene
+is byte-for-byte identical to the pre-migration artifact:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 3 size:        117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The temporary comparison directory was removed. The live, gitignored generated
+scene was not rebuilt or altered, and no production render was launched.
+
+### Stage 3 result
+
+All Stage 3 acceptance requirements are satisfied. The next approved stage is
+to establish the `scene_description` shell with `mode`, the migrated scene
+name, and `scene_context`, while continuing to keep only one authoritative
+configuration.

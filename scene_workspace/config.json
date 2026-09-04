@@ -23,13 +23,23 @@
     "fov": 50.0
   },
 
-  "runtime": {
-    "use_gpu": true,
-    "show_stats": true
-  },
-
-  "pipeline": {
-    "build_scene": { "enabled": true },
+  "render_settings": {
+    "film": {
+      "x_resolution": 2000,
+      "y_resolution": 1450
+    },
+    "sampler": {
+      "type": "halton",
+      "pixel_samples": 512
+    },
+    "integrator": {
+      "type": "volpath",
+      "max_depth": 80
+    },
+    "backend": {
+      "type": "gpu",
+      "show_statistics": true
+    },
     "shaft_composite": {
       "enabled": false,
       "shaft_light": "shaft_sun",
@@ -43,18 +53,6 @@
 
   "scene": {
     "name":             "Poppy Field Overcast 8AM Study",
-
-    "sampler": {
-      "enabled": true,
-      "type": "halton",
-      "pixel_samples": 512
-    },
-
-    "integrator": {
-      "enabled": true,
-      "type": "volpath",
-      "max_depth": 80
-    },
 
     "fog": {
       "enabled": false,
@@ -118,12 +116,6 @@
           "resolution": [120, 72, 36]
         }
       ]
-    },
-
-    "film": {
-      "enabled": true,
-      "x_resolution": 2000,
-      "y_resolution": 1450
     },
 
     "sky": {

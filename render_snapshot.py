@@ -139,6 +139,8 @@ def _validate_config(path: Path) -> dict:
         raise RenderSnapshotError("scene configuration requires a scene object")
     if not isinstance(config.get("camera_settings"), dict):
         raise RenderSnapshotError("scene configuration requires camera_settings")
+    if not isinstance(config.get("render_settings"), dict):
+        raise RenderSnapshotError("scene configuration requires render_settings")
     file_names = config.get("file_names")
     file_paths = config.get("file_paths")
     if not isinstance(file_names, dict):
@@ -158,17 +160,18 @@ def _validate_config(path: Path) -> dict:
     archive_image_name(config, "20000101_000000")
     if "archive" in config:
         raise RenderSnapshotError("obsolete archive root is not supported")
-    runtime = config.get("runtime", {})
-    if isinstance(runtime, dict) and "pbrt_binary" in runtime:
-        raise RenderSnapshotError("obsolete runtime.pbrt_binary is not supported")
-    pipeline = config.get("pipeline", {})
-    if isinstance(pipeline, dict) and "rclone_sync" in pipeline:
-        raise RenderSnapshotError("obsolete pipeline.rclone_sync is not supported")
+    if "runtime" in config:
+        raise RenderSnapshotError("obsolete runtime root is not supported")
+    if "pipeline" in config:
+        raise RenderSnapshotError("obsolete pipeline root is not supported")
     for name in ("master_file", "output_filename", "generated_medium"):
         if name in config["scene"]:
             raise RenderSnapshotError(f"obsolete scene.{name} is not supported")
     if "camera" in config["scene"]:
         raise RenderSnapshotError("obsolete scene.camera is not supported")
+    for name in ("film", "sampler", "integrator"):
+        if name in config["scene"]:
+            raise RenderSnapshotError(f"obsolete scene.{name} is not supported")
     return config
 
 
@@ -265,17 +268,7 @@ def create_snapshot(
                     f"{executable_source}"
                 )
 
-        build_enabled = bool(
-            config.get("pipeline", {}).get("build_scene", {}).get("enabled", True)
-        )
         relative_scene_files = scene_files_relative(config)
-        source_scene_files = repository_root / relative_scene_files
-        if not build_enabled and source_scene_files.is_dir():
-            snapshot_scene_files = snapshot_root / relative_scene_files
-            shutil.copytree(source_scene_files, snapshot_scene_files)
-            copied_paths.extend(
-                path for path in snapshot_scene_files.rglob("*") if path.is_file()
-            )
 
         for path in copied_paths:
             path.chmod(path.stat().st_mode & ~0o222)

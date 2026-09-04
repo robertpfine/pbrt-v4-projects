@@ -39,27 +39,55 @@ echo "Render inputs frozen: $RUN_DIRECTORY"
 SCENE_NAME=$(jq -r '.scene.name // "untitled_scene"' "$CONFIG_FILE")
 REMOTE_PATH=$(jq -r '.file_paths.remote_archive'   "$CONFIG_FILE")
 PBRT_BIN=$(jq    -r '.file_paths.pbrt_executable'  "$CONFIG_FILE")
-USE_GPU=$(jq     -r '.runtime.use_gpu'             "$CONFIG_FILE")
-SHOW_STATS=$(jq  -r '.runtime.show_stats'          "$CONFIG_FILE")
-RUN_BUILD=$(jq   -r '.pipeline.build_scene.enabled' "$CONFIG_FILE")
+BACKEND_TYPE=$(jq -r '.render_settings.backend.type' "$CONFIG_FILE")
+SHOW_STATS=$(jq -r '.render_settings.backend.show_statistics' "$CONFIG_FILE")
+SHAFT_COMPOSITE=$(jq -r '.render_settings.shaft_composite.enabled' "$CONFIG_FILE")
 SCENE_FILENAME=$(jq -r '.file_names.pbrt_scene'    "$CONFIG_FILE")
 SCENE_PATH="${SCENE_FILES}/${SCENE_FILENAME}"
 
-# --- 3. RUN SCENE BUILDER (if enabled) ---
-if [ "$RUN_BUILD" = "true" ]; then
-    BUILD_SCRIPT="${SCENE_ROOT}/build_scene.py"
-    if [ ! -f "$BUILD_SCRIPT" ]; then
-        echo "ERROR: build_scene.py not found in: $SCENE_ROOT"
+CMD_FLAGS=""
+if [ "$BACKEND_TYPE" = "gpu" ]; then
+    CMD_FLAGS="$CMD_FLAGS --gpu"
+elif [ "$BACKEND_TYPE" != "cpu" ]; then
+    echo "ERROR: Unsupported render backend: $BACKEND_TYPE"
+    exit 1
+fi
+if [ "$SHOW_STATS" = "true" ]; then
+    CMD_FLAGS="$CMD_FLAGS --stats"
+elif [ "$SHOW_STATS" != "false" ]; then
+    echo "ERROR: render_settings.backend.show_statistics must be boolean."
+    exit 1
+fi
+if [ "$SHAFT_COMPOSITE" != "true" ] && [ "$SHAFT_COMPOSITE" != "false" ]; then
+    echo "ERROR: render_settings.shaft_composite.enabled must be boolean."
+    exit 1
+fi
+
+# A composite render reuses this already-frozen transaction rather than
+# creating a second timestamp or reading mutable live settings.
+if [ "$SHAFT_COMPOSITE" = "true" ]; then
+    COMPOSITE_SCRIPT="${SNAPSHOT_REPO_ROOT}/render_shaft_composite.py"
+    if [ ! -f "$COMPOSITE_SCRIPT" ]; then
+        echo "ERROR: render_shaft_composite.py not found in frozen repository."
         exit 1
     fi
-    echo "Building scene: $SCENE_NAME"
-    python3 "$BUILD_SCRIPT" "$CONFIG_FILE"
-    if [ $? -ne 0 ]; then
-        echo "ERROR: build_scene.py failed."
-        exit 1
-    fi
-else
-    echo "Skipping build_scene.py (disabled in config)."
+    export PBRT_RENDER_SNAPSHOT_DIR="$RUN_DIRECTORY"
+    export PBRT_LIVE_REPOSITORY_ROOT="$REPO_ROOT"
+    export PBRT_RENDER_TIMESTAMP="$TS"
+    exec python3 "$COMPOSITE_SCRIPT" "$CONFIG_FILE"
+fi
+
+# --- 3. RUN REQUIRED SCENE BUILDER ---
+BUILD_SCRIPT="${SCENE_ROOT}/build_scene.py"
+if [ ! -f "$BUILD_SCRIPT" ]; then
+    echo "ERROR: build_scene.py not found in: $SCENE_ROOT"
+    exit 1
+fi
+echo "Building scene: $SCENE_NAME"
+python3 "$BUILD_SCRIPT" "$CONFIG_FILE"
+if [ $? -ne 0 ]; then
+    echo "ERROR: build_scene.py failed."
+    exit 1
 fi
 
 # --- 4. RUN PROCEDURAL GEOMETRY (if enabled) ---
@@ -88,11 +116,6 @@ if [ ! -f "$SCENE_PATH" ]; then
     echo "ERROR: Scene file not found at: $SCENE_PATH"
     exit 1
 fi
-
-# --- 6. BUILD PBRT RUNTIME FLAGS ---
-CMD_FLAGS=""
-if [ "$USE_GPU"    = "true" ]; then CMD_FLAGS="$CMD_FLAGS --gpu";   fi
-if [ "$SHOW_STATS" = "true" ]; then CMD_FLAGS="$CMD_FLAGS --stats"; fi
 
 mkdir -p "$ARCHIVE_DIR"
 FINAL_BASE="${FINAL_IMAGE%.png}"

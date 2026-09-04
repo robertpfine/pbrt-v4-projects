@@ -461,7 +461,7 @@ A GitHub push alone does not complete continuity delivery.
 ## Immediate follow-up work
 
 Detailed implementation notes, exact benchmark results, test coverage, and the
-remaining pre-migration gate are recorded in
+active staged migration are recorded in
 `docs/engineering-progress-2026-09-04.md`.
 
 The active artist-accepted high-resolution master is render `093054`, with
@@ -507,11 +507,11 @@ order:
    geometry, placement, material, color, and surface objects remain
    adjacent. Begin from the landform-first principle: choose a landform, then
    decide its relief, appearance, and surface objects.
-   The first two live migration stages are complete: `file_names`,
-   `file_paths`, and `camera_settings` are active, their old paths are absent,
-   every known consumer uses the new locations, and bounded rebuilds reproduced
-   the pre-migration PBRT scene byte for byte. The next stage moves render
-   controls to `render_settings`.
+   The first three live migration stages are complete: `file_names`,
+   `file_paths`, `camera_settings`, and `render_settings` are active, their old
+   paths are absent, every known consumer uses the new locations, and bounded
+   rebuilds reproduced the pre-migration PBRT scene byte for byte. The next
+   stage establishes the `scene_description` shell, name, and scene context.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -555,18 +555,17 @@ Additional continuity requirements:
 12. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
-## 2026-09-04 first two live configuration-migration stages
+## 2026-09-04 first three live configuration-migration stages
 
-The first two staged migrations are implemented in the sole authoritative
-`scene_workspace/config.json`. Its first two root sections are now
-`file_names` and `file_paths`, followed by root `camera_settings`. The old
-top-level `archive` object,
-`runtime.pbrt_binary`, `pipeline.rclone_sync`, `scene.master_file`,
-`scene.output_filename`, `scene.generated_medium`, and `scene.camera` are
-absent; there are no duplicate compatibility readers. A configured remote
-archive now means that ordinary and composite workflows attempt synchronization
-only after the local bundle is complete, retaining local output on remote
-failure.
+The first three staged migrations are implemented in the sole authoritative
+`scene_workspace/config.json`. Its roots are now `file_names`, `file_paths`,
+`camera_settings`, `render_settings`, and the not-yet-migrated `scene`, in that
+order. The old top-level `archive`, `runtime`, and `pipeline` objects and
+`scene.master_file`, `scene.output_filename`, `scene.generated_medium`,
+`scene.camera`, `scene.film`, `scene.sampler`, and `scene.integrator` are absent;
+there are no duplicate compatibility readers. A configured remote archive now
+means that ordinary and composite workflows attempt synchronization only after
+the local bundle is complete, retaining local output on remote failure.
 
 The render pipeline, immutable snapshot transaction, standard builder,
 shaft-composite workflow, tree and foliage generators, validator, and Qt
@@ -585,9 +584,21 @@ all consume the new root. A fresh in-memory migration and isolated build of the
 same `020525` diagnostic configuration again produced the exact
 117,462,947-byte PBRT scene and SHA-256 above. No PBRT render was launched.
 
-The next migration stage is `render_settings`. Preserve the existing film,
-sampler, integrator, backend, and shaft-compositing values exactly; remove their
-old roots only as their consumers move.
+Stage 3 moved the existing film, sampler, integrator, backend, statistics, and
+shaft-compositing controls to root `render_settings`. Scene building is now a
+mandatory render phase; the standard pipeline selects an ordinary or composite
+workflow from the already-frozen JSON, and the composite workflow reuses that
+same snapshot and timestamp. The builder, terrain-aware placement, validator,
+snapshot boundary, Qt inspector, standard pipeline, composite entry point, and
+tests all consume the new root. A fresh in-memory migration and isolated build
+of the same `020525` diagnostic configuration again produced the exact
+117,462,947-byte PBRT scene and SHA-256 above. The complete `.venv` suite ran 98
+tests (89 passed, nine dependency-aware skips), and all 85 system-Python
+non-GUI tests passed. No PBRT render was launched.
+
+The next migration stage establishes `scene_description` with `mode`, the
+migrated scene name, and `scene_context`, preserving the one-live-JSON rule and
+moving operational consumers together.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

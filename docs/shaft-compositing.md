@@ -14,7 +14,7 @@ The shaft pass is blurred slightly and added to the base image in linear RGB.
 The result retains PBRT's volumetric transport while allowing atmospheric
 shafts to be controlled independently of ground illumination.
 
-Configuration is under `pipeline.shaft_composite`:
+Configuration is under `render_settings.shaft_composite`:
 
 ```json
 "shaft_composite": {
@@ -37,7 +37,13 @@ Configuration is under `pipeline.shaft_composite`:
   shaft pass, allowing it to remain darker than the tree.
 - `blur_radius` applies a small pixel-space Gaussian blur before compositing.
 
-Run from the repository root:
+The normal pipeline selects this workflow when `enabled` is true:
+
+```bash
+./render_pipeline.sh
+```
+
+The composite entry point may also be run directly from the repository root:
 
 ```bash
 python3 render_shaft_composite.py
@@ -48,7 +54,7 @@ generator sources into `scene_workspace/.render_runs/<timestamp>/repository`.
 Both PBRT passes are built and rendered from that immutable mirror. Manual
 edits to the live JSON while a render is underway therefore apply only to the
 next render. On success, the local Archive receives the frozen JSON, generated
-PBRT files, source bundle, and SHA-256 manifest before optional Google Drive
+PBRT files, source bundle, and SHA-256 manifest before configured Google Drive
 synchronization. A failed build, render, or archive step retains the temporary
 run directory for diagnosis.
 

@@ -169,6 +169,35 @@ class Inspector(QtWidgets.QWidget):
         )
         return widget
 
+    def _choice(
+        self,
+        form: QtWidgets.QFormLayout,
+        label: str,
+        path: tuple[str | int, ...],
+        choices: tuple[tuple[str, str], ...],
+        object_name: str = "",
+    ) -> QtWidgets.QComboBox:
+        widget = QtWidgets.QComboBox()
+        if object_name:
+            widget.setObjectName(object_name)
+        for display, value in choices:
+            widget.addItem(display, value)
+
+        def set_choice(index: int) -> None:
+            value = widget.itemData(index)
+            if value is not None:
+                self._set(path, value)
+
+        def refresh_choice() -> None:
+            index = widget.findData(self.config.get(path))
+            self._blocked(widget, max(0, index))
+
+        widget.currentIndexChanged.connect(set_choice)
+        form.addRow(label, widget)
+        self.refreshers.append(refresh_choice)
+        refresh_choice()
+        return widget
+
     def _integer(
         self,
         form: QtWidgets.QFormLayout,
@@ -856,16 +885,78 @@ class Inspector(QtWidgets.QWidget):
             "Each completed render archives its image, PBRT scene, exact JSON, "
             "builder, and pipeline for reproducibility.",
         )
-        self._integer(form, "Width", ("scene", "film", "x_resolution"), 1, 32_768)
-        self._integer(form, "Height", ("scene", "film", "y_resolution"), 1, 32_768)
-        self._check(form, "Override samples", ("scene", "sampler", "enabled"))
+        base = ("render_settings",)
+        self._integer(form, "Width", base + ("film", "x_resolution"), 1, 32_768)
+        self._integer(form, "Height", base + ("film", "y_resolution"), 1, 32_768)
+        self._choice(
+            form,
+            "Sampler",
+            base + ("sampler", "type"),
+            (("Halton", "halton"),),
+            "render_sampler_type",
+        )
         self._integer(
             form,
             "Pixel samples",
-            ("scene", "sampler", "pixel_samples"),
+            base + ("sampler", "pixel_samples"),
             1,
             1_000_000,
         )
+        self._choice(
+            form,
+            "Integrator",
+            base + ("integrator", "type"),
+            (("Volume path", "volpath"),),
+            "render_integrator_type",
+        )
+        self._integer(
+            form,
+            "Maximum path depth",
+            base + ("integrator", "max_depth"),
+            1,
+            1_000_000,
+        )
+        self._choice(
+            form,
+            "Backend",
+            base + ("backend", "type"),
+            (("GPU", "gpu"), ("CPU", "cpu")),
+            "render_backend_type",
+        )
+        statistics = self._check(
+            form,
+            "Show statistics",
+            base + ("backend", "show_statistics"),
+        )
+        statistics.setObjectName("render_show_statistics")
+        shaft = base + ("shaft_composite",)
+        shaft_enabled = self._check(form, "Shaft composite", shaft + ("enabled",))
+        shaft_enabled.setObjectName("shaft_composite_enabled")
+        self._text(
+            form,
+            "Shaft light",
+            shaft + ("shaft_light",),
+            "shaft_composite_light",
+        )
+        self._number(form, "Base opacity", shaft + ("base_opacity",), 0.0, 1_000.0, 4)
+        self._number(form, "Shaft opacity", shaft + ("shaft_opacity",), 0.0, 1_000.0, 4)
+        self._number(
+            form,
+            "Surface reflectance scale",
+            shaft + ("surface_reflectance_scale",),
+            0.0,
+            1_000.0,
+            5,
+        )
+        self._number(
+            form,
+            "Terrain reflectance scale",
+            shaft + ("terrain_reflectance_scale",),
+            0.0,
+            1_000.0,
+            5,
+        )
+        self._number(form, "Blur radius", shaft + ("blur_radius",), 0.0, 10_000.0, 3)
         self._text(
             form,
             "PBRT scene file",
