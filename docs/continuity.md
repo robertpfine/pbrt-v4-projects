@@ -11,8 +11,8 @@ result through atmosphere, light, camera, and post-render compositing.
 
 The user prefers decisive, informative bookend experiments over sequences of
 barely perceptible parameter changes. Artistic evaluation is made from the
-locally archived renders, normally while a visible terminal displays generation
-and PBRT progress.
+locally archived renders while the Art Studio's persistent docked log normally
+displays generation and PBRT progress.
 
 ## Repository and checkpoint
 
@@ -435,19 +435,19 @@ A GitHub push alone does not complete continuity delivery.
 
 ## Working preferences and safeguards
 
-- Show render progress in a visible terminal.
-- Launch that visible terminal with `./run_render_terminal.sh`. This repository
-  wrapper is the canonical interactive render entry point from Codex/VS Code:
-  it removes the Snap-injected GTK/GIO runtime variables that otherwise make a
-  raw `gnome-terminal` launch fail with a GLIBC symbol error, preserves the
-  desktop and CUDA environment, runs `./render_pipeline.sh`, and keeps the
-  terminal open when the pipeline exits. Do not substitute a raw
-  `gnome-terminal` command and do not use XTerm; XTerm is too small for the
-  artist's progress view. Before invoking the wrapper, verify that no builder,
-  PBRT process, or render pipeline is already active, and launch exactly one.
-- Keep the terminal open after completion; assume the user will close it.
-- Use one approval only for the desktop terminal launch. Monitor logs and files
-  with sandboxed read-only commands so the user is not asked repeatedly.
+- The canonical artist-facing render workflow is `./run_art_studio.sh`, then
+  the Art Studio toolbar's **Render** control. Render output belongs in the
+  application's readable, persistent docked log, and the completed local image
+  updates in the same interface. This recurring issue is resolved; do not
+  substitute XTerm, a newly launched GNOME Terminal, or another detached
+  terminal for the Studio log.
+- `./run_render_terminal.sh` remains only a fallback when the artist
+  specifically requests a separate host GNOME Terminal. It removes the
+  Snap-injected GTK/GIO variables that otherwise cause a GLIBC symbol error.
+  It is not the normal artist-facing entry point because external terminal text
+  has repeatedly been too small to read.
+- Before starting any render, verify that no builder, PBRT process, or render
+  pipeline is already active, and launch exactly one.
 - Use the CUDA device; render duration is not presently onerous.
 - Prefer strong comparison tests when a visual parameter is uncertain.
 - Do not produce undocumented collections of near-identical renders.
@@ -458,6 +458,34 @@ A GitHub push alone does not complete continuity delivery.
   logs, and verbatim transcripts out of Git.
 - Commit and push meaningful code/configuration/documentation checkpoints to
   the active `pbrt-v4-art-studio` branch.
+
+### Recurring live-log issue: immediate resolution
+
+This issue has recurred many times and is already resolved. If the artist says
+that there is no live log, no visible terminal, or the terminal text is too
+small to read, do not investigate GNOME Terminal, alter terminal environment
+handling, add launcher-wait flags, substitute XTerm, or start a probe/render.
+Immediately give the artist this command from the repository root:
+
+```bash
+./run_art_studio.sh
+```
+
+The artist then selects **Render** on the Art Studio toolbar. The bottom dock
+named **Persistent Render Log** is the required readable progress display. Its
+implementation is not a terminal embedding: `ArtStudioWindow.start_render()`
+starts `render_pipeline.sh` with the authoritative configuration through a
+merged-channel `QProcess`; `_read_render_output()` appends live output to the
+dock; and the `ART_STUDIO_RENDER_READY=` record updates the viewer from the
+completed local PNG while archive synchronization continues.
+
+Before the artist selects **Render**, check that no `render_pipeline.sh`, scene
+builder, or PBRT process is active. Once selected, positive confirmation is the
+`PBRT-v4 Art Studio render started` banner followed by pipeline output in the
+docked log. If that dock itself fails to update, diagnose the Art Studio
+`QProcess` path without launching a separate terminal or a second render.
+`run_render_terminal.sh` is fallback-only and must be used only when the artist
+explicitly requests a separate GNOME Terminal.
 
 ## Immediate follow-up work
 
@@ -870,15 +898,16 @@ live configuration was restored exactly to committed settings and validates
 cleanly. See the migration progress record for the retained environmental
 failure diagnostics `072338` and `072454`.
 
-The successful `072547` run was captured by the automation process rather than
-streamed in the dedicated GNOME Terminal, so it did not validate the required
-visible-log workflow. The earlier terminal attempt `072338` detached and
-stopped during snapshot setup. `run_render_terminal.sh` now passes
-`gnome-terminal --wait`, keeping the launcher attached to the terminal session;
-its existing inner interactive shell continues to keep the window open after
-the pipeline exits. The canonical visible-log command remains
-`./run_render_terminal.sh`. One successful render through that corrected
-wrapper is still required to close the workflow-validation item.
+The successful `072547` run was captured by automation, so it validated the
+migrated render path but not the artist-facing live-log workflow. A subsequent
+GNOME Terminal probe started no render and reconfirmed the already documented
+problem: external terminal text is too small to read. Historical session
+evidence records the accepted solution as the Art Studio's readable,
+persistent docked render log. The canonical workflow is therefore
+`./run_art_studio.sh`, followed by the toolbar's **Render** control. One
+successful render initiated that way is still required to close the
+workflow-validation item. No additional external-terminal experiment is
+required.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

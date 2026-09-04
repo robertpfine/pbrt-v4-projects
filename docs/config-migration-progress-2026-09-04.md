@@ -1735,26 +1735,28 @@ overcast diagnostic. The complete immutable bundle and manifest are in
 the existing Google Drive API rate limit, and was not retried. There was no
 fatal loop, no PBRT hang, and no post-migration image difference.
 
-### Visible-terminal follow-up
+### Artist-visible log follow-up
 
-The successful `072547` host-GPU run was captured by the automation process;
-it did not stream through the dedicated GNOME Terminal window. It therefore
-validated the migrated builder, C++ cloud-grid path, PBRT/CUDA execution, and
-archived output equivalence, but it did **not** validate the artist's required
-visible-log workflow.
+The successful `072547` host-GPU run was captured by automation. It validated
+the migrated builder, C++ cloud-grid path, PBRT/CUDA execution, and archived
+output equivalence, but it did **not** validate the artist-facing live-log
+workflow.
 
-The earlier `072338` attempt used `run_render_terminal.sh`, but the GNOME
-Terminal launcher detached from its child window and the render stopped during
-snapshot preparation. The wrapper now passes GNOME Terminal's `--wait` option.
-This keeps the launcher attached to the terminal session for the lifetime of
-the render log; the existing inner interactive shell still keeps the visible
-window open after the pipeline exits. The canonical artist-facing command is:
+An attempted GNOME Terminal correction after `072547` ran only a no-render
+probe. The visible terminal opened, but its text was again too small to read.
+Historical session evidence confirms that this recurring issue was already
+resolved by using the Art Studio's readable, persistent docked render log. The
+canonical artist-facing launch command is:
 
 ```bash
-./run_render_terminal.sh
+./run_art_studio.sh
 ```
 
-Running `./render_pipeline.sh` directly remains supported when pipeline output
-is intentionally wanted in the current terminal, but it is not the canonical
-dedicated-window workflow. A successful render launched with the corrected
-wrapper is still required to close this workflow-validation item.
+The artist then uses the toolbar's **Render** control. The application saves and
+validates the one authoritative `scene_workspace/config.json`, runs
+`render_pipeline.sh` through a merged-output `QProcess`, streams the output into
+the docked log, and displays the completed local PNG before remote archive sync
+finishes. `run_render_terminal.sh` is only a fallback when a separate GNOME
+Terminal is explicitly requested; XTerm and further external-terminal probes
+are not solutions. A successful render initiated through the Studio remains
+the only open workflow-validation check. No render was launched by this probe.
