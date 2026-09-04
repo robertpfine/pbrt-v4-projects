@@ -526,6 +526,16 @@ order:
    editing, discoverable scene inspection, rendering, progress visibility, and
    comparison of accepted images. Do not infer that every JSON value needs a
    permanent control.
+   The migrated `config.json` is substantially more rational than its previous
+   structure, but its physical key order can still be refined later. The
+   artist's preferred refinement environment is the Qt GUI, which must continue
+   to reference the one authoritative `scene_workspace/config.json` while
+   providing richer organization than file order alone: selectors, collapsible
+   groups, pull-down menus, search, and sliders paired with exact numeric entry.
+   The GUI must not create parallel configuration state, conceal the underlying
+   JSON path, or compromise direct manual editing. Treat this as future design
+   direction, not authorization to reorder or edit the live JSON during the
+   current cloud-control review.
 7. **The compiled cloud-grid accelerator is implemented.** The standalone C++
    helper receives a normalized versioned job from Python, supports both
    current cloud forms, writes `uniformgrid` or `rgbgrid` PBRT declarations,
