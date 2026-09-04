@@ -25,6 +25,7 @@ except ModuleNotFoundError:
 from scene_workspace.build_scene import (
     configured_filename,
     configured_scene_files,
+    write_camera,
     write_geometry,
     write_lsystem_trees,
 )
@@ -53,6 +54,24 @@ class ConfiguredFileLayoutTests(unittest.TestCase):
         config = {"file_names": {"pbrt_scene": "../outside.pbrt"}}
         with self.assertRaisesRegex(ValueError, "filename without a directory"):
             configured_filename(config, "pbrt_scene")
+
+    def test_camera_writer_uses_explicit_supported_type(self):
+        lines = []
+        camera = {
+            "enabled": True,
+            "type": "perspective",
+            "look_at": {
+                "eye": [0, 1, 2],
+                "look": [0, 0, 0],
+                "up": [0, 1, 0],
+            },
+            "fov": 50.0,
+        }
+        write_camera(lines, camera)
+        self.assertIn('Camera "perspective"  "float fov" [ 50.0 ]', lines)
+        camera["type"] = "orthographic"
+        with self.assertRaisesRegex(ValueError, "unsupported camera_settings.type"):
+            write_camera([], camera)
 
 
 class GeometryMaterialTests(unittest.TestCase):

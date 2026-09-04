@@ -718,13 +718,17 @@ def write_camera(lines, cam):
     """
     Write LookAt and Camera directives.
     These must appear before Sampler, Integrator, and Film.
-    Config reads: scene.camera (enabled, look_at, fov)
+    Config reads: camera_settings (enabled, type, look_at, fov)
 
     pbrt note: LookAt takes eye / look-at point / up-vector,
                all as flat space-separated values on one line.
     """
-    if not cam.get("enabled", True):
+    if not cam["enabled"]:
         return
+
+    camera_type = cam["type"]
+    if camera_type != "perspective":
+        raise ValueError(f"unsupported camera_settings.type {camera_type!r}")
 
     e = cam["look_at"]["eye"]
     l = cam["look_at"]["look"]
@@ -735,7 +739,7 @@ def write_camera(lines, cam):
         f"        {l[0]} {l[1]} {l[2]}",
         f"        {u[0]} {u[1]} {u[2]}",
         "",
-        f'Camera "perspective"  "float fov" [ {cam["fov"]} ]',
+        f'Camera "{camera_type}"  "float fov" [ {cam["fov"]} ]',
         "",
     ]
 
@@ -3158,10 +3162,12 @@ def write_scene(cfg, scene_root, medium_rel_path):
       Pre-world:  header, camera, sampler, integrator, film, medium Include
       World:      WorldBegin, lights, geometry
 
-    Config reads: all of scene.*, file_names.*, and file_paths.scene_files
+    Config reads: camera_settings, scene.*, file_names.*, and
+                  file_paths.scene_files
     Output file:  file_paths.scene_files/file_names.pbrt_scene
     """
     scene    = cfg["scene"]
+    camera_settings = cfg["camera_settings"]
     scene_files_root = configured_scene_files(cfg, scene_root)
     out_path = scene_files_root / configured_filename(cfg, "pbrt_scene")
     scene_files_relative = scene_relative_path(scene_files_root, scene_root)
@@ -3170,7 +3176,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     # --- Pre-world section ---
     write_header(lines, scene.get("name", "untitled_scene"))
     write_fog_medium(cfg, lines)
-    write_camera(lines, scene["camera"])
+    write_camera(lines, camera_settings)
     write_sampler(lines, scene["sampler"])
     write_integrator(lines, scene["integrator"])
     lines.append("")
@@ -3217,7 +3223,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
         lines,
         terrain,
         ground_config,
-        camera=scene.get("camera"),
+        camera=camera_settings,
         film=scene.get("film"),
     )
     write_distant_hills(

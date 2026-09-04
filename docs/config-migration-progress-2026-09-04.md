@@ -200,3 +200,111 @@ was needed or launched. After the GitHub and continuity-archive checkpoint, the
 next migration stage is the exact move of `scene.camera` to root
 `camera_settings`, with builder, placement consumers, validator, Qt inspector,
 and tests changing together.
+
+## Stage 2 — camera settings
+
+Status: implementation and validation complete from pushed Stage 1 checkpoint
+`0e77a3e`
+
+### Exact target
+
+The camera block moves once from `scene.camera` to the root, immediately after
+`file_paths`:
+
+```json
+"camera_settings": {
+  "enabled": true,
+  "type": "perspective",
+  "look_at": {
+    "eye":  [290.0, 165.0, 365.0],
+    "look": [5.0, 155.0, -5.0],
+    "up":   [0, 1, 0]
+  },
+  "fov": 50.0
+}
+```
+
+All existing artistic and numeric values are preserved. `type: "perspective"`
+makes the builder's existing hardcoded PBRT camera type explicit, as required
+by the approved schema; it does not change rendered behavior. `scene.camera`
+is removed rather than retained as a compatibility copy.
+
+### Consumer inventory
+
+- `scene_workspace/build_scene.py` emits the PBRT `LookAt` and `Camera`
+  directives and passes the same camera to terrain-detail placement.
+- `terrain_details.py` consumes the camera object passed by the builder for
+  visible-frustum placement and depth fade. It contains no JSON ownership path
+  and therefore needs no schema-specific edit.
+- `scene_config.py` validates the root camera object.
+- `pbrt_v4_art_studio.py` binds the Camera page to exact camera values.
+- `render_snapshot.py` enforces the new root and rejects the obsolete location
+  before a frozen render can proceed.
+- Snapshot, configuration, builder, terrain-placement, and Qt tests provide
+  the regression boundary.
+
+### Progress record
+
+- Verified a clean worktree on branch `pbrt-v4-art-studio`, synchronized with
+  GitHub at `0e77a3e` before beginning Stage 2.
+- Moved the live camera values to `camera_settings`, inserted the explicit
+  existing `perspective` type, and removed `scene.camera`.
+- Updated PBRT emission and terrain-detail placement to consume the same root
+  camera object. No camera values are duplicated beneath `scene`.
+- Updated the Qt Camera page to expose enabled state, type, eye, look target,
+  up vector, and field of view from `camera_settings`.
+- Expanded validation to enforce the approved perspective-camera contract:
+  explicit boolean enabled state, supported type, finite three-component
+  vectors, different eye/look points, nonzero and nonparallel up vector, and a
+  finite field of view strictly between zero and 180 degrees.
+- Added render-boundary rejection of obsolete `scene.camera` and began updating
+  test fixtures and formatting-preserving save checks to the new root.
+- Completed the fixture and regression migration. No operational read of
+  `scene.camera` remains; remaining occurrences are rejection tests,
+  validation messages, and historical migration documentation.
+- Focused camera/configuration/snapshot/builder/placement/Qt verification ran
+  54 tests: 52 passed and two composite tests were skipped because `.venv`
+  intentionally lacks NumPy/Pillow.
+- The complete `.venv` suite ran 90 tests: 83 passed and seven
+  dependency-aware tests were skipped. The explicit system-Python non-GUI
+  suite passed all 78 tests, including NumPy/Pillow-backed coverage.
+- Live validation reports zero errors. Python byte-compilation, shell syntax,
+  and `git diff --check` all pass.
+
+### Exact Stage 2 migration audit
+
+A mechanical comparison starts from `0e77a3e`, removes only `scene.camera`,
+inserts the same values at root `camera_settings`, and exposes the builder's
+existing `perspective` type. It reports:
+
+```text
+stage_two_only True
+root_order ['file_names', 'file_paths', 'camera_settings', 'runtime', 'pipeline', 'scene']
+scene_has_camera False
+```
+
+### Stage 2 structural PBRT comparison
+
+The archived `020525` configuration was migrated through Stages 1 and 2 in
+memory and built with the current builder in a temporary `/tmp` workspace. No
+second scene JSON was written and PBRT was not launched. The first attempt used
+`.venv` and stopped before generation because that environment intentionally
+lacks NumPy. The system-Python rerun completed in approximately 25 seconds.
+
+The emitted scene and the archived pre-migration PBRT file are identical:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 2 size:        117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The temporary comparison directory was removed after verification. The live,
+gitignored generated scene was not rebuilt or altered.
+
+### Stage 2 result
+
+All Stage 2 acceptance requirements are satisfied. The next approved stage is
+the exact move of film, sampler, integrator, backend, and shaft-compositing
+controls into root `render_settings`.

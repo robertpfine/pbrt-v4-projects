@@ -137,6 +137,8 @@ def _validate_config(path: Path) -> dict:
         raise RenderSnapshotError(f"invalid scene configuration {path}: {error}") from error
     if not isinstance(config, dict) or not isinstance(config.get("scene"), dict):
         raise RenderSnapshotError("scene configuration requires a scene object")
+    if not isinstance(config.get("camera_settings"), dict):
+        raise RenderSnapshotError("scene configuration requires camera_settings")
     file_names = config.get("file_names")
     file_paths = config.get("file_paths")
     if not isinstance(file_names, dict):
@@ -165,6 +167,8 @@ def _validate_config(path: Path) -> dict:
     for name in ("master_file", "output_filename", "generated_medium"):
         if name in config["scene"]:
             raise RenderSnapshotError(f"obsolete scene.{name} is not supported")
+    if "camera" in config["scene"]:
+        raise RenderSnapshotError("obsolete scene.camera is not supported")
     return config
 
 

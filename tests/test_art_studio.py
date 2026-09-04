@@ -127,6 +127,20 @@ class ArtStudioTests(unittest.TestCase):
             self.assertIsNotNone(widget, object_name)
             self.assertEqual(widget.text(), value)
 
+    def test_camera_page_uses_root_camera_settings(self):
+        enabled = self.window.findChild(QtWidgets.QCheckBox, "camera_enabled")
+        camera_type = self.window.findChild(QtWidgets.QComboBox, "camera_type")
+        self.assertIsNotNone(enabled)
+        self.assertTrue(enabled.isChecked())
+        self.assertIsNotNone(camera_type)
+        self.assertEqual(camera_type.currentData(), "perspective")
+
+        self.window.inspector._set(("camera_settings", "fov"), 47.5)
+        self.assertTrue(self.window.save_config())
+        data = json.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(data["camera_settings"]["fov"], 47.5)
+        self.assertNotIn("camera", data["scene"])
+
     def test_latest_render_uses_configured_local_archive(self):
         archive = Path(self.temporary_directory.name) / "ConfiguredArchive"
         archive.mkdir()

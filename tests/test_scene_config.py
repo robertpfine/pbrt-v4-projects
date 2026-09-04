@@ -20,6 +20,12 @@ class SceneConfigTests(unittest.TestCase):
     "remote_archive": "unused:",
     "pbrt_executable": "/usr/bin/false"
   },
+  "camera_settings": {
+    "enabled": true,
+    "type": "perspective",
+    "look_at": { "eye": [0, 1, 2], "look": [0, 0, 0], "up": [0, 1, 0] },
+    "fov": 55.0
+  },
   "scene": {
     "landscape": {
       "ground": {
@@ -45,10 +51,6 @@ class SceneConfigTests(unittest.TestCase):
       "background": { "enabled": true, "type": "infinite" },
       "clouds": { "enabled": false }
     },
-    "camera": {
-      "look_at": { "eye": [0, 1, 2], "look": [0, 0, 0], "up": [0, 1, 0] },
-      "fov": 55.0
-    },
     "film": { "x_resolution": 100, "y_resolution": 100 },
     "fog": { "enabled": false },
     "lsystem_trees": [],
@@ -65,7 +67,7 @@ class SceneConfigTests(unittest.TestCase):
             path, source = self.make_config(directory)
             config = SceneConfig(path)
             config.set("scene.landscape.ground.details.poppies.count", 2600)
-            config.set("scene.camera.look_at.eye", [4, 5, 6])
+            config.set("camera_settings.look_at.eye", [4, 5, 6])
             config.save()
             result = path.read_text(encoding="utf-8")
             expected = source.replace('"count": 20', '"count": 2600').replace(
@@ -129,6 +131,17 @@ class SceneConfigTests(unittest.TestCase):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
+    def test_invalid_camera_geometry_is_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set("camera_settings.look_at.look", [0, 1, 2])
+            with self.assertRaisesRegex(
+                SceneConfigError, "camera_settings eye and look points must differ"
+            ):
+                config.save()
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
     def test_current_scene_is_valid_and_describable(self):
         root = Path(__file__).resolve().parents[1]
         config = SceneConfig(root / "scene_workspace" / "config.json")
@@ -162,13 +175,14 @@ class SceneConfigTests(unittest.TestCase):
             (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
         )
         self.assertEqual(
-            list(config)[:2],
-            ["file_names", "file_paths"],
+            list(config)[:3],
+            ["file_names", "file_paths", "camera_settings"],
         )
         self.assertNotIn("archive", config)
         self.assertNotIn("pbrt_binary", config["runtime"])
         self.assertNotIn("rclone_sync", config["pipeline"])
         data = config["scene"]
+        self.assertNotIn("camera", data)
         for obsolete in ("master_file", "output_filename", "generated_medium"):
             self.assertNotIn(obsolete, data)
         self.assertNotIn("terrain", data)

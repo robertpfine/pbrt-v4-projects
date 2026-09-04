@@ -46,6 +46,16 @@ class RenderSnapshotTests(unittest.TestCase):
                         "remote_archive": "unused:",
                         "pbrt_executable": "/usr/bin/false",
                     },
+                    "camera_settings": {
+                        "enabled": True,
+                        "type": "perspective",
+                        "look_at": {
+                            "eye": [0, 1, 2],
+                            "look": [0, 0, 0],
+                            "up": [0, 1, 0],
+                        },
+                        "fov": 50.0,
+                    },
                     "scene": {"name": "Original Scene"},
                 }
             )
@@ -176,6 +186,13 @@ class RenderSnapshotTests(unittest.TestCase):
             RenderSnapshotError, "obsolete scene.master_file"
         ):
             create_snapshot(self.root, self.config, "20260904_010216")
+
+    def test_snapshot_rejects_obsolete_scene_camera(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["camera"] = config["camera_settings"]
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.camera"):
+            create_snapshot(self.root, self.config, "20260904_010217")
 
     def test_snapshot_freezes_configured_cloud_grid_executable(self):
         executable = self.root / "build" / "cloud_grid_builder" / "cloud_grid_builder"
@@ -326,6 +343,16 @@ class RenderPipelineSnapshotIntegrationTests(unittest.TestCase):
                     "local_archive": "SavedRenders",
                     "remote_archive": "unused:",
                     "pbrt_executable": str(fake_pbrt),
+                },
+                "camera_settings": {
+                    "enabled": True,
+                    "type": "perspective",
+                    "look_at": {
+                        "eye": [0, 1, 2],
+                        "look": [0, 0, 0],
+                        "up": [0, 1, 0],
+                    },
+                    "fov": 50.0,
                 },
                 "runtime": {
                     "use_gpu": False,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+import math
 import os
 from pathlib import Path
 import tempfile
@@ -590,18 +591,73 @@ class SceneConfig:
                                 f"{prefix}.resolution values must be integers at least 2"
                             )
 
-        camera = require(("scene", "camera"), dict)
+        camera = require(("camera_settings",), dict)
         if camera is not None:
+            if not isinstance(camera.get("enabled"), bool):
+                errors.append("camera_settings.enabled must be boolean")
+            if camera.get("type") != "perspective":
+                errors.append("camera_settings.type must be perspective")
             look_at = camera.get("look_at", {})
+            if not isinstance(look_at, dict):
+                errors.append("camera_settings.look_at must be an object")
+                look_at = {}
+            valid_vectors: dict[str, list[float | int]] = {}
             for name in ("eye", "look", "up"):
                 vector = look_at.get(name)
                 if not isinstance(vector, list) or len(vector) != 3 or not all(
-                    isinstance(item, (int, float)) for item in vector
+                    isinstance(item, (int, float))
+                    and not isinstance(item, bool)
+                    and math.isfinite(item)
+                    for item in vector
                 ):
-                    errors.append(f"camera.look_at.{name} must contain 3 numbers")
+                    errors.append(
+                        f"camera_settings.look_at.{name} must contain 3 finite numbers"
+                    )
+                else:
+                    valid_vectors[name] = vector
+            if (
+                "eye" in valid_vectors
+                and "look" in valid_vectors
+                and valid_vectors["eye"] == valid_vectors["look"]
+            ):
+                errors.append("camera_settings eye and look points must differ")
+            if "up" in valid_vectors:
+                up = valid_vectors["up"]
+                if math.sqrt(sum(value * value for value in up)) <= 1e-12:
+                    errors.append("camera_settings up vector must be nonzero")
+            if all(name in valid_vectors for name in ("eye", "look", "up")):
+                eye = valid_vectors["eye"]
+                look = valid_vectors["look"]
+                up = valid_vectors["up"]
+                view = [look[index] - eye[index] for index in range(3)]
+                cross = (
+                    view[1] * up[2] - view[2] * up[1],
+                    view[2] * up[0] - view[0] * up[2],
+                    view[0] * up[1] - view[1] * up[0],
+                )
+                view_length = math.sqrt(sum(value * value for value in view))
+                up_length = math.sqrt(sum(value * value for value in up))
+                cross_length = math.sqrt(sum(value * value for value in cross))
+                if cross_length <= 1e-12 * view_length * up_length:
+                    errors.append(
+                        "camera_settings up vector must not be parallel to view"
+                    )
             fov = camera.get("fov")
-            if not isinstance(fov, (int, float)) or not 0 < fov < 180:
-                errors.append("camera.fov must be between 0 and 180 degrees")
+            if (
+                not isinstance(fov, (int, float))
+                or isinstance(fov, bool)
+                or not math.isfinite(fov)
+                or not 0 < fov < 180
+            ):
+                errors.append(
+                    "camera_settings.fov must be between 0 and 180 degrees"
+                )
+
+        scene_for_camera = self.get(("scene",), {})
+        if isinstance(scene_for_camera, dict) and "camera" in scene_for_camera:
+            errors.append(
+                "obsolete scene.camera must be removed after camera_settings migration"
+            )
 
         film = require(("scene", "film"), dict)
         if film is not None:

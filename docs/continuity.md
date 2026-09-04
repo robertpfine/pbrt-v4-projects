@@ -507,10 +507,11 @@ order:
    geometry, placement, material, color, and surface objects remain
    adjacent. Begin from the landform-first principle: choose a landform, then
    decide its relief, appearance, and surface objects.
-   The first live migration stage is complete: `file_names` and `file_paths`
-   are active, their old paths are absent, every known consumer uses the new
-   locations, and a bounded rebuild reproduced the pre-migration PBRT scene
-   byte for byte. The next stage moves camera controls to `camera_settings`.
+   The first two live migration stages are complete: `file_names`,
+   `file_paths`, and `camera_settings` are active, their old paths are absent,
+   every known consumer uses the new locations, and bounded rebuilds reproduced
+   the pre-migration PBRT scene byte for byte. The next stage moves render
+   controls to `render_settings`.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -554,16 +555,18 @@ Additional continuity requirements:
 12. Preserve readable and raw conversation archives in the gitignored
    `SessionArchive/` directory.
 
-## 2026-09-04 first live configuration-migration stage
+## 2026-09-04 first two live configuration-migration stages
 
-The first staged migration is implemented in the sole authoritative
+The first two staged migrations are implemented in the sole authoritative
 `scene_workspace/config.json`. Its first two root sections are now
-`file_names` and `file_paths`. The old top-level `archive` object,
+`file_names` and `file_paths`, followed by root `camera_settings`. The old
+top-level `archive` object,
 `runtime.pbrt_binary`, `pipeline.rclone_sync`, `scene.master_file`,
-`scene.output_filename`, and `scene.generated_medium` are absent; there are no
-duplicate compatibility readers. A configured remote archive now means that
-ordinary and composite workflows attempt synchronization only after the local
-bundle is complete, retaining local output on remote failure.
+`scene.output_filename`, `scene.generated_medium`, and `scene.camera` are
+absent; there are no duplicate compatibility readers. A configured remote
+archive now means that ordinary and composite workflows attempt synchronization
+only after the local bundle is complete, retaining local output on remote
+failure.
 
 The render pipeline, immutable snapshot transaction, standard builder,
 shaft-composite workflow, tree and foliage generators, validator, and Qt
@@ -575,10 +578,16 @@ using the archived `020525` diagnostic values produced the exact same
 pre-migration builder. No PBRT render was launched for this structural check.
 See `docs/config-migration-progress-2026-09-04.md` for the detailed record.
 
-The next migration stage is camera settings. Preserve the existing camera
-values exactly, remove `scene.camera`, and update the builder, terrain-aware
-placement, validator, and Qt inspector together before proceeding to render
-settings.
+Stage 2 moved the existing camera block unchanged to root `camera_settings` and
+made the builder's already-hardcoded `perspective` type explicit. The builder,
+terrain-aware placement, validator, snapshot boundary, Qt inspector, and tests
+all consume the new root. A fresh in-memory migration and isolated build of the
+same `020525` diagnostic configuration again produced the exact
+117,462,947-byte PBRT scene and SHA-256 above. No PBRT render was launched.
+
+The next migration stage is `render_settings`. Preserve the existing film,
+sampler, integrator, backend, and shaft-compositing values exactly; remove their
+old roots only as their consumers move.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

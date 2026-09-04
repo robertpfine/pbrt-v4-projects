@@ -824,7 +824,26 @@ class Inspector(QtWidgets.QWidget):
 
     def _build_camera_page(self) -> None:
         form = self._page("camera", "Camera")
-        base = ("scene", "camera")
+        base = ("camera_settings",)
+        enabled = self._check(form, "Enabled", base + ("enabled",))
+        enabled.setObjectName("camera_enabled")
+        camera_type = QtWidgets.QComboBox()
+        camera_type.setObjectName("camera_type")
+        camera_type.addItem("Perspective", "perspective")
+
+        def set_camera_type(index: int) -> None:
+            value = camera_type.itemData(index)
+            if value is not None:
+                self._set(base + ("type",), value)
+
+        def refresh_camera_type() -> None:
+            index = camera_type.findData(self.config.get(base + ("type",)))
+            self._blocked(camera_type, max(0, index))
+
+        camera_type.currentIndexChanged.connect(set_camera_type)
+        form.addRow("Type", camera_type)
+        self.refreshers.append(refresh_camera_type)
+        refresh_camera_type()
         self._vector(form, "Eye", base + ("look_at", "eye"))
         self._vector(form, "Look at", base + ("look_at", "look"))
         self._vector(form, "Up", base + ("look_at", "up"))
