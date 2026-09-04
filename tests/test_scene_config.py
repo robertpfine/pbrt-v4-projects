@@ -176,12 +176,13 @@ class SceneConfigTests(unittest.TestCase):
       "haze": [],
       "mist": [],
       "rain": []
+    },
+    "water": {
+      "enabled": false
     }
   },
   "scene": {
-    "landscape": {
-      "water": { "enabled": false }
-    },
+    "landscape": {},
     "geometry": []
   }
 }
@@ -506,11 +507,7 @@ class SceneConfigTests(unittest.TestCase):
         self.assertTrue(
             all(item.get("label") != "vista_plane" for item in data["geometry"])
         )
-        self.assertNotIn("ground", data["landscape"])
-        self.assertEqual(
-            set(data["landscape"]),
-            {"water"},
-        )
+        self.assertNotIn("landscape", data)
         self.assertNotIn("sky", data)
         self.assertNotIn("lights", data)
         self.assertNotIn("fog", data)
@@ -531,6 +528,7 @@ class SceneConfigTests(unittest.TestCase):
             [rain["name"] for rain in atmosphere["rain"]],
             ["left_cloud_distant_shower"],
         )
+        self.assertEqual(config["scene_description"]["water"], {"enabled": False})
         flat = next(
             landform
             for landform in config["scene_description"]["landforms"]
@@ -701,6 +699,18 @@ class SceneConfigTests(unittest.TestCase):
             self.assertIn(
                 "obsolete scene.geometry vista_plane must be removed after "
                 "vista landform migration",
+                SceneConfig(path).validate(),
+            )
+
+    def test_obsolete_water_path_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["landscape"]["water"] = {"enabled": False}
+            path.write_text(json.dumps(data), encoding="utf-8")
+
+            self.assertIn(
+                "obsolete scene.landscape.water must be removed after water migration",
                 SceneConfig(path).validate(),
             )
 

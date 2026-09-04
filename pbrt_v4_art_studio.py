@@ -380,8 +380,8 @@ class Inspector(QtWidgets.QWidget):
         self._module_boundary(
             "water",
             "Water",
-            ("scene", "landscape", "water"),
-            "The first-class landscape boundary is established and disabled. "
+            ("scene_description", "water"),
+            "The first-class scene boundary is established and disabled. "
             "Water bodies, waves, optics, and shoreline controls are the third "
             "ordered element of Step 4.",
         )

@@ -849,6 +849,17 @@ The complete `.venv` suite runs 146 tests (136 passed, ten skips), and all 131
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 8 is
 complete; Stage 9 moves the disabled water placeholder.
 
+Stage 9 water migration is complete in the working implementation. The exact
+disabled placeholder moved from `scene.landscape.water` to
+`scene_description.water`; it still has no generator or implied rendering
+behavior. The empty temporary landscape wrapper was removed, the old path is
+rejected, and all consumers use the new path. The archived `020525` proof
+remains byte-identical at 117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 148 tests (138 passed, ten skips), and all 133
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 10 removes
+the now-empty legacy `scene` wrapper and performs the final migration audit.
+
 ## 2026-09-03 schema and overcast-work checkpoint
 
 The artist and assistant began the separate architectural draft

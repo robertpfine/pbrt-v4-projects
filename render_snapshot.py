@@ -259,6 +259,13 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 f"scene_description.atmosphere.rain.{index} is invalid"
             )
+    water = description.get("water")
+    if (
+        not isinstance(water, dict)
+        or set(water) != {"enabled"}
+        or not isinstance(water.get("enabled"), bool)
+    ):
+        raise RenderSnapshotError("scene_description.water is invalid")
     grass_objects = [
         item
         for landform in landforms
@@ -466,6 +473,10 @@ def configured_scene_name(config: dict) -> str:
                 "obsolete scene.geometry fog_volume is not supported"
             )
     landscape = scene.get("landscape", {}) if isinstance(scene, dict) else {}
+    if isinstance(landscape, dict) and "water" in landscape:
+        raise RenderSnapshotError(
+            "obsolete scene.landscape.water is not supported"
+        )
     if isinstance(landscape, dict) and "distant_hills" in landscape:
         raise RenderSnapshotError(
             "obsolete scene.landscape.distant_hills is not supported"

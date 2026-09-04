@@ -1289,9 +1289,12 @@ class SceneConfig:
                     "obsolete scene.geometry fog_volume must be absorbed by fog"
                 )
 
-        landscape = require(("scene", "landscape"), dict)
-        ground = landscape.get("ground") if landscape is not None else None
-        if landscape is not None:
+        landscape = self.get(("scene", "landscape"), {})
+        if not isinstance(landscape, dict):
+            errors.append("obsolete scene.landscape must be an object")
+            landscape = {}
+        ground = landscape.get("ground")
+        if landscape:
             distant_hills = landscape.get("distant_hills")
             if distant_hills is None:
                 pass
@@ -1492,11 +1495,10 @@ class SceneConfig:
                                 errors.append(
                                     f"distant_hills.tree_line.{field} must be in [0, 1]"
                                 )
-            water = landscape.get("water")
-            if not isinstance(water, dict):
-                errors.append("landscape requires a water module")
-            elif not isinstance(water.get("enabled", False), bool):
-                errors.append("water.enabled must be boolean")
+            if "water" in landscape:
+                errors.append(
+                    "obsolete scene.landscape.water must be removed after water migration"
+                )
         if ground is not None:
             errors.append(
                 "obsolete scene.landscape.ground must be removed after "
@@ -1730,6 +1732,14 @@ class SceneConfig:
                 if len(rain_names) != len(set(rain_names)):
                     errors.append("atmosphere rain names must be unique")
 
+        water = scene_description.get("water")
+        if not isinstance(water, dict):
+            errors.append("scene_description.water must be an object")
+        elif set(water) != {"enabled"}:
+            errors.append("scene_description.water is an enabled-only placeholder")
+        elif not isinstance(water.get("enabled"), bool):
+            errors.append("scene_description.water.enabled must be boolean")
+
         camera = require(("camera_settings",), dict)
         if camera is not None:
             if not isinstance(camera.get("enabled"), bool):
@@ -1939,7 +1949,7 @@ class SceneConfig:
             for landform in self.get(LANDFORMS_PATH)
             if landform.get("topography", {}).get("generator") == "distant_ridge"
         ]
-        water = self.get(("scene", "landscape", "water"))
+        water = self.get(("scene_description", "water"))
         sky = self.get(SKY_PATH)
         rain = self.get(("scene_description", "atmosphere", "rain"), [])
         grass_count = sum(

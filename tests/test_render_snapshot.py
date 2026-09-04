@@ -104,6 +104,7 @@ def scene_description(name="Original Scene"):
             "mist": [],
             "rain": [],
         },
+        "water": {"enabled": False},
     }
 
 
@@ -413,6 +414,13 @@ class RenderSnapshotTests(unittest.TestCase):
         self.config.write_text(json.dumps(config), encoding="utf-8")
         with self.assertRaisesRegex(RenderSnapshotError, "geometry vista_plane"):
             create_snapshot(self.root, self.config, "20260904_010227")
+
+    def test_snapshot_rejects_obsolete_water_path(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"] = {"landscape": {"water": {"enabled": False}}}
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "landscape.water"):
+            create_snapshot(self.root, self.config, "20260904_010235")
 
     def test_snapshot_rejects_obsolete_distant_hills_wrapper(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))

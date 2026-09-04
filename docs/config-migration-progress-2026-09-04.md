@@ -1,6 +1,6 @@
 # Live Configuration Migration Progress — 2026-09-04
 
-Status: Stages 1–8 implementation and validation complete
+Status: Stages 1–9 implementation and validation complete
 
 ## Authority and starting point
 
@@ -1576,3 +1576,43 @@ system Python passes all 131 non-GUI tests. Live validation reports zero
 errors, the JSON parses cleanly, Python compilation and shell syntax checks
 pass, and no production render was launched. Stage 8 is complete; Stage 9
 migrates the disabled water placeholder.
+
+The Stage 8.2 rain commit is `313ef0d` (`Migrate self-contained rain
+atmosphere`) and is pushed to `origin/pbrt-v4-art-studio`. Its Google Drive
+continuity copy succeeded at
+`gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md`.
+
+## Stage 9 — disabled water placeholder
+
+Status: implementation and validation complete from pushed atmosphere
+checkpoint `313ef0d`
+
+The exact `{"enabled": false}` water placeholder moved once from
+`scene.landscape.water` to `scene_description.water`. It remains deliberately
+only a visible placeholder: no generator, geometry, material, optics,
+shoreline behavior, or hidden defaults were introduced. Because water was the
+last child of the temporary legacy landscape wrapper, that empty wrapper was
+removed rather than retained as dead structure.
+
+The Qt Water page, configuration summary, configuration validation, immutable
+snapshot validation, and tests now use the new path. Both validators reject
+`scene.landscape.water`; the new block is required to contain exactly the one
+boolean `enabled` field.
+
+```text
+water value preserved               True
+water exact keys                     ['enabled']
+legacy scene.landscape present       False
+pre-migration size                   117,462,947 bytes
+Stage 9 size                         117,462,947 bytes
+both SHA-256                         c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result                           identical
+```
+
+The retained proof workspace is `/tmp/pbrt-water-stage9.SNQC0I`. The complete
+`.venv` suite runs 148 tests (138 passed, ten dependency-aware skips), and
+system Python passes all 133 non-GUI tests. Live validation reports zero
+errors, the JSON parses cleanly, Python compilation and shell syntax checks
+pass, and no production render was launched. Stage 10 removes the now-empty
+legacy `scene` wrapper and audits the entire migrated configuration and every
+remaining compatibility reference.
