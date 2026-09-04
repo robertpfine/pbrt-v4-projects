@@ -203,14 +203,21 @@ accepted by PBRT-v4's non-rendering `--format` parser.
 - At 2026-09-04 00:58 EDT, no PBRT render, scene builder, cloud-grid builder,
   standard pipeline, or shaft-composite process was running.
 
-## Remaining gate before live schema migration
+## Pre-migration gate completion
 
-1. Review the final diff for snapshot/archive and fallback edge cases.
-2. Perform a limited visual comparison of compiled versus Python cloud output
-   only with the artist's awareness. Continuity explicitly forbids automatically
-   rendering or tuning the unaccepted overcast state.
-3. Once visually cleared, begin the approved staged migration with file names
-   and file paths; do not create a second live JSON.
+The limited visual comparison was completed with the artist's explicit
+authorization and is recorded in
+`docs/cpp-cloud-grid-validation-2026-09-04.md`. The full current overcast grid
+was retained while unrelated grass and poppy expansion and production render
+cost were temporarily removed. The Python control `020525` and C++ comparison
+`020829` both completed through the immutable legacy pipeline and produced
+byte-for-byte identical PNGs. The live configuration was then restored exactly
+to its committed pre-test contents.
+
+The compiled cloud-grid validation gate is complete. The next implementation
+stage is the approved migration of file names and file paths in the sole live
+JSON, with all consumers and tests updated together and no duplicate legacy
+paths.
 
 The native-Perlin snapshot boundary has now been verified directly: when the
 frozen adapter is executed from its snapshot repository, it resolves

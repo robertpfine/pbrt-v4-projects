@@ -526,9 +526,11 @@ order:
    scene build took about 208.70 seconds and produced a 1.044 GB PBRT file,
    confirming that current vegetation/scene expansion is now the larger build
    cost. Do not confuse either build time with PBRT `volpath` render time.
-   Before live schema migration, perform only the required limited visual
-   comparison with the artist's awareness; do not automatically render or tune
-   the unaccepted overcast scene.
+   The required limited visual comparison is now complete with the artist's
+   explicit authorization. Python control `020525` and C++ comparison `020829`
+   used the same full current overcast grid at bounded render settings and
+   produced byte-for-byte identical PNGs. The live configuration was restored
+   exactly afterward. See `docs/cpp-cloud-grid-validation-2026-09-04.md`.
 
 Additional continuity requirements:
 
