@@ -517,7 +517,9 @@ order:
    pre-migration PBRT scene byte for byte. Stage 5B is complete: grass, poppies,
    litter, rocks, and undergrowth are migrated and the empty legacy ground
    wrapper is removed. Stage 5C is complete: the vista plane and `broad_rise`
-   are independent landforms. Stage 6 migrates independent objects next.
+   are independent landforms. Stage 5D is migrating the remaining tree surface
+   objects before Stage 6 begins independent objects; L-system trees are done
+   and space-colonization trees are next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -729,6 +731,20 @@ live ownership. The archived `020525` proof remains byte-identical at
 The complete `.venv` suite runs 125 tests (116 passed, nine skips), and all 111
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 5C is
 complete; Stage 6 begins with independent objects.
+
+Stage 5D L-system tree migration is complete in the working implementation.
+The disabled `live_oak` and enabled `fractal_tree` moved in stable order from
+`scene.lsystem_trees[]` to `flat_landform.surface_objects[]` with generator
+`lsystem_tree`. Complete generator inputs live under `construction`; origin,
+terrain placement, and explicit instances live under `population`. The active
+fractal tree retains all three horizon placements. Builder, Qt inspection,
+validation, snapshot safeguards, and tests use the new path; the old array is
+absent and rejected. The archived `020525` proof remains byte-identical at
+117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 128 tests (119 passed, nine skips), and all 114
+system-Python non-GUI tests pass. No PBRT render was launched. The next bounded
+Stage 5D move is the `space_colonization_tree` generator and grove placement.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

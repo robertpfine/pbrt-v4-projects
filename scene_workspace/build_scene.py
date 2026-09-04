@@ -2595,31 +2595,38 @@ def _poppy_mesh(variant=0, config=None):
 def configured_surface_object(landform, generator):
     """Flatten one registered landform object for its existing generator."""
 
-    matches = [
-        item
-        for item in landform.get("surface_objects", [])
-        if item.get("generator") == generator
-    ]
+    matches = configured_surface_objects(landform, generator)
     if len(matches) > 1:
         raise ValueError(
             f"landform {landform.get('name')!r} permits at most one "
             f"{generator!r} surface object"
         )
-    if not matches:
-        return {"enabled": False}
-    item = matches[0]
-    construction = item.get("construction", {})
-    population = item.get("population", {})
-    if not isinstance(construction, dict) or not isinstance(population, dict):
-        raise ValueError(
-            f"surface object {item.get('name')!r} requires construction "
-            "and population objects"
-        )
-    return {
-        "enabled": item.get("enabled", False),
-        **construction,
-        **population,
-    }
+    return matches[0] if matches else {"enabled": False}
+
+
+def configured_surface_objects(landform, generator):
+    """Flatten all surface objects registered to one generator family."""
+
+    matches = [
+        item
+        for item in landform.get("surface_objects", [])
+        if item.get("generator") == generator
+    ]
+    result = []
+    for item in matches:
+        construction = item.get("construction", {})
+        population = item.get("population", {})
+        if not isinstance(construction, dict) or not isinstance(population, dict):
+            raise ValueError(
+                f"surface object {item.get('name')!r} requires construction "
+                "and population objects"
+            )
+        result.append({
+            "enabled": item.get("enabled", False),
+            **construction,
+            **population,
+        })
+    return result
 
 
 def write_terrain_details(lines, terrain, config, camera=None, film=None):
@@ -3417,7 +3424,11 @@ def write_scene(cfg, scene_root, medium_rel_path):
         poppy_config,
     )
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
-    write_lsystem_trees(lines, scene.get("lsystem_trees", []), terrain)
+    write_lsystem_trees(
+        lines,
+        configured_surface_objects(terrain_landform, "lsystem_tree"),
+        terrain,
+    )
 
     grove_cfg = scene.get("grove", {})
     grove_tree_index = grove_cfg.get("tree_index", 0)

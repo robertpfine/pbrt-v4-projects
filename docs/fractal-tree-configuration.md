@@ -4,13 +4,20 @@ This guide documents the `fractal_tree` preset implemented in
 [`fractal_tree.py`](../fractal_tree.py) and rendered through
 [`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py).
 
-The configuration lives in an entry under:
+The configuration lives in the enabled foreground landform under:
 
 ```text
-scene -> lsystem_trees -> an entry whose preset is "fractal_tree"
+scene_description -> landforms[flat_landform] -> surface_objects[]
+  -> an entry whose generator is "lsystem_tree"
+     and construction.preset is "fractal_tree"
 ```
 
-The current entry is:
+The entry uses the approved construction/population boundary. `construction`
+owns the preset and all generated-tree geometry, recursion, variation, and
+material controls. `population` owns `method: "explicit"`, the origin,
+terrain-placement behavior, and the explicit instance list. The flattened
+field listing below remains a compact reference for the construction controls;
+the authoritative nested values are in `scene_workspace/config.json`.
 
 ```json
 {
@@ -76,12 +83,12 @@ Selects the generator dispatched by `build_scene.py`. It must be
 
 Adds an `[x, y, z]` translation to every generated segment and leaf.
 
-The current `[0.0, -55.0, 0.0]` moves the complete tree 55 units downward. It
-does not alter growth, proportions, the seed, or branch directions.
+The current population origin is `[-315.5, 0.0, -134.2]`. It does not alter
+growth, proportions, the seed, or branch directions.
 
 When a non-empty `instances` array is present, the reusable tree is generated
 at local origin instead. Each instance then supplies its own scene translation,
-rotation, and optional scale. The legacy single `origin` remains effective when
+rotation, and optional scale. The population `origin` remains effective when
 there are no instances.
 
 ### `instances`

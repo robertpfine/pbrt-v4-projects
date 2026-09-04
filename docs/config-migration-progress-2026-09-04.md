@@ -1124,3 +1124,68 @@ The complete `.venv` suite ran 125 tests (116 passed, nine skips); system Python
 passed all 111 non-GUI tests. Live validation reports zero errors. No production
 render was launched. Stage 5C is complete; Stage 6 begins with independent
 objects.
+
+The distant-ridge commit is `d4ce2ff` (`Migrate distant ridge landform`) and is
+pushed to `origin/pbrt-v4-art-studio`. Its single Google Drive continuity
+attempt immediately rate-limited and was not retried.
+
+## Stage 5D.1 — L-system tree surface objects
+
+Status: implementation and validation complete from pushed distant-ridge
+checkpoint `d4ce2ff`
+
+The Stage 6 inventory exposed a required ordering correction: the resolved
+schema classifies trees as landform surface objects, not independent objects.
+Therefore Stage 5D completes the remaining landform-owned generator families
+before `scene_description.objects` begins.
+
+Both entries from `scene.lsystem_trees[]` moved in stable order beneath enabled
+`flat_landform.surface_objects[]`:
+
+```text
+name          generator      enabled  construction.preset
+live_oak      lsystem_tree   false    live_oak
+fractal_tree  lsystem_tree   true     fractal_tree
+```
+
+Every geometry, recursion, balance, growth, crownlet, seed, debug-render,
+scale, and reflectance field moved beneath each object's `construction`.
+`population` owns `method: "explicit"`, origin, explicit terrain-placement
+state, and the ordered instance array. Neutral live-oak scale, terrain
+placement, and empty instances are now explicit instead of relying on builder
+fallbacks. The active fractal tree retains its three manually placed horizon
+instances exactly.
+
+The builder's plural surface-object resolver preserves source order and feeds
+the existing L-system writer without a legacy path. Configuration validation
+supports multiple named objects using the same registered generator, validates
+the construction/population split and placements, and rejects
+`scene.lsystem_trees`. Snapshot validation and the Qt tree inspector use the new
+path; the inspector temporarily continues to include the not-yet-migrated
+space-colonization entries until Stage 5D.2.
+
+Mechanical ownership audit:
+
+```text
+lsystem_tree_names ['live_oak', 'fractal_tree']
+enabled_lsystem_trees ['fractal_tree']
+fractal_instance_count 3
+legacy_lsystem_trees_present False
+```
+
+The archived `020525` diagnostic migration was built in memory without a second
+JSON or PBRT launch:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5D.1 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The retained proof workspace is `/tmp/pbrt-lsystem-stage5d.QSTghk`; leaving it
+in `/tmp` avoids another destructive-cleanup keyboard prompt while the artist
+is away. The complete `.venv` suite ran 128 tests (119 passed, nine skips);
+system Python passed all 114 non-GUI tests. Live validation reports zero errors.
+No production render was launched. Stage 5D.2 migrates space-colonization trees
+and folds the separate grove population into its selected tree.

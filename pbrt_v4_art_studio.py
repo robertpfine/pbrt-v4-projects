@@ -636,14 +636,35 @@ class Inspector(QtWidgets.QWidget):
             "The proof of concept exposes the established tree entries directly. "
             "A generalized source-object and instance editor remains deferred.",
         )
-        entries: list[tuple[str, tuple[str | int, ...]]] = []
-        for index, tree in enumerate(self.config.get(("scene", "lsystem_trees"), [])):
-            label = tree.get("preset", f"procedural tree {index + 1}")
-            entries.append((f"{label} (rule-based)", ("scene", "lsystem_trees", index)))
+        entries: list[
+            tuple[str, tuple[str | int, ...], tuple[str | int, ...]]
+        ] = []
+        terrain_root = LANDFORMS_PATH + (
+            self.config.terrain_landform_index(),
+        )
+        for index, item in enumerate(
+            self.config.get(terrain_root + ("surface_objects",), [])
+        ):
+            if item.get("generator") != "lsystem_tree":
+                continue
+            root = terrain_root + ("surface_objects", index)
+            label = item.get("construction", {}).get(
+                "preset", f"procedural tree {index + 1}"
+            )
+            entries.append((
+                f"{label} (rule-based)",
+                root,
+                root + ("construction", "scale"),
+            ))
         for index, _tree in enumerate(self.config.get(("scene", "trees"), [])):
-            entries.append((f"space-colonization tree {index + 1}", ("scene", "trees", index)))
+            root = ("scene", "trees", index)
+            entries.append((
+                f"space-colonization tree {index + 1}",
+                root,
+                root + ("scale",),
+            ))
         selector = QtWidgets.QComboBox()
-        for label, _path in entries:
+        for label, _path, _scale_path in entries:
             selector.addItem(label)
         enabled = QtWidgets.QCheckBox()
         scale = QtWidgets.QDoubleSpinBox()
@@ -653,27 +674,29 @@ class Inspector(QtWidgets.QWidget):
         form.addRow("Enabled", enabled)
         form.addRow("Uniform scale", scale)
 
-        def selected_path() -> tuple[str | int, ...]:
-            return entries[max(0, selector.currentIndex())][1]
+        def selected_entry() -> tuple[
+            str, tuple[str | int, ...], tuple[str | int, ...]
+        ]:
+            return entries[max(0, selector.currentIndex())]
 
         def refresh_tree() -> None:
             if not entries:
                 enabled.setEnabled(False)
                 scale.setEnabled(False)
                 return
-            path = selected_path()
+            _label, path, scale_path = selected_entry()
             self._blocked(enabled, bool(self.config.get(path + ("enabled",))))
-            configured_scale = self.config.get(path + ("scale",), None)
+            configured_scale = self.config.get(scale_path, None)
             scale.setEnabled(configured_scale is not None)
             if configured_scale is not None:
                 self._blocked(scale, float(configured_scale))
 
         selector.currentIndexChanged.connect(lambda _index: refresh_tree())
         enabled.toggled.connect(
-            lambda value: self._set(selected_path() + ("enabled",), value)
+            lambda value: self._set(selected_entry()[1] + ("enabled",), value)
         )
         scale.valueChanged.connect(
-            lambda value: self._set(selected_path() + ("scale",), value)
+            lambda value: self._set(selected_entry()[2], value)
             if scale.isEnabled()
             else None
         )

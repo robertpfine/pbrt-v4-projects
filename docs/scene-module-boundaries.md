@@ -38,6 +38,12 @@ to `flat_landform.surface_objects[]`, in order: grass, poppies, litter, rocks,
 and undergrowth. The emptied `scene.landscape.ground` wrapper is removed rather
 than retained as a compatibility shell.
 
+The rule-based tree entries have also moved to
+`flat_landform.surface_objects[]` as ordered `lsystem_tree` objects. Their
+construction and explicit population placement remain separate. The older
+space-colonization tree and grove paths remain temporary until their next
+generator-family substage.
+
 Receding-horizon geometry is now represented by independent landforms using
 `topography.generator: "distant_ridge"`. Its generator and Qt controls remain
 independent of the accepted foreground terrain. The retained configuration now

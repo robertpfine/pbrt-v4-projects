@@ -205,6 +205,22 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "undergrowth requires one surface object with construction and population"
         )
+    lsystem_trees = [
+        item
+        for landform in landforms
+        if isinstance(landform, dict)
+        for item in landform.get("surface_objects", [])
+        if isinstance(item, dict) and item.get("generator") == "lsystem_tree"
+    ]
+    if any(
+        not isinstance(item.get("construction"), dict)
+        or not isinstance(item.get("population"), dict)
+        or item["population"].get("method") != "explicit"
+        for item in lsystem_trees
+    ):
+        raise RenderSnapshotError(
+            "lsystem_tree requires construction and explicit population"
+        )
     vista_landforms = [
         landform
         for landform in landforms
@@ -252,6 +268,10 @@ def configured_scene_name(config: dict) -> str:
                 "distant_ridge requires one plane patch, parameters, and material"
             )
     if isinstance(scene, dict):
+        if "lsystem_trees" in scene:
+            raise RenderSnapshotError(
+                "obsolete scene.lsystem_trees is not supported"
+            )
         geometry = scene.get("geometry", [])
         if isinstance(geometry, list) and any(
             isinstance(item, dict) and item.get("label") == "vista_plane"

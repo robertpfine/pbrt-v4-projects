@@ -147,7 +147,6 @@ class SceneConfigTests(unittest.TestCase):
     },
     "fog": { "enabled": false },
     "lights": [{ "label": "shaft_sun", "enabled": false }],
-    "lsystem_trees": [],
     "trees": []
   }
 }
@@ -448,6 +447,7 @@ class SceneConfigTests(unittest.TestCase):
         for obsolete in ("master_file", "output_filename", "generated_medium"):
             self.assertNotIn(obsolete, data)
         self.assertNotIn("terrain", data)
+        self.assertNotIn("lsystem_trees", data)
         self.assertEqual(
             [
                 landform["name"]
@@ -477,6 +477,32 @@ class SceneConfigTests(unittest.TestCase):
         self.assertEqual(set(data["sky"]), {"background", "clouds"})
         self.assertEqual(data["sky"]["background"]["type"], "infinite")
         self.assertTrue(all(light.get("type") != "infinite" for light in data["lights"]))
+        flat = next(
+            landform
+            for landform in config["scene_description"]["landforms"]
+            if landform["name"] == "flat_landform"
+        )
+        self.assertEqual(
+            [
+                item["name"]
+                for item in flat["surface_objects"]
+                if item["generator"] == "lsystem_tree"
+            ],
+            ["live_oak", "fractal_tree"],
+        )
+
+    def test_obsolete_lsystem_tree_array_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["lsystem_trees"] = []
+            path.write_text(json.dumps(data), encoding="utf-8")
+
+            self.assertIn(
+                "obsolete scene.lsystem_trees must be removed after "
+                "L-system tree migration",
+                SceneConfig(path).validate(),
+            )
 
     def test_obsolete_geometry_vista_plane_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -356,6 +356,13 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "landscape.distant_hills"):
             create_snapshot(self.root, self.config, "20260904_010228")
 
+    def test_snapshot_rejects_obsolete_lsystem_tree_array(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["lsystem_trees"] = []
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "scene.lsystem_trees"):
+            create_snapshot(self.root, self.config, "20260904_010229")
+
     def test_snapshot_requires_one_enabled_terrain_landform(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene_description"]["landforms"][0]["enabled"] = False

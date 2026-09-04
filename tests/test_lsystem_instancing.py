@@ -25,6 +25,7 @@ except ModuleNotFoundError:
 from scene_workspace.build_scene import (
     configured_filename,
     configured_scene_files,
+    configured_surface_objects,
     planar_landform_geometry,
     write_camera,
     write_film,
@@ -205,6 +206,33 @@ class GeometryMaterialTests(unittest.TestCase):
 
 
 class LSystemInstancingTests(unittest.TestCase):
+    def test_lsystem_surface_objects_flatten_in_stable_order(self):
+        landform = {
+            "surface_objects": [{
+                "name": "oak",
+                "enabled": False,
+                "generator": "lsystem_tree",
+                "construction": {"preset": "live_oak", "scale": 1.0},
+                "population": {"method": "explicit", "origin": [0, 0, 0]},
+            }, {
+                "name": "fractal",
+                "enabled": True,
+                "generator": "lsystem_tree",
+                "construction": {"preset": "fractal_tree", "scale": 2.5},
+                "population": {
+                    "method": "explicit",
+                    "origin": [1, 2, 3],
+                    "instances": [{"position": [4, 5, 6]}],
+                },
+            }]
+        }
+
+        trees = configured_surface_objects(landform, "lsystem_tree")
+
+        self.assertEqual([tree["preset"] for tree in trees], ["live_oak", "fractal_tree"])
+        self.assertFalse(trees[0]["enabled"])
+        self.assertEqual(trees[1]["instances"], [{"position": [4, 5, 6]}])
+
     def test_instances_share_local_geometry_and_keep_manual_positions(self):
         tree = {
             "enabled": True,

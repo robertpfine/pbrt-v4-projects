@@ -457,6 +457,20 @@ absent and rejected. Enabling `broad_rise` directly restores the retained hill;
 grass and poppy `population.extension` blocks continue to target its stable
 landform name.
 
+### L-system trees
+
+The disabled `live_oak` and enabled `fractal_tree` are ordered
+`generator: "lsystem_tree"` surface objects under `flat_landform`.
+`construction` owns each complete rule-based generator, including its preset,
+scale, recursive architecture, render form, seed, and reflectances.
+`population` owns explicit placement: origin, terrain-placement behavior, and
+the ordered instance array. The active fractal tree retains its three deliberate
+horizon placements.
+
+The former `scene.lsystem_trees` array is absent and rejected. Multiple objects
+may use the same registered generator; stable object names, rather than an
+artificial generator-uniqueness rule, distinguish them.
+
 ### Ecological layering
 
 The layers deliberately use different fields and spatial rules:

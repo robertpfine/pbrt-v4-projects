@@ -692,7 +692,6 @@ class SceneConfig:
                         errors.append(f"{prefix}.surface_objects must be an array")
                     else:
                         object_names: list[str] = []
-                        object_generators: list[str] = []
                         for object_index, item in enumerate(surface_objects):
                             object_prefix = (
                                 f"{prefix}.surface_objects.{object_index}"
@@ -716,13 +715,12 @@ class SceneConfig:
                                 "litter",
                                 "rock_scatter",
                                 "undergrowth",
+                                "lsystem_tree",
                             }:
                                 errors.append(
                                     f"{object_prefix}.generator must be grass, poppy, "
-                                    "litter, rock_scatter, or undergrowth"
+                                    "litter, rock_scatter, undergrowth, or lsystem_tree"
                                 )
-                            else:
-                                object_generators.append(generator)
                             construction = item.get("construction")
                             population = item.get("population")
                             if not isinstance(construction, dict):
@@ -858,12 +856,91 @@ class SceneConfig:
                                     errors.append(
                                         "undergrowth.construction.scale must be an ascending pair"
                                     )
+                            elif generator == "lsystem_tree":
+                                if construction.get("preset") not in {
+                                    "christmas_tree",
+                                    "live_oak",
+                                    "fractal_tree",
+                                }:
+                                    errors.append(
+                                        "lsystem_tree.construction.preset is unsupported"
+                                    )
+                                scale = construction.get("scale")
+                                if not isinstance(
+                                    scale, (int, float)
+                                ) or isinstance(scale, bool) or scale <= 0:
+                                    errors.append(
+                                        "lsystem_tree.construction.scale must be positive"
+                                    )
+                                if population.get("method") != "explicit":
+                                    errors.append(
+                                        "lsystem_tree.population.method must be explicit"
+                                    )
+                                origin = population.get("origin")
+                                if (
+                                    not isinstance(origin, list)
+                                    or len(origin) != 3
+                                    or not all(
+                                        isinstance(value, (int, float))
+                                        and not isinstance(value, bool)
+                                        for value in origin
+                                    )
+                                ):
+                                    errors.append(
+                                        "lsystem_tree.population.origin must contain "
+                                        "three numbers"
+                                    )
+                                terrain_placement = population.get(
+                                    "terrain_placement"
+                                )
+                                if not isinstance(terrain_placement, dict) or not isinstance(
+                                    terrain_placement.get("enabled"), bool
+                                ):
+                                    errors.append(
+                                        "lsystem_tree.population.terrain_placement "
+                                        "must contain enabled"
+                                    )
+                                instances = population.get("instances")
+                                if not isinstance(instances, list):
+                                    errors.append(
+                                        "lsystem_tree.population.instances must be an array"
+                                    )
+                                else:
+                                    for instance_index, instance in enumerate(instances):
+                                        instance_prefix = (
+                                            "lsystem_tree.population.instances."
+                                            f"{instance_index}"
+                                        )
+                                        if not isinstance(instance, dict):
+                                            errors.append(
+                                                f"{instance_prefix} must be an object"
+                                            )
+                                            continue
+                                        position = instance.get("position")
+                                        if (
+                                            not isinstance(position, list)
+                                            or len(position) != 3
+                                            or not all(
+                                                isinstance(value, (int, float))
+                                                and not isinstance(value, bool)
+                                                for value in position
+                                            )
+                                        ):
+                                            errors.append(
+                                                f"{instance_prefix}.position must "
+                                                "contain three numbers"
+                                            )
+                                        instance_scale = instance.get("scale")
+                                        if not isinstance(
+                                            instance_scale, (int, float)
+                                        ) or isinstance(
+                                            instance_scale, bool
+                                        ) or instance_scale <= 0:
+                                            errors.append(
+                                                f"{instance_prefix}.scale must be positive"
+                                            )
                         if len(object_names) != len(set(object_names)):
                             errors.append(f"{prefix}.surface object names must be unique")
-                        if len(object_generators) != len(set(object_generators)):
-                            errors.append(
-                                f"{prefix}.surface object generators must be unique"
-                            )
 
                 if len(names) != len(set(names)):
                     errors.append("scene_description.landform names must be unique")
@@ -884,6 +961,11 @@ class SceneConfig:
                     errors.append(
                         f"obsolete scene.{name} must be removed after file_names migration"
                     )
+            if "lsystem_trees" in scene_root:
+                errors.append(
+                    "obsolete scene.lsystem_trees must be removed after "
+                    "L-system tree migration"
+                )
             geometry = scene_root.get("geometry", [])
             if isinstance(geometry, list) and any(
                 isinstance(item, dict) and item.get("label") == "vista_plane"
