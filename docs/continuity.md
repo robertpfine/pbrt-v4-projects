@@ -851,6 +851,11 @@ tests (109 passed, ten skips), and all 104 system-Python non-GUI tests pass. No
 PBRT render was launched. Detailed final audit evidence is in
 `docs/config-migration-progress-2026-09-04.md`.
 
+The completed Stage 10 implementation is Git checkpoint `ffcba78` on
+`pbrt-v4-art-studio`; it is pushed to GitHub and its continuity record was
+successfully copied to
+`gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md`.
+
 ## 2026-09-03 schema and overcast-work checkpoint
 
 The artist and assistant began the separate architectural draft
