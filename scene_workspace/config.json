@@ -198,7 +198,102 @@
             }
           }
         },
-        "surface_objects": []
+        "surface_objects": [
+          {
+            "name": "grass",
+            "enabled": true,
+            "generator": "grass",
+            "construction": {
+              "blade": {
+                "height": [8.0, 12.0],
+                "width": [0.025, 0.050],
+                "segments": 3,
+                "lean": [0.10, 0.48],
+                "lean_spread_degrees": 41.51267873219528,
+                "bend": [-0.255, 0.255],
+                "bend_exponent": 3.45,
+                "tip_droop": [0.0, 0.0],
+                "tropism": {
+                  "enabled": true,
+                  "direction_degrees": 465.0,
+                  "strength": [3.0, 10.0],
+                  "direction_variation_degrees": 70.0,
+                  "curvature_exponent": 5.0,
+                  "field": {
+                    "enabled": true,
+                    "seed": 113,
+                    "frequency": 0.004,
+                    "direction_variation_degrees": 160.0,
+                    "octaves": 8,
+                    "persistence": 0.40,
+                    "random_jitter_degrees": 20.0
+                  }
+                },
+                "taper_exponent": 1.35
+              },
+              "tuft": {
+                "blades": 7,
+                "radius": [0.025, 0.14],
+                "angle_jitter_degrees": 38.0
+              },
+              "surface": {
+                "type": "coateddiffuse",
+                "roughness": 0.07,
+                "eta": 1.33,
+                "thickness": 0.003
+              },
+              "reflectance_variants": [
+                [0.045, 0.16, 0.020],
+                [0.075, 0.22, 0.030],
+                [0.12, 0.20, 0.035]
+              ]
+            },
+            "population": {
+              "seed": 41,
+              "variants": 3,
+              "layers": [
+                {
+                  "count": 3400000,
+                  "seed": 41,
+                  "scale": [1.0, 1.7],
+                  "patchiness": { "strength": 0.12, "frequency": 0.012 }
+                }
+              ],
+              "region": { "center": [-400.0, -700.0], "size": [3000.0, 2800.0] },
+              "max_slope_degrees": 70.0,
+              "y_offset": 0.03,
+              "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
+              "camera_frustum": {
+                "enabled": true,
+                "bottom_margin": 0.08,
+                "depth_fade": {
+                  "enabled": false,
+                  "start": 1850.0,
+                  "end": 2400.0,
+                  "minimum_density": 0.0
+                }
+              },
+              "extension": {
+                "enabled": false,
+                "target_distant_hill": "broad_rise",
+                "count": 250000,
+                "seed": 409,
+                "lateral_range": [-1.0, 1.0],
+                "depth_range": [0.0, 0.56],
+                "ridge_fade": {
+                  "enabled": true,
+                  "start": 0.44,
+                  "end": 0.53,
+                  "minimum_density": 0.0
+                },
+                "scale": [0.55, 0.90],
+                "max_slope_degrees": 70.0,
+                "y_offset": 0.05,
+                "patchiness": { "strength": 0.12, "frequency": 0.012 }
+              }
+            }
+          }
+        ]
       }
     ]
   },
@@ -425,94 +520,6 @@
     "landscape": {
       "ground": {
         "details": {
-          "grass": {
-            "enabled": true,
-            "seed": 41,
-            "region": { "center": [-400.0, -700.0], "size": [3000.0, 2800.0] },
-            "camera_frustum": {
-              "enabled": true,
-              "bottom_margin": 0.08,
-              "depth_fade": {
-                "enabled": false,
-                "start": 1850.0,
-                "end": 2400.0,
-                "minimum_density": 0.0
-              }
-            },
-            "max_slope_degrees": 70.0,
-            "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
-            "y_offset": 0.03,
-            "variants": 3,
-            "blade": {
-              "height": [8.0, 12.0],
-              "width": [0.025, 0.050],
-              "segments": 3,
-              "lean": [0.10, 0.48],
-              "lean_spread_degrees": 41.51267873219528,
-              "bend": [-0.255, 0.255],
-              "bend_exponent": 3.45,
-              "tip_droop": [0.0, 0.0],
-              "tropism": {
-                "enabled": true,
-                "direction_degrees": 465.0,
-                "strength": [3.0, 10.0],
-                "direction_variation_degrees": 70.0,
-                "curvature_exponent": 5.0,
-                "field": {
-                  "enabled": true,
-                  "seed": 113,
-                  "frequency": 0.004,
-                  "direction_variation_degrees": 160.0,
-                  "octaves": 8,
-                  "persistence": 0.40,
-                  "random_jitter_degrees": 20.0
-                }
-              },
-              "taper_exponent": 1.35
-            },
-            "tuft": {
-              "blades": 7,
-              "radius": [0.025, 0.14],
-              "angle_jitter_degrees": 38.0
-            },
-            "reflectance_variants": [
-              [0.045, 0.16, 0.020],
-              [0.075, 0.22, 0.030],
-              [0.12, 0.20, 0.035]
-            ],
-            "surface": {
-              "type": "coateddiffuse",
-              "roughness": 0.07,
-              "eta": 1.33,
-              "thickness": 0.003
-            },
-            "layers": [
-              {
-                "count": 3400000,
-                "seed": 41,
-                "scale": [1.0, 1.7],
-                "patchiness": { "strength": 0.12, "frequency": 0.012 }
-              }
-            ],
-            "extension": {
-              "enabled": false,
-              "target_distant_hill": "broad_rise",
-              "count": 250000,
-              "seed": 409,
-              "lateral_range": [-1.0, 1.0],
-              "depth_range": [0.0, 0.56],
-              "ridge_fade": {
-                "enabled": true,
-                "start": 0.44,
-                "end": 0.53,
-                "minimum_density": 0.0
-              },
-              "scale": [0.55, 0.90],
-              "max_slope_degrees": 70.0,
-              "y_offset": 0.05,
-              "patchiness": { "strength": 0.12, "frequency": 0.012 }
-            }
-          },
           "poppies": {
             "enabled": true,
             "count": 3500,

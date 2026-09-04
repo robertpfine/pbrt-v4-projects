@@ -524,24 +524,54 @@ class Inspector(QtWidgets.QWidget):
             "Population and blade controls use exact values; the render, not the "
             "interface, shows their visual consequence.",
         )
-        base = GROUND_PATH + ("details", "grass")
+        base = self.config.surface_object_path("grass")
+        construction = base + ("construction",)
+        population = base + ("population",)
         self._check(form, "Enabled", base + ("enabled",))
-        self._integer(form, "Tuft instances", base + ("layers", 0, "count"))
-        self._integer(form, "Blades per tuft", base + ("tuft", "blades"), 1, 100)
-        self._pair(form, "Blade height", base + ("blade", "height"), 0.0, 1000.0)
-        self._pair(form, "Blade width", base + ("blade", "width"), 0.0, 100.0, 5)
-        self._check(form, "Tropism", base + ("blade", "tropism", "enabled"))
+        self._integer(
+            form,
+            "Tuft instances",
+            population + ("layers", 0, "count"),
+        )
+        self._integer(
+            form,
+            "Blades per tuft",
+            construction + ("tuft", "blades"),
+            1,
+            100,
+        )
+        self._pair(
+            form,
+            "Blade height",
+            construction + ("blade", "height"),
+            0.0,
+            1000.0,
+        )
+        self._pair(
+            form,
+            "Blade width",
+            construction + ("blade", "width"),
+            0.0,
+            100.0,
+            5,
+        )
+        self._check(
+            form,
+            "Tropism",
+            construction + ("blade", "tropism", "enabled"),
+        )
         self._pair(
             form,
             "Tropism strength",
-            base + ("blade", "tropism", "strength"),
+            construction + ("blade", "tropism", "strength"),
             -100.0,
             100.0,
         )
         self._number(
             form,
             "Direction variation",
-            base + ("blade", "tropism", "direction_variation_degrees"),
+            construction
+            + ("blade", "tropism", "direction_variation_degrees"),
             0.0,
             360.0,
             2,

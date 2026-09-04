@@ -648,3 +648,97 @@ The foreground landform core is fully migrated with no live old/new ownership
 bridge. Stage 5B proceeds through surface-object generators individually,
 beginning with grass, while preserving exact generator parameters and rendered
 behavior at each checkpoint.
+
+The Stage 5A commit is `302376f` (`Migrate foreground landform core`). It was
+pushed to `origin/pbrt-v4-art-studio`, and the required continuity copy to
+`gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md` succeeded immediately.
+
+## Stage 5B.1 — grass surface-object generator
+
+Status: implementation and validation complete from pushed Stage 5A checkpoint
+`302376f`
+
+### Exact ownership move
+
+The sole legacy `scene.landscape.ground.details.grass` object moved to the
+enabled `flat_landform.surface_objects[]` array as:
+
+```text
+name:       grass
+enabled:    preserved true
+generator:  grass
+construction:
+  blade, tuft, surface, reflectance_variants
+population:
+  seed, variants, layers, region, max_slope_degrees, y_offset,
+  exclusion, camera_frustum, extension
+```
+
+Nested layer seed/scale/patchiness, blade tropism and spatial field, coating
+values, frustum bottom margin/depth fade, and the disabled distant-hill
+extension all retain their exact field names and values. No grass value remains
+at the old path; the other four detail generators are unchanged.
+
+### Consumers and safeguards
+
+- The scene builder resolves at most one `grass` generator on the enabled
+  terrain landform and flattens its adjacent `construction` and `population`
+  objects only for the existing generator implementation. An absent grass
+  object remains a valid grass-free scene; duplicates are rejected.
+- Terrain detail output and dormant distant-hill grass extension both consume
+  that same resolved object, so there is no hidden second definition.
+- Configuration validation checks unique surface-object names/generators,
+  construction/population objects, grass material type, depth-fade structure,
+  and population layer/count, and rejects the obsolete legacy path.
+- The immutable snapshot boundary rejects legacy grass ownership before a
+  render can be frozen.
+- The Qt Grass page and scene summary use the new construction/population paths.
+- The shaft pass resets and terrain-scales the migrated grass together with the
+  owning terrain surface, preserving its pre-migration composite behavior.
+- The local-only ignored flat-landform preview helper was adjusted to resolve
+  migrated grass without adding a second configuration.
+
+### Mechanical ownership audit
+
+A mechanical transformation starts from `302376f`, removes only the legacy
+grass object, partitions its fields according to the approved mapping, and
+appends the result to the enabled terrain landform. The complete parsed JSON
+comparison reports:
+
+```text
+stage5b_grass_only True
+owner flat_landform
+construction_keys ['blade', 'tuft', 'surface', 'reflectance_variants']
+population_keys ['seed', 'variants', 'layers', 'region',
+                 'max_slope_degrees', 'y_offset', 'exclusion',
+                 'camera_frustum', 'extension']
+legacy_detail_keys ['poppies', 'litter', 'rocks', 'undergrowth']
+```
+
+### Exact structural PBRT comparison
+
+The archived `020525` configuration, whose grass generator is disabled, was
+migrated through Stage 5B.1 entirely in memory and built in a temporary
+workspace. The builder resolved the new grass object and preserved the disabled
+state. PBRT was not launched and no second scene JSON was written.
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5B.1 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The temporary comparison directory was removed. The live generated scene and
+archived artifact were not modified.
+
+### Tests and result
+
+- The complete `.venv` suite ran 111 tests: 102 passed and nine
+  dependency-aware tests were skipped.
+- System Python passed all 97 non-GUI tests.
+- The live JSON validates with zero errors.
+- No production PBRT render was launched.
+
+Grass is fully migrated with no old/new compatibility ownership. The next
+one-generator substage is poppies.

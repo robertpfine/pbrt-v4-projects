@@ -79,13 +79,14 @@ def configure_shaft(cfg, shaft_label, surface_scale=0.0, terrain_scale=0.0):
             topography.get("enabled", False)
             and topography.get("generator") == "terrain_heightfield"
         ):
-            result["scene_description"]["landforms"][index]["surface"] = (
-                copy.deepcopy(source["surface"])
-            )
-            scale_reflectances(
-                result["scene_description"]["landforms"][index]["surface"],
-                terrain_scale,
-            )
+            for field in ("surface", "surface_objects"):
+                result["scene_description"]["landforms"][index][field] = (
+                    copy.deepcopy(source[field])
+                )
+                scale_reflectances(
+                    result["scene_description"]["landforms"][index][field],
+                    terrain_scale,
+                )
     return result
 
 

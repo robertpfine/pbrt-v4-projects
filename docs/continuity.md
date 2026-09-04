@@ -514,8 +514,8 @@ order:
    alternatives, their geometry/topography, material, and texture now live in
    `scene_description.landforms`. Their old paths are absent, every known
    consumer uses the new locations, and bounded rebuilds reproduced the
-   pre-migration PBRT scene byte for byte. Stage 5B next migrates surface-object
-   generators one at a time.
+   pre-migration PBRT scene byte for byte. Stage 5B is in progress: grass is
+   migrated, and poppies are next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -637,8 +637,24 @@ again produced its exact 117,462,947-byte PBRT scene and SHA-256
 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
 The complete `.venv` suite ran 108 tests (99 passed and nine dependency-aware
 skips), and all 94 system-Python non-GUI tests passed. No PBRT render was
-launched. Stage 5B next migrates the retained surface-object generators one at
-a time, beginning with grass.
+launched.
+
+Stage 5B grass is complete in the working implementation. Grass is now the
+`generator: "grass"` surface object owned by enabled `flat_landform`.
+`construction` owns its blade, tuft, material, and reflectance variants;
+`population` owns all seed, variant, layer/count, region, slope, offset,
+exclusion, camera-frustum, patchiness, and dormant distant-hill-extension
+controls. The old `scene.landscape.ground.details.grass` path is absent and
+rejected. The builder flattens the explicit construction/population boundary
+only at the generator call, the Qt Grass page edits the new paths, the scene
+summary derives its count from the migrated population, and the shaft pass
+preserves its prior terrain-reflectance treatment.
+
+A fresh in-memory Stage 5B migration of archived `020525` again emitted the
+exact 117,462,947-byte PBRT scene and SHA-256 above. The complete `.venv` suite
+now runs 111 tests (102 passed and nine dependency-aware skips), and all 97
+system-Python non-GUI tests pass. No PBRT render was launched. The next
+one-generator substage is poppies.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

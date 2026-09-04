@@ -227,6 +227,23 @@ class SceneConfig:
             )
         return matches[0]
 
+    def surface_object_path(self, generator: str) -> JsonPath:
+        """Return the unique path for a registered landform surface object."""
+
+        matches = []
+        for landform_index, landform in enumerate(self.get(LANDFORMS_PATH)):
+            for object_index, item in enumerate(landform.get("surface_objects", [])):
+                if item.get("generator") == generator:
+                    matches.append(
+                        LANDFORMS_PATH
+                        + (landform_index, "surface_objects", object_index)
+                    )
+        if len(matches) != 1:
+            raise SceneConfigError(
+                f"scene requires exactly one {generator} surface object"
+            )
+        return matches[0]
+
     def validate(self) -> list[str]:
         errors: list[str] = []
 
@@ -591,8 +608,81 @@ class SceneConfig:
                         for field in ("material", "texture"):
                             if not isinstance(surface.get(field), dict):
                                 errors.append(f"{prefix}.surface.{field} must be an object")
-                    if not isinstance(landform.get("surface_objects"), list):
+                    surface_objects = landform.get("surface_objects")
+                    if not isinstance(surface_objects, list):
                         errors.append(f"{prefix}.surface_objects must be an array")
+                    else:
+                        object_names: list[str] = []
+                        object_generators: list[str] = []
+                        for object_index, item in enumerate(surface_objects):
+                            object_prefix = (
+                                f"{prefix}.surface_objects.{object_index}"
+                            )
+                            if not isinstance(item, dict):
+                                errors.append(f"{object_prefix} must be an object")
+                                continue
+                            object_name = item.get("name")
+                            if not isinstance(object_name, str) or not object_name.strip():
+                                errors.append(
+                                    f"{object_prefix}.name must be a non-empty string"
+                                )
+                            else:
+                                object_names.append(object_name)
+                            if not isinstance(item.get("enabled"), bool):
+                                errors.append(f"{object_prefix}.enabled must be boolean")
+                            generator = item.get("generator")
+                            if generator != "grass":
+                                errors.append(f"{object_prefix}.generator must be grass")
+                            else:
+                                object_generators.append(generator)
+                            construction = item.get("construction")
+                            population = item.get("population")
+                            if not isinstance(construction, dict):
+                                errors.append(
+                                    f"{object_prefix}.construction must be an object"
+                                )
+                                construction = {}
+                            if not isinstance(population, dict):
+                                errors.append(
+                                    f"{object_prefix}.population must be an object"
+                                )
+                                population = {}
+                            if generator == "grass":
+                                validate_depth_fade(
+                                    "grass", population.get("camera_frustum", {})
+                                )
+                                grass_surface = construction.get("surface")
+                                if not isinstance(grass_surface, dict):
+                                    errors.append("grass.construction.surface must be an object")
+                                elif grass_surface.get("type", "diffuse") not in {
+                                    "diffuse",
+                                    "coateddiffuse",
+                                }:
+                                    errors.append(
+                                        "grass.construction.surface.type must be "
+                                        "diffuse or coateddiffuse"
+                                    )
+                                layers = population.get("layers")
+                                if not isinstance(layers, list) or not layers:
+                                    errors.append(
+                                        "grass.population.layers must contain at least one layer"
+                                    )
+                                else:
+                                    count = (
+                                        layers[0].get("count")
+                                        if isinstance(layers[0], dict)
+                                        else None
+                                    )
+                                    if not isinstance(count, int) or count < 0:
+                                        errors.append(
+                                            "grass.population.layers.0.count must be non-negative"
+                                        )
+                        if len(object_names) != len(set(object_names)):
+                            errors.append(f"{prefix}.surface object names must be unique")
+                        if len(object_generators) != len(set(object_generators)):
+                            errors.append(
+                                f"{prefix}.surface object generators must be unique"
+                            )
 
                 if len(names) != len(set(names)):
                     errors.append("scene_description.landform names must be unique")
@@ -830,6 +920,11 @@ class SceneConfig:
                 errors.append(
                     "obsolete scene.landscape.ground.details.surface must be "
                     "removed after landform migration"
+                )
+            if isinstance(details, dict) and "grass" in details:
+                errors.append(
+                    "obsolete scene.landscape.ground.details.grass must be "
+                    "removed after grass migration"
                 )
 
         sky = require(SKY_PATH, dict)
@@ -1085,22 +1180,6 @@ class SceneConfig:
                         "root or flower"
                     )
 
-        grass = require(GROUND_PATH + ("details", "grass"), dict)
-        if grass is not None:
-            validate_depth_fade("grass", grass.get("camera_frustum", {}))
-            surface = grass.get("surface", {})
-            if not isinstance(surface, dict):
-                errors.append("grass.surface must be an object")
-            elif surface.get("type", "diffuse") not in {"diffuse", "coateddiffuse"}:
-                errors.append("grass.surface.type must be diffuse or coateddiffuse")
-            layers = grass.get("layers", [])
-            if not isinstance(layers, list) or not layers:
-                errors.append("grass.layers must contain at least one layer")
-            else:
-                count = layers[0].get("count") if isinstance(layers[0], dict) else None
-                if not isinstance(count, int) or count < 0:
-                    errors.append("grass.layers.0.count must be non-negative")
-
         return errors
 
     def describe(self) -> str:
@@ -1113,7 +1192,12 @@ class SceneConfig:
         for index, entry in enumerate(self.get(("scene", "trees"), [])):
             if entry.get("enabled", False):
                 enabled_trees.append(entry.get("name", f"space_colonization_{index}"))
-        grass = self.get(GROUND_PATH + ("details", "grass"))
+        grass_object = self.get(self.surface_object_path("grass"))
+        grass = {
+            "enabled": grass_object["enabled"],
+            **grass_object["construction"],
+            **grass_object["population"],
+        }
         poppies = self.get(GROUND_PATH + ("details", "poppies"))
         distant_hills = self.get(HILLS_PATH)
         water = self.get(("scene", "landscape", "water"))

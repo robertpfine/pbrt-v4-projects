@@ -130,6 +130,21 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "scene requires exactly one enabled terrain_heightfield landform"
         )
+    grass_objects = [
+        item
+        for landform in landforms
+        if isinstance(landform, dict)
+        for item in landform.get("surface_objects", [])
+        if isinstance(item, dict) and item.get("generator") == "grass"
+    ]
+    if grass_objects and (
+        len(grass_objects) != 1
+        or not isinstance(grass_objects[0].get("construction"), dict)
+        or not isinstance(grass_objects[0].get("population"), dict)
+    ):
+        raise RenderSnapshotError(
+            "grass requires one surface object with construction and population"
+        )
     ground = (
         scene.get("landscape", {}).get("ground", {})
         if isinstance(scene, dict)
@@ -145,6 +160,10 @@ def configured_scene_name(config: dict) -> str:
         if isinstance(details, dict) and "surface" in details:
             raise RenderSnapshotError(
                 "obsolete scene.landscape.ground.details.surface is not supported"
+            )
+        if isinstance(details, dict) and "grass" in details:
+            raise RenderSnapshotError(
+                "obsolete scene.landscape.ground.details.grass is not supported"
             )
     return name
 

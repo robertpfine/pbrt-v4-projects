@@ -285,6 +285,17 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "active_landform"):
             create_snapshot(self.root, self.config, "20260904_010220")
 
+    def test_snapshot_rejects_obsolete_ground_grass(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"] = {
+            "landscape": {
+                "ground": {"details": {"grass": {"enabled": False}}}
+            }
+        }
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "details.grass"):
+            create_snapshot(self.root, self.config, "20260904_010222")
+
     def test_snapshot_requires_one_enabled_terrain_landform(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene_description"]["landforms"][0]["enabled"] = False
@@ -699,11 +710,7 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
                 "sun_aperture": {"enabled": True},
                 "lights": [{"label": "shaft_sun", "enabled": True}],
                 "landscape": {
-                    "ground": {
-                        "details": {
-                            "grass": {"reflectance": [0.4, 0.5, 0.6]}
-                        }
-                    }
+                    "ground": {"details": {}}
                 },
             },
         }
@@ -711,6 +718,17 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
             "material": {"reflectance": [0.2, 0.3, 0.4]},
             "texture": {},
         }
+        config["scene_description"]["landforms"][0]["surface_objects"] = [
+            {
+                "name": "grass",
+                "enabled": True,
+                "generator": "grass",
+                "construction": {
+                    "reflectance_variants": [[0.4, 0.5, 0.6]]
+                },
+                "population": {},
+            }
+        ]
         base = render_shaft_composite.configure_base(config, "shaft_sun")
         shaft = render_shaft_composite.configure_shaft(
             config, "shaft_sun", 0.1, 0.01
@@ -727,10 +745,10 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
             },
         )
         self.assertEqual(
-            shaft["scene"]["landscape"]["ground"]["details"]["grass"][
-                "reflectance"
-            ],
-            [0.004, 0.005, 0.006],
+            shaft["scene_description"]["landforms"][0]["surface_objects"][0][
+                "construction"
+            ]["reflectance_variants"],
+            [[0.004, 0.005, 0.006]],
         )
 
     def test_entry_point_reexecutes_the_frozen_script_and_config(self):

@@ -2499,6 +2499,36 @@ def _poppy_mesh(variant=0, config=None):
     }
 
 
+def configured_surface_object(landform, generator):
+    """Flatten one registered landform object for its existing generator."""
+
+    matches = [
+        item
+        for item in landform.get("surface_objects", [])
+        if item.get("generator") == generator
+    ]
+    if len(matches) > 1:
+        raise ValueError(
+            f"landform {landform.get('name')!r} permits at most one "
+            f"{generator!r} surface object"
+        )
+    if not matches:
+        return {"enabled": False}
+    item = matches[0]
+    construction = item.get("construction", {})
+    population = item.get("population", {})
+    if not isinstance(construction, dict) or not isinstance(population, dict):
+        raise ValueError(
+            f"surface object {item.get('name')!r} requires construction "
+            "and population objects"
+        )
+    return {
+        "enabled": item.get("enabled", False),
+        **construction,
+        **population,
+    }
+
+
 def write_terrain_details(lines, terrain, config, camera=None, film=None):
     """Write reusable ground-detail objects and terrain-aware instances."""
 
@@ -3240,6 +3270,9 @@ def write_scene(cfg, scene_root, medium_rel_path):
         )
     terrain_landform = terrain_landforms[0]
     terrain = create_terrain(terrain_landform)
+    grass_config = configured_surface_object(terrain_landform, "grass")
+    terrain_details = dict(ground_config.get("details", {}))
+    terrain_details["grass"] = grass_config
     lights = []
     background = sky_config.get("background")
     if background:
@@ -3265,14 +3298,14 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_terrain_details(
         lines,
         terrain,
-        ground_config,
+        {"details": terrain_details},
         camera=camera_settings,
         film=render_settings["film"],
     )
     write_distant_hills(
         lines,
         landscape_config.get("distant_hills", {}),
-        ground_config.get("details", {}).get("grass", {}),
+        grass_config,
         ground_config.get("details", {}).get("poppies", {}),
     )
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))

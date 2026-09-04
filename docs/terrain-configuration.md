@@ -332,7 +332,8 @@ The nested `terrain_surface_texture` controls are:
 ### Shared scatter controls
 
 The `grass`, `poppies`, `litter`, `rocks`, and `undergrowth` blocks share these
-controls:
+controls. Grass now owns them below its landform surface object; the other four
+blocks retain their temporary ground-detail paths until their migration turns:
 
 - `enabled` activates the layer.
 - `count` is the requested number of object instances, not the number of blades
@@ -355,19 +356,25 @@ controls:
 
 ### Grass
 
+Grass is the `generator: "grass"` entry under the enabled foreground
+landform's `surface_objects`. `construction` owns `blade`, `tuft`, `surface`,
+and `reflectance_variants`; `population` owns all placement and repetition
+controls, including `layers`, frustum handling, and the distant-hill extension.
+The former `scene.landscape.ground.details.grass` path is rejected.
+
 Each grass instance is a small crossed cluster of seven differently leaning
 blades. Thousands of clusters can therefore describe a field without emitting
 each blade as an independent scene object. The current exclusion radius keeps
 the immediate trunk contact readable, while high patchiness creates bare soil
 between colonies.
 
-`surface.type` selects the blade material. The default `diffuse` retains the
+`construction.surface.type` selects the blade material. The default `diffuse` retains the
 established matte grass. `coateddiffuse` adds a thin dielectric layer controlled
 by `roughness`, `eta`, and `thickness`; a low-roughness layer with `eta: 1.33`
 provides a restrained approximation of morning dew while preserving the grass
-colors in `reflectance_variants`.
+colors in `construction.reflectance_variants`.
 
-An optional `layers` array creates multiple grass strata from the same reusable
+An optional `population.layers` array creates multiple grass strata from the same reusable
 blade cluster. Values in each layer override the shared grass controls. This is
 useful for pasture treatments: a high-count, weakly patchy, short base stratum
 provides nearly continuous coverage, while a lower-count, taller stratum adds

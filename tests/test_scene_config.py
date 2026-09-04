@@ -80,7 +80,18 @@ class SceneConfigTests(unittest.TestCase):
           }
         },
         "surface": { "material": {}, "texture": {} },
-        "surface_objects": []
+        "surface_objects": [{
+          "name": "grass",
+          "enabled": true,
+          "generator": "grass",
+          "construction": {
+            "surface": { "type": "diffuse" }
+          },
+          "population": {
+            "layers": [{ "count": 10 }],
+            "camera_frustum": { "enabled": false }
+          }
+        }]
       },
       {
         "name": "gully",
@@ -117,7 +128,6 @@ class SceneConfigTests(unittest.TestCase):
     "landscape": {
       "ground": {
         "details": {
-          "grass": { "enabled": true, "layers": [{ "count": 10 }] },
           "poppies": {
             "enabled": true,
             "count": 20,
@@ -319,6 +329,35 @@ class SceneConfigTests(unittest.TestCase):
         )
         self.assertIn("Sky background: enabled", description)
         self.assertIn("Clouds: enabled", description)
+
+    def test_grass_uses_unique_landform_surface_object_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            config = SceneConfig(path)
+            self.assertEqual(
+                config.surface_object_path("grass"),
+                (
+                    "scene_description",
+                    "landforms",
+                    0,
+                    "surface_objects",
+                    0,
+                ),
+            )
+
+    def test_obsolete_ground_grass_is_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["landscape"]["ground"]["details"]["grass"] = {
+                "enabled": False
+            }
+            path.write_text(json.dumps(data), encoding="utf-8")
+            self.assertIn(
+                "obsolete scene.landscape.ground.details.grass must be "
+                "removed after grass migration",
+                SceneConfig(path).validate(),
+            )
 
     def test_current_scene_uses_explicit_landscape_and_sky_boundaries(self):
         root = Path(__file__).resolve().parents[1]
