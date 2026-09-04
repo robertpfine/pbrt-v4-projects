@@ -498,23 +498,28 @@ class Inspector(QtWidgets.QWidget):
                 100_000.0,
                 2,
             )
-            parameters = root + ("topography", "parameters")
-            self._number(
-                form,
-                "Grade",
-                parameters + ("slope", "grade"),
-                minimum=-10.0,
-                maximum=10.0,
-                decimals=4,
-            )
-            self._number(
-                form,
-                "Noise amplitude",
-                parameters + ("noise", "amplitude"),
-                minimum=0.0,
-                maximum=10_000.0,
-                decimals=3,
-            )
+            topography = self.config.get(root + ("topography",), {})
+            if (
+                topography.get("enabled", False)
+                and topography.get("generator") == "terrain_heightfield"
+            ):
+                parameters = root + ("topography", "parameters")
+                self._number(
+                    form,
+                    "Grade",
+                    parameters + ("slope", "grade"),
+                    minimum=-10.0,
+                    maximum=10.0,
+                    decimals=4,
+                )
+                self._number(
+                    form,
+                    "Noise amplitude",
+                    parameters + ("noise", "amplitude"),
+                    minimum=0.0,
+                    maximum=10_000.0,
+                    decimals=3,
+                )
 
     def _build_grass_page(self) -> None:
         form = self._page(

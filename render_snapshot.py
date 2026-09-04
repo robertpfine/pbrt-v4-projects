@@ -205,6 +205,37 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "undergrowth requires one surface object with construction and population"
         )
+    vista_landforms = [
+        landform
+        for landform in landforms
+        if isinstance(landform, dict) and landform.get("name") == "vista_plane"
+    ]
+    if vista_landforms:
+        if len(vista_landforms) != 1:
+            raise RenderSnapshotError("vista_plane requires one landform")
+        vista = vista_landforms[0]
+        if vista.get("topography") != {"enabled": False}:
+            raise RenderSnapshotError("vista_plane topography must be disabled")
+        surface = vista.get("surface")
+        texture = surface.get("texture") if isinstance(surface, dict) else None
+        if (
+            not isinstance(surface, dict)
+            or not isinstance(surface.get("material"), dict)
+            or not isinstance(texture, dict)
+            or texture.get("generator") != "vista_surface_mottle"
+        ):
+            raise RenderSnapshotError(
+                "vista_plane requires material and vista_surface_mottle texture"
+            )
+    if isinstance(scene, dict):
+        geometry = scene.get("geometry", [])
+        if isinstance(geometry, list) and any(
+            isinstance(item, dict) and item.get("label") == "vista_plane"
+            for item in geometry
+        ):
+            raise RenderSnapshotError(
+                "obsolete scene.geometry vista_plane is not supported"
+            )
     landscape = scene.get("landscape", {}) if isinstance(scene, dict) else {}
     ground = (
         landscape.get("ground", {}) if isinstance(landscape, dict) else {}

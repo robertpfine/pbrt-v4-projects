@@ -28,10 +28,12 @@ scene (temporary migration root)
 
 ## Landscape
 
-`scene_description.landforms` now owns foreground landform geometry,
-topography, material, and surface texture. The retained `right_dip_rise` and
-`flat_landform` alternatives are independent entries; `flat_landform` is the
-sole enabled terrain heightfield. The temporary
+`scene_description.landforms` now owns landform geometry, topography, material,
+and surface texture. The retained `right_dip_rise` and `flat_landform`
+alternatives are independent entries; `flat_landform` is the sole enabled
+terrain heightfield. The enabled `vista_plane` is a third independent landform
+with one topographically flat plane patch and its own mottled surface.
+
 All five former ground-detail generators have completed their individual moves
 to `flat_landform.surface_objects[]`, in order: grass, poppies, litter, rocks,
 and undergrowth. The emptied `scene.landscape.ground` wrapper is removed rather
@@ -41,8 +43,8 @@ than retained as a compatibility shell.
 geometry. Its generator and Qt controls remain independent of the accepted
 ground system. The retained configuration now contains one `broad_rise`
 height field; the complete module is disabled in accepted render `054517`.
-Grass and poppy definitions stay under ground details and may target the rise
-through their own `extension` blocks when the hill module is enabled.
+Grass and poppy definitions stay on `flat_landform` and may target the rise
+through their own `population.extension` blocks when the hill module is enabled.
 
 ### Agreed distant-hill formation
 

@@ -27,6 +27,7 @@ import math
 import random
 import subprocess
 import time
+from copy import deepcopy
 from pathlib import Path
 from noise import pnoise2, pnoise3
 
@@ -1204,6 +1205,97 @@ def write_geometry(lines, geometry, scene_root=None, scene_files_root=None):
 
         lines.append("AttributeEnd")
         lines.append("")
+
+
+def planar_landform_geometry(landform):
+    """Adapt one topographically flat landform to the geometry writer."""
+
+    if not landform.get("enabled", False):
+        return []
+    topography = landform.get("topography", {})
+    if topography.get("enabled", False):
+        return []
+
+    placement = landform.get("placement", {})
+    rotation = placement.get("rotation_degrees", [0.0, 0.0, 0.0])
+    if any(float(value) != 0.0 for value in rotation):
+        raise ValueError("planar landforms do not yet support rotation")
+
+    surface = landform.get("surface", {})
+    material = deepcopy(surface.get("material", {}))
+    material["scale"] = material.pop("reflectance_scale", 1.0)
+    texture = deepcopy(surface.get("texture", {}))
+    if texture.get("enabled", False):
+        if texture.get("generator") != "vista_surface_mottle":
+            raise ValueError(
+                "unsupported planar landform texture generator: "
+                f"{texture.get('generator')!r}"
+            )
+        texture.pop("generator", None)
+        material["surface_mottle"] = texture
+
+    geometry = []
+    for patch in landform.get("geometry", {}).get("patches", []):
+        if not patch.get("enabled", False):
+            continue
+        if patch.get("generator") != "plane":
+            raise ValueError(
+                "unsupported planar landform patch generator: "
+                f"{patch.get('generator')!r}"
+            )
+        local_rotation = patch.get(
+            "local_rotation_degrees", [0.0, 0.0, 0.0]
+        )
+        if any(float(value) != 0.0 for value in local_rotation):
+            raise ValueError("planar landform patches do not yet support rotation")
+        width, depth = patch["dimensions"]
+        local_x, local_y, local_z = patch.get(
+            "local_position", [0.0, 0.0, 0.0]
+        )
+
+        def compact_number(value):
+            number = float(value)
+            return int(number) if number.is_integer() else number
+
+        x0 = compact_number(float(local_x) - float(width) / 2.0)
+        x1 = compact_number(float(local_x) + float(width) / 2.0)
+        z0 = compact_number(float(local_z) - float(depth) / 2.0)
+        z1 = compact_number(float(local_z) + float(depth) / 2.0)
+        y = compact_number(local_y)
+        geometry.append({
+            "enabled": True,
+            "label": landform.get("name", "landform"),
+            "material": deepcopy(material),
+            "transform": {
+                "translate": placement.get("position", [0.0, 0.0, 0.0]),
+                "rotate": [],
+            },
+            "shape": {
+                "type": "bilinearmesh",
+                "indices": [0, 1, 2, 3],
+                "points": [
+                    x0, y, z0,
+                    x0, y, z1,
+                    x1, y, z0,
+                    x1, y, z1,
+                ],
+            },
+        })
+    return geometry
+
+
+def write_planar_landforms(
+    lines, landforms, scene_root=None, scene_files_root=None
+):
+    """Write every enabled landform whose topography is disabled."""
+
+    for landform in landforms:
+        write_geometry(
+            lines,
+            planar_landform_geometry(landform),
+            scene_root,
+            scene_files_root,
+        )
 
 
 def write_phyllotaxis_organ(lines, object_name, organ):
@@ -3301,6 +3393,12 @@ def write_scene(cfg, scene_root, medium_rel_path):
         exterior_medium="fog" if fog_enabled else "",
     )
     write_sun_aperture(lines, scene.get("sun_aperture"), lights)
+    write_planar_landforms(
+        lines,
+        scene_description.get("landforms", []),
+        scene_root,
+        scene_files_root,
+    )
     write_geometry(
         lines, scene.get("geometry", []), scene_root, scene_files_root
     )

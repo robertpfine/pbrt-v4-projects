@@ -516,7 +516,8 @@ order:
    consumer uses the new locations, and bounded rebuilds reproduced the
    pre-migration PBRT scene byte for byte. Stage 5B is complete: grass, poppies,
    litter, rocks, and undergrowth are migrated and the empty legacy ground
-   wrapper is removed. Stage 5C migrates vista and distant landforms next.
+   wrapper is removed. Stage 5C is in progress: the vista plane is migrated;
+   the distant ridge landform is next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -700,6 +701,19 @@ SHA-256 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
 The complete `.venv` suite runs 119 tests (110 passed, nine skips), and all 105
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 5C begins
 with the vista-plane landform.
+
+Stage 5C vista migration is complete in the working implementation. The
+enabled `vista_plane` moved atomically from `scene.geometry[]` to an independent
+entry in `scene_description.landforms`. Its placement, one plane patch, disabled
+topography, diffuse material, reflectance scale, complete deterministic mottle
+texture, and empty surface-object collection are now adjacent. The old generic
+geometry location is absent and rejected by configuration and snapshot
+validation. The archived `020525` structural rebuild remains byte-identical at
+117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 122 tests (113 passed, nine skips), and all 108
+system-Python non-GUI tests pass. No PBRT render was launched. The next bounded
+Stage 5C move is `broad_rise` from the temporary distant-hills wrapper.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

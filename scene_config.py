@@ -565,13 +565,26 @@ class SceneConfig:
                     if not isinstance(topography, dict):
                         errors.append(f"{prefix}.topography must be an object")
                     else:
-                        if not isinstance(topography.get("enabled"), bool):
+                        topography_enabled = topography.get("enabled")
+                        if not isinstance(topography_enabled, bool):
                             errors.append(f"{prefix}.topography.enabled must be boolean")
-                        if topography.get("generator") != "terrain_heightfield":
+                        generator = topography.get("generator")
+                        if topography_enabled is True:
+                            if generator != "terrain_heightfield":
+                                errors.append(
+                                    f"{prefix}.topography.generator must be "
+                                    "terrain_heightfield"
+                                )
+                            if not isinstance(topography.get("parameters"), dict):
+                                errors.append(
+                                    f"{prefix}.topography.parameters must be an object"
+                                )
+                        elif generator is not None and generator != "terrain_heightfield":
                             errors.append(
-                                f"{prefix}.topography.generator must be terrain_heightfield"
+                                f"{prefix}.topography.generator must be "
+                                "terrain_heightfield when provided"
                             )
-                        else:
+                        if topography_enabled is True and generator == "terrain_heightfield":
                             rotations = []
                             if isinstance(placement, dict):
                                 rotations.append(placement.get("rotation_degrees"))
@@ -591,12 +604,10 @@ class SceneConfig:
                                     f"{prefix} terrain_heightfield rotations "
                                     "must currently be zero"
                                 )
-                        if not isinstance(topography.get("parameters"), dict):
-                            errors.append(f"{prefix}.topography.parameters must be an object")
                         if (
                             enabled is True
-                            and topography.get("enabled") is True
-                            and topography.get("generator") == "terrain_heightfield"
+                            and topography_enabled is True
+                            and generator == "terrain_heightfield"
                         ):
                             enabled_terrain_count += 1
 
@@ -804,6 +815,15 @@ class SceneConfig:
                     errors.append(
                         f"obsolete scene.{name} must be removed after file_names migration"
                     )
+            geometry = scene_root.get("geometry", [])
+            if isinstance(geometry, list) and any(
+                isinstance(item, dict) and item.get("label") == "vista_plane"
+                for item in geometry
+            ):
+                errors.append(
+                    "obsolete scene.geometry vista_plane must be removed after "
+                    "vista landform migration"
+                )
 
         landscape = require(("scene", "landscape"), dict)
         ground = landscape.get("ground") if landscape is not None else None

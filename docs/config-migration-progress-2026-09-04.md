@@ -992,3 +992,70 @@ cleanup latency rather than a render or generator loop.
 The complete `.venv` suite ran 119 tests (110 passed, nine skips); system Python
 passed all 105 non-GUI tests. Live validation reports zero errors. No production
 render was launched. Stage 5B is complete; Stage 5C begins with the vista plane.
+
+The undergrowth commit is `9b4666f` (`Migrate undergrowth surface object`) and
+is pushed to `origin/pbrt-v4-art-studio`. Its single Google Drive continuity
+attempt immediately rate-limited and was not retried.
+
+## Stage 5C.1 — vista-plane landform
+
+Status: implementation and validation complete from pushed Stage 5B checkpoint
+`9b4666f`
+
+The enabled `vista_plane` moved atomically from `scene.geometry[]` to a third
+independent entry in `scene_description.landforms`. The new ownership is:
+
+```text
+placement.position:                 [-9000, -250, -12000]
+geometry.patches[0].generator:      plane
+geometry.patches[0].dimensions:     [50000, 50000]
+geometry.patches[0].subdivisions:   [2, 2]
+geometry.patches[0].local_position: [0, -500, 0]
+topography.enabled:                 false
+surface.material:                   diffuse reflectance + reflectance_scale
+surface.texture.generator:          vista_surface_mottle
+surface_objects:                    []
+```
+
+Every former mottle control moved intact beneath `surface.texture`: resolution,
+seed, cluster size/floor, mottle and fine sizes, coverage, softness, contrast,
+mottle/accent reflectances, and accent fraction. The builder adapts the planar
+landform to the established generic geometry writer at the original output
+location. This preserves the old bilinear-mesh point ordering, transform,
+material multiplication, generated texture, automatic UVs, and PBRT comments
+without keeping duplicate configuration ownership.
+
+Configuration and snapshot validation reject an old `scene.geometry[]` entry
+labeled `vista_plane`. Topography validation now accepts the approved explicit
+`{"enabled": false}` form for a flat landform rather than requiring a dormant
+terrain generator. The Qt Landform page enumerates the new entry without
+assuming that it has heightfield grade and noise controls.
+
+Mechanical ownership audit:
+
+```text
+enabled_landforms ['flat_landform', 'vista_plane']
+vista_patch_generators ['plane']
+vista_texture_generator vista_surface_mottle
+legacy_geometry_vista_count 0
+```
+
+For the exact structural proof, the current migrated configuration was adjusted
+in memory with the seven known `020525` diagnostic differences from the
+pre-migration live configuration: 640-by-464 film, eight samples, max depth 20,
+disabled grass and poppies, Python cloud-grid backend, and the former disabled
+remote sync (which has no builder effect). No second JSON was written and PBRT
+was not launched.
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5C.1 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The comparison completed normally. Its temporary directory was deleted in a
+separate filesystem call after the result was recorded. The complete `.venv`
+suite ran 122 tests (113 passed, nine skips); system Python passed all 108
+non-GUI tests. Live validation reports zero errors. No production render was
+launched. Stage 5C continues with the retained `broad_rise` distant landform.

@@ -25,6 +25,7 @@ except ModuleNotFoundError:
 from scene_workspace.build_scene import (
     configured_filename,
     configured_scene_files,
+    planar_landform_geometry,
     write_camera,
     write_film,
     write_geometry,
@@ -90,6 +91,56 @@ class ConfiguredFileLayoutTests(unittest.TestCase):
 
 
 class GeometryMaterialTests(unittest.TestCase):
+    def test_planar_landform_adapts_to_existing_geometry_contract(self):
+        landform = {
+            "name": "vista_plane",
+            "enabled": True,
+            "placement": {
+                "position": [-9000, -250, -12000],
+                "rotation_degrees": [0.0, 0.0, 0.0],
+            },
+            "geometry": {
+                "patches": [{
+                    "name": "main_patch",
+                    "enabled": True,
+                    "generator": "plane",
+                    "dimensions": [50000, 50000],
+                    "subdivisions": [2, 2],
+                    "local_position": [0, -500, 0],
+                    "local_rotation_degrees": [0.0, 0.0, 0.0],
+                }]
+            },
+            "topography": {"enabled": False},
+            "surface": {
+                "material": {
+                    "type": "diffuse",
+                    "reflectance": [0.22, 0.28, 0.10],
+                    "reflectance_scale": 0.22,
+                },
+                "texture": {
+                    "enabled": True,
+                    "generator": "vista_surface_mottle",
+                    "seed": 941,
+                },
+            },
+            "surface_objects": [],
+        }
+
+        geometry = planar_landform_geometry(landform)
+
+        self.assertEqual(len(geometry), 1)
+        self.assertEqual(geometry[0]["label"], "vista_plane")
+        self.assertEqual(geometry[0]["material"]["scale"], 0.22)
+        self.assertEqual(
+            geometry[0]["shape"]["points"],
+            [
+                -25000, -500, -25000,
+                -25000, -500, 25000,
+                25000, -500, -25000,
+                25000, -500, 25000,
+            ],
+        )
+
     def test_diffuse_scale_multiplies_reflectance(self):
         geometry = [{
             "enabled": True,

@@ -470,7 +470,16 @@ class SceneConfigTests(unittest.TestCase):
                 for landform in config["scene_description"]["landforms"]
                 if landform["enabled"]
             ],
-            ["flat_landform"],
+            ["flat_landform", "vista_plane"],
+        )
+        vista = config["scene_description"]["landforms"][-1]
+        self.assertFalse(vista["topography"]["enabled"])
+        self.assertEqual(
+            vista["surface"]["texture"]["generator"],
+            "vista_surface_mottle",
+        )
+        self.assertTrue(
+            all(item.get("label") != "vista_plane" for item in data["geometry"])
         )
         self.assertNotIn("ground", data["landscape"])
         self.assertEqual(
@@ -480,6 +489,19 @@ class SceneConfigTests(unittest.TestCase):
         self.assertEqual(set(data["sky"]), {"background", "clouds"})
         self.assertEqual(data["sky"]["background"]["type"], "infinite")
         self.assertTrue(all(light.get("type") != "infinite" for light in data["lights"]))
+
+    def test_obsolete_geometry_vista_plane_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["geometry"] = [{"label": "vista_plane"}]
+            path.write_text(json.dumps(data), encoding="utf-8")
+
+            self.assertIn(
+                "obsolete scene.geometry vista_plane must be removed after "
+                "vista landform migration",
+                SceneConfig(path).validate(),
+            )
 
     def test_invalid_stage_one_paths_are_reported_at_new_locations(self):
         with tempfile.TemporaryDirectory() as directory:

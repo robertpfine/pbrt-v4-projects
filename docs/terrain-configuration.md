@@ -430,6 +430,19 @@ The first undergrowth organ is a reusable stylized fern composed of five curved
 fronds and paired leaflets. High patchiness forms separate colonies. This block
 can later become a general species list without changing the scatter interface.
 
+### Vista plane
+
+The enabled `vista_plane` is an independent topographically flat landform. Its
+single `generator: "plane"` patch owns the 50,000-by-50,000 extent and local
+vertical offset, while landform placement retains the established world
+translation. Its diffuse material uses explicit `reflectance_scale`, and its
+independent `generator: "vista_surface_mottle"` texture retains every prior
+resolution, seed, cluster, mottle, coverage, contrast, and accent control.
+
+The old `scene.geometry[]` entry labeled `vista_plane` is absent and rejected.
+The builder adapts this landform to the established deterministic bilinear-mesh
+and texture writers, preserving generated PBRT and texture behavior exactly.
+
 ### Ecological layering
 
 The layers deliberately use different fields and spatial rules:
