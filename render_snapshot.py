@@ -130,6 +130,62 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "scene requires exactly one enabled terrain_heightfield landform"
         )
+    objects = description.get("objects")
+    if not isinstance(objects, list):
+        raise RenderSnapshotError("scene_description.objects must be an array")
+    names = []
+    for index, item in enumerate(objects):
+        if not isinstance(item, dict):
+            raise RenderSnapshotError(
+                f"scene_description.objects.{index} must be an object"
+            )
+        name_value = item.get("name")
+        placement = item.get("placement")
+        geometry_value = item.get("geometry")
+        if not isinstance(name_value, str) or not name_value.strip():
+            raise RenderSnapshotError(
+                f"scene_description.objects.{index}.name must be non-empty"
+            )
+        names.append(name_value)
+        if not isinstance(item.get("enabled"), bool):
+            raise RenderSnapshotError(
+                f"scene_description.objects.{index}.enabled must be boolean"
+            )
+        if (
+            not isinstance(placement, dict)
+            or any(
+                not isinstance(placement.get(field), list)
+                or len(placement[field]) != 3
+                or any(
+                    not isinstance(value, (int, float))
+                    or isinstance(value, bool)
+                    or not math.isfinite(value)
+                    for value in placement[field]
+                )
+                for field in ("position", "rotation_degrees")
+            )
+        ):
+            raise RenderSnapshotError(
+                f"scene_description.objects.{index} requires explicit placement"
+            )
+        if not isinstance(geometry_value, dict) or len(
+            {"pbrt_shape", "generator"}.intersection(geometry_value)
+        ) != 1:
+            raise RenderSnapshotError(
+                f"scene_description.objects.{index} requires one geometry source"
+            )
+        if not isinstance(item.get("material"), dict):
+            raise RenderSnapshotError(
+                f"scene_description.objects.{index}.material must be an object"
+            )
+        if "generator" in geometry_value and not isinstance(
+            item.get("construction"), dict
+        ):
+            raise RenderSnapshotError(
+                f"scene_description.objects.{index}.construction must be an object"
+            )
+    if len(names) != len(set(names)):
+        raise RenderSnapshotError("scene_description object names must be unique")
     grass_objects = [
         item
         for landform in landforms
@@ -295,6 +351,10 @@ def configured_scene_name(config: dict) -> str:
                 raise RenderSnapshotError(
                     f"obsolete scene.{legacy_name} is not supported"
                 )
+        if "planar_phyllotaxis" in scene:
+            raise RenderSnapshotError(
+                "obsolete scene.planar_phyllotaxis is not supported"
+            )
         geometry = scene.get("geometry", [])
         if isinstance(geometry, list) and any(
             isinstance(item, dict) and item.get("label") == "vista_plane"

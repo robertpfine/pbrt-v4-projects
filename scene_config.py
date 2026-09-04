@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 JsonPath = tuple[str | int, ...]
 _MISSING = object()
 LANDFORMS_PATH: JsonPath = ("scene_description", "landforms")
+OBJECTS_PATH: JsonPath = ("scene_description", "objects")
 SKY_PATH: JsonPath = ("scene", "sky")
 
 
@@ -1030,6 +1031,108 @@ class SceneConfig:
                         "scene requires exactly one enabled terrain_heightfield landform"
                     )
 
+            objects = scene_description.get("objects")
+            if not isinstance(objects, list):
+                errors.append("scene_description.objects must be an array")
+            else:
+                object_names: list[str] = []
+                for index, item in enumerate(objects):
+                    prefix = f"scene_description.objects.{index}"
+                    if not isinstance(item, dict):
+                        errors.append(f"{prefix} must be an object")
+                        continue
+                    name = item.get("name")
+                    if not isinstance(name, str) or not name.strip():
+                        errors.append(f"{prefix}.name must be a non-empty string")
+                    else:
+                        object_names.append(name)
+                    if not isinstance(item.get("enabled"), bool):
+                        errors.append(f"{prefix}.enabled must be boolean")
+                    placement = item.get("placement")
+                    if not isinstance(placement, dict):
+                        errors.append(f"{prefix}.placement must be an object")
+                    else:
+                        for field in ("position", "rotation_degrees"):
+                            vector = placement.get(field)
+                            if (
+                                not isinstance(vector, list)
+                                or len(vector) != 3
+                                or any(
+                                    not isinstance(value, (int, float))
+                                    or isinstance(value, bool)
+                                    or not math.isfinite(value)
+                                    for value in vector
+                                )
+                            ):
+                                errors.append(
+                                    f"{prefix}.placement.{field} must contain "
+                                    "3 finite numbers"
+                                )
+                    geometry = item.get("geometry")
+                    if not isinstance(geometry, dict):
+                        errors.append(f"{prefix}.geometry must be an object")
+                    else:
+                        sources = [
+                            field
+                            for field in ("pbrt_shape", "generator")
+                            if field in geometry
+                        ]
+                        if len(sources) != 1:
+                            errors.append(
+                                f"{prefix}.geometry requires exactly one of "
+                                "pbrt_shape or generator"
+                            )
+                        elif geometry.get("generator") not in {
+                            None,
+                            "planar_phyllotaxis",
+                        }:
+                            errors.append(
+                                f"{prefix}.geometry.generator is not registered"
+                            )
+                    if not isinstance(item.get("material"), dict):
+                        errors.append(f"{prefix}.material must be an object")
+                    construction = item.get("construction")
+                    if isinstance(geometry, dict) and "generator" in geometry:
+                        if not isinstance(construction, dict):
+                            errors.append(f"{prefix}.construction must be an object")
+                        elif geometry.get("generator") == "planar_phyllotaxis":
+                            count = construction.get("count")
+                            spacing = construction.get("spacing")
+                            center = construction.get("center")
+                            zones = construction.get("zones")
+                            if not isinstance(count, int) or count < 0:
+                                errors.append(
+                                    f"{prefix}.construction.count must be non-negative"
+                                )
+                            if (
+                                not isinstance(spacing, (int, float))
+                                or isinstance(spacing, bool)
+                                or spacing <= 0
+                            ):
+                                errors.append(
+                                    f"{prefix}.construction.spacing must be positive"
+                                )
+                            if (
+                                not isinstance(center, list)
+                                or len(center) != 3
+                                or not all(
+                                    isinstance(value, (int, float))
+                                    and not isinstance(value, bool)
+                                    for value in center
+                                )
+                            ):
+                                errors.append(
+                                    f"{prefix}.construction.center must contain "
+                                    "three numbers"
+                                )
+                            if not isinstance(zones, list) or not zones:
+                                errors.append(
+                                    f"{prefix}.construction.zones must be a "
+                                    "non-empty array"
+                                )
+                if len(object_names) != len(set(object_names)):
+                    errors.append("scene_description object names must be unique")
+
         scene_root = self.get(("scene",), {})
         if isinstance(scene_root, dict):
             if "name" in scene_root:
@@ -1053,6 +1156,11 @@ class SceneConfig:
                         f"obsolete scene.{name} must be removed after "
                         "space-colonization tree migration"
                     )
+            if "planar_phyllotaxis" in scene_root:
+                errors.append(
+                    "obsolete scene.planar_phyllotaxis must be removed after "
+                    "independent-object migration"
+                )
             geometry = scene_root.get("geometry", [])
             if isinstance(geometry, list) and any(
                 isinstance(item, dict) and item.get("label") == "vista_plane"

@@ -2629,6 +2629,28 @@ def configured_surface_objects(landform, generator):
     return result
 
 
+def configured_scene_objects(scene_description, generator):
+    """Flatten independent objects registered to one generator family."""
+
+    result = []
+    for item in scene_description.get("objects", []):
+        geometry = item.get("geometry", {})
+        if not isinstance(geometry, dict) or geometry.get("generator") != generator:
+            continue
+        construction = item.get("construction", {})
+        if not isinstance(construction, dict):
+            raise ValueError(
+                f"scene object {item.get('name')!r} requires a construction object"
+            )
+        result.append({
+            "enabled": item.get("enabled", False),
+            "label": item.get("name", generator),
+            "_placement": item.get("placement", {}),
+            **construction,
+        })
+    return result
+
+
 def write_terrain_details(lines, terrain, config, camera=None, film=None):
     """Write reusable ground-detail objects and terrain-aware instances."""
 
@@ -3120,6 +3142,19 @@ def write_planar_phyllotaxis(lines, patterns):
         if not pattern.get("enabled", True):
             continue
 
+        placement = pattern.get("_placement", {})
+        position = placement.get("position", [0.0, 0.0, 0.0])
+        rotation = placement.get("rotation_degrees", [0.0, 0.0, 0.0])
+        has_object_transform = any(value != 0 for value in (*position, *rotation))
+        if has_object_transform:
+            lines += [
+                "AttributeBegin",
+                f"    Translate {position[0]} {position[1]} {position[2]}",
+            ]
+            for angle, axis in zip(rotation, ("1 0 0", "0 1 0", "0 0 1")):
+                if angle != 0:
+                    lines.append(f"    Rotate {angle} {axis}")
+
         count = pattern["count"]
         spacing = float(pattern.get("spacing", 1.0))
         center = pattern.get("center", [0.0, 0.0, 0.0])
@@ -3301,7 +3336,10 @@ def write_planar_phyllotaxis(lines, patterns):
                 f'    ObjectInstance "{object_names[matching_zone_index]}"',
                 'AttributeEnd',
             ]
-        lines.append("")
+        if has_object_transform:
+            lines += ["AttributeEnd", ""]
+        else:
+            lines.append("")
 
 
 # ==============================================================
@@ -3423,7 +3461,10 @@ def write_scene(cfg, scene_root, medium_rel_path):
         grass_config,
         poppy_config,
     )
-    write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
+    write_planar_phyllotaxis(
+        lines,
+        configured_scene_objects(scene_description, "planar_phyllotaxis"),
+    )
     write_lsystem_trees(
         lines,
         configured_surface_objects(terrain_landform, "lsystem_tree"),

@@ -136,7 +136,8 @@ class SceneConfigTests(unittest.TestCase):
         "surface": { "material": {}, "texture": {} },
         "surface_objects": []
       }
-    ]
+    ],
+    "objects": []
   },
   "scene": {
     "landscape": {
@@ -547,6 +548,40 @@ class SceneConfigTests(unittest.TestCase):
                 "obsolete scene.grove must be removed after "
                 "space-colonization tree migration",
                 errors,
+            )
+
+    def test_independent_object_schema_and_obsolete_phyllotaxis_are_checked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene_description"]["objects"] = [{
+                "name": "sunflower",
+                "enabled": False,
+                "placement": {
+                    "position": [0.0, 0.0, 0.0],
+                    "rotation_degrees": [0.0, 0.0, 0.0],
+                },
+                "geometry": {"generator": "planar_phyllotaxis"},
+                "material": {},
+                "construction": {
+                    "count": 3,
+                    "spacing": 1.0,
+                    "center": [0.0, 0.0, 0.0],
+                    "zones": [{"index_min": 0, "index_max": 2, "organ": {}}],
+                },
+            }]
+            data["scene"]["planar_phyllotaxis"] = []
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+
+            self.assertIn(
+                "obsolete scene.planar_phyllotaxis must be removed after "
+                "independent-object migration",
+                errors,
+            )
+            self.assertEqual(
+                [error for error in errors if "scene_description.objects" in error],
+                [],
             )
 
     def test_obsolete_geometry_vista_plane_is_rejected(self):

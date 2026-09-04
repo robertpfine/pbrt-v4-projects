@@ -1,6 +1,6 @@
 # Live Configuration Migration Progress — 2026-09-04
 
-Status: Stage 1 implementation and validation complete
+Status: Stages 1–5 and Stage 6.1 implementation and validation complete
 
 ## Authority and starting point
 
@@ -1253,3 +1253,63 @@ destructive cleanup prompt while unattended. The complete `.venv` suite ran
 Live validation reports zero errors, and `render_pipeline.sh` passes `bash -n`.
 No production render was launched. Stage 5D is complete; Stage 6 begins with
 independently placed objects.
+
+## Stage 6.1 — planar-phyllotaxis independent object
+
+Status: implementation and validation complete from pushed landform checkpoint
+`857d13b`
+
+The disabled `sunflower_head_vogel_pattern` moved atomically from
+`scene.planar_phyllotaxis[]` to the first entry in
+`scene_description.objects[]`. The independent object now owns its descriptive
+name, enabled state, explicit neutral position and rotation, registered
+`planar_phyllotaxis` geometry source, composite-generator material boundary,
+and complete construction. Every existing count, Vogel spacing/divergence,
+absolute head center, pitch, dome surface, receptacle, underside, bract, stem,
+leaf, zoned organ, and nested material value remains intact beneath
+`construction`; there is no duplicate live configuration.
+
+The scene builder resolves registered independent objects and flattens the new
+boundary into the established phyllotaxis writer in stable array order. Object
+placement is operational: non-neutral transforms wrap the generated object,
+while the migrated neutral transform emits no extra PBRT directives. The shaft
+composite now scales independent-object reflectances with other visible
+surfaces. Configuration validation and immutable-snapshot validation require
+names, enabled flags, finite three-component placement vectors, one and only
+one geometry source, material ownership, and generator construction; both
+reject the removed `scene.planar_phyllotaxis` path.
+
+The Qt Art Studio now includes an Independent Objects inspector. It exposes the
+selected object's enabled state, geometry source, position, and rotation; its
+dynamic placement bindings were verified before adding later volume objects so
+the selector cannot silently edit the first entry. Generator-specific detail
+remains directly editable in the sole authoritative JSON.
+
+Mechanical ownership audit:
+
+```text
+object_names                       ['sunflower_head_vogel_pattern']
+object_geometry_sources            ['planar_phyllotaxis']
+enabled_objects                    []
+legacy_planar_phyllotaxis_present  False
+```
+
+The archived `020525` diagnostic migration was built in memory without a
+second JSON or PBRT launch:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 6.1 size:      117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The proof workspace remains at `/tmp/pbrt-phyllotaxis-stage6.SAmXb0`; it is
+intentionally retained to avoid a destructive-cleanup approval prompt during
+unattended work. The complete `.venv` suite runs 135 tests (126 passed, nine
+dependency-aware skips), and system Python passes all 120 non-GUI tests. Live
+validation reports zero errors, and `render_pipeline.sh` passes `bash -n`. No
+production render was launched. Stage 6.2 migrates the disabled legacy
+`volume_sphere` and `volume_box` into self-contained independent objects; the
+legacy direct-grid construction will move with them, while `fog_volume` waits
+for the atmosphere stage.

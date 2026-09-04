@@ -2,9 +2,43 @@ import math
 import unittest
 
 from phyllotaxis import dome_height, vogel_points
+from scene_workspace.build_scene import configured_scene_objects
 
 
 class VogelPointTests(unittest.TestCase):
+    def test_independent_object_adapter_preserves_generator_inputs(self):
+        description = {
+            "objects": [
+                {
+                    "name": "sunflower",
+                    "enabled": False,
+                    "placement": {
+                        "position": [1.0, 2.0, 3.0],
+                        "rotation_degrees": [4.0, 5.0, 6.0],
+                    },
+                    "geometry": {"generator": "planar_phyllotaxis"},
+                    "material": {},
+                    "construction": {"count": 630, "spacing": 1.3},
+                }
+            ]
+        }
+
+        self.assertEqual(
+            configured_scene_objects(description, "planar_phyllotaxis"),
+            [
+                {
+                    "enabled": False,
+                    "label": "sunflower",
+                    "_placement": {
+                        "position": [1.0, 2.0, 3.0],
+                        "rotation_degrees": [4.0, 5.0, 6.0],
+                    },
+                    "count": 630,
+                    "spacing": 1.3,
+                }
+            ],
+        )
+
     def test_figure_4_1_formula(self):
         points = vogel_points(4, divergence_angle=137.5, spacing=2.0)
 

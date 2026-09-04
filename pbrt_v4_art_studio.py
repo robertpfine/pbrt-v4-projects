@@ -25,6 +25,7 @@ except ImportError as error:  # pragma: no cover - exercised before Qt starts
 
 from scene_config import (
     LANDFORMS_PATH,
+    OBJECTS_PATH,
     SKY_PATH,
     SceneConfig,
     SceneConfigError,
@@ -375,6 +376,7 @@ class Inspector(QtWidgets.QWidget):
         self._build_grass_page()
         self._build_poppy_page()
         self._build_tree_page()
+        self._build_objects_page()
         self._module_boundary(
             "water",
             "Water",
@@ -700,6 +702,81 @@ class Inspector(QtWidgets.QWidget):
         )
         self.refreshers.append(refresh_tree)
         refresh_tree()
+
+    def _build_objects_page(self) -> None:
+        form = self._page(
+            "objects",
+            "Independent Objects",
+            "Objects here are placed independently rather than growing from a "
+            "landform. Generator-specific construction remains directly editable "
+            "in the authoritative JSON.",
+        )
+        objects = self.config.get(OBJECTS_PATH)
+        selector = QtWidgets.QComboBox()
+        for item in objects:
+            selector.addItem(item.get("name", "unnamed object"))
+        enabled = QtWidgets.QCheckBox()
+        source = QtWidgets.QLabel()
+        source.setTextInteractionFlags(
+            QtCore.Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        form.addRow("Object", selector)
+        form.addRow("Enabled", enabled)
+        form.addRow("Geometry source", source)
+
+        def selected_path() -> tuple[str | int, ...]:
+            return OBJECTS_PATH + (max(0, selector.currentIndex()),)
+
+        vector_widgets: dict[str, list[QtWidgets.QDoubleSpinBox]] = {}
+        for field, label in (
+            ("position", "Position"),
+            ("rotation_degrees", "Rotation"),
+        ):
+            row = QtWidgets.QWidget()
+            layout = QtWidgets.QHBoxLayout(row)
+            layout.setContentsMargins(0, 0, 0, 0)
+            vector_widgets[field] = []
+            for component, axis in enumerate("XYZ"):
+                spin = QtWidgets.QDoubleSpinBox()
+                spin.setRange(-1_000_000.0, 1_000_000.0)
+                spin.setDecimals(3)
+                spin.setPrefix(f"{axis} ")
+                spin.valueChanged.connect(
+                    lambda value, f=field, i=component: self._set_vector_value(
+                        selected_path() + ("placement", f), i, value
+                    )
+                    if objects
+                    else None
+                )
+                vector_widgets[field].append(spin)
+                layout.addWidget(spin)
+            form.addRow(label, row)
+
+        def refresh_object() -> None:
+            if not objects:
+                enabled.setEnabled(False)
+                source.setText("none")
+                return
+            path = selected_path()
+            item = self.config.get(path)
+            self._blocked(enabled, item.get("enabled", False))
+            geometry = item.get("geometry", {})
+            source.setText(
+                str(geometry.get("generator", geometry.get("pbrt_shape", "unknown")))
+            )
+            for field, widgets in vector_widgets.items():
+                vector = item["placement"][field]
+                for component, widget in enumerate(widgets):
+                    self._blocked(widget, float(vector[component]))
+
+        selector.currentIndexChanged.connect(lambda _index: refresh_object())
+        enabled.toggled.connect(
+            lambda value: self._set(selected_path() + ("enabled",), value)
+            if objects
+            else None
+        )
+        self.refreshers.append(refresh_object)
+        refresh_object()
 
     def _build_distant_hills_page(self) -> None:
         form = self._page(
@@ -1199,6 +1276,7 @@ class StudioWindow(QtWidgets.QMainWindow):
             ("Trees", "trees", "landscape"),
             ("Water", "water", "landscape"),
             ("Distant Hills", "distant_hills", "landscape"),
+            ("Objects", "objects", None),
             ("Sky", "sky", None),
             ("Clouds", "clouds", "sky"),
             ("Atmosphere", "atmosphere", None),

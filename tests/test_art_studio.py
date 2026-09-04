@@ -49,6 +49,7 @@ class ArtStudioTests(unittest.TestCase):
                 "trees",
                 "water",
                 "distant_hills",
+                "objects",
                 "sky",
                 "clouds",
                 "atmosphere",
@@ -142,6 +143,14 @@ class ArtStudioTests(unittest.TestCase):
         self.assertEqual(layer_selector.currentText(), "broad_rise")
         self.assertEqual(peak_selector.count(), 1)
         self.assertEqual(peak_selector.currentText(), "Peak 1")
+
+    def test_independent_object_page_exposes_planar_phyllotaxis(self):
+        self.window.inspector.show_page("objects")
+        selector = self.window.inspector.pages["objects"].findChild(
+            QtWidgets.QComboBox
+        )
+        self.assertIsNotNone(selector)
+        self.assertEqual(selector.currentText(), "sunflower_head_vogel_pattern")
 
     def test_no_add_control_is_present(self):
         buttons = self.window.findChildren(QtWidgets.QAbstractButton)

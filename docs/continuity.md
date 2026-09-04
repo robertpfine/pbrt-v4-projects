@@ -519,7 +519,10 @@ order:
    wrapper is removed. Stage 5C is complete: the vista plane and `broad_rise`
    are independent landforms. Stage 5D is complete: L-system and
    space-colonization trees are landform surface objects, and the grove is folded
-   into its selected tree population. Stage 6 begins independent objects next.
+   into its selected tree population. Stage 6.1 is complete: the disabled
+   planar-phyllotaxis sunflower is the first `scene_description.objects` entry.
+   Stage 6.2 migrates the disabled legacy sphere and box volume experiments;
+   `fog_volume` remains for the atmosphere stage.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -760,6 +763,22 @@ the new structure. The archived `020525` proof remains byte-identical at
 The complete `.venv` suite runs 132 tests (123 passed, nine skips), and all 118
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 5D is
 complete; Stage 6 begins independently placed objects.
+
+Stage 6.1 planar-phyllotaxis migration is complete in the working
+implementation. The disabled `sunflower_head_vogel_pattern` moved from
+`scene.planar_phyllotaxis[]` to `scene_description.objects[]` with explicit
+neutral placement, registered generator geometry, an object material boundary,
+and every established head/support/organ/material control intact under
+`construction`. The builder adapter preserves stable ordering and supports
+non-neutral object transforms; the old path is absent and rejected. The Qt
+inspector, shaft composite, configuration validator, immutable snapshot guard,
+and tests use the new ownership. The archived `020525` proof remains
+byte-identical at 117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 135 tests (126 passed, nine skips), and all 120
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 6.2 moves
+the disabled experimental `volume_sphere` and `volume_box`; the fog boundary
+stays with the later atmosphere migration.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

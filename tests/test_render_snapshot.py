@@ -64,6 +64,7 @@ def scene_description(name="Original Scene"):
                 "surface_objects": [],
             }
         ],
+        "objects": [],
     }
 
 
@@ -806,6 +807,19 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
                 "population": {},
             }
         ]
+        config["scene_description"]["objects"] = [
+            {
+                "name": "sunflower",
+                "enabled": False,
+                "placement": {
+                    "position": [0.0, 0.0, 0.0],
+                    "rotation_degrees": [0.0, 0.0, 0.0],
+                },
+                "geometry": {"generator": "planar_phyllotaxis"},
+                "material": {"reflectance": [0.5, 0.4, 0.3]},
+                "construction": {},
+            }
+        ]
         base = render_shaft_composite.configure_base(config, "shaft_sun")
         shaft = render_shaft_composite.configure_shaft(
             config, "shaft_sun", 0.1, 0.01
@@ -827,6 +841,11 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
             ]["reflectance_variants"],
             [[0.004, 0.005, 0.006]],
         )
+        for actual, expected in zip(
+            shaft["scene_description"]["objects"][0]["material"]["reflectance"],
+            [0.05, 0.04, 0.03],
+        ):
+            self.assertAlmostEqual(actual, expected)
 
     def test_entry_point_reexecutes_the_frozen_script_and_config(self):
         result = {
