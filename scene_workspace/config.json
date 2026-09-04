@@ -292,6 +292,104 @@
                 "patchiness": { "strength": 0.12, "frequency": 0.012 }
               }
             }
+          },
+          {
+            "name": "poppies",
+            "enabled": true,
+            "generator": "poppy",
+            "construction": {
+              "stem_reflectance": [0.035, 0.16, 0.025],
+              "foliage_reflectance": [0.08, 0.21, 0.065],
+              "tropism": {
+                "main_stem": {
+                  "direction_degrees": 88.0,
+                  "height": 0.765,
+                  "bend": 0.135,
+                  "lateral_sway": 0.045
+                },
+                "emerging_buds": {
+                  "count": 2,
+                  "direction_degrees": 4.0,
+                  "reach": 0.28,
+                  "droop": 0.30
+                },
+                "foliage": {
+                  "direction_degrees": 205.0,
+                  "spread_degrees": 115.0,
+                  "droop": 0.52
+                }
+              },
+              "center_reflectance": [0.012, 0.006, 0.004],
+              "capsule_reflectance": [0.16, 0.30, 0.09],
+              "anther_reflectance": [0.055, 0.010, 0.025],
+              "stigma_reflectance": [0.42, 0.10, 0.12],
+              "stigma_center_reflectance": [0.018, 0.002, 0.008],
+              "basal_blotch_reflectance": [0.012, 0.003, 0.009],
+              "basal_blotch_variants": [true, true, true, true, false, false, false],
+              "color_names": [
+                "scarlet", "vermilion", "orange", "coral",
+                "apricot", "gold", "cream"
+              ],
+              "center_reflectance_variants": [
+                [0.012, 0.006, 0.004],
+                [0.016, 0.007, 0.003],
+                [0.12, 0.055, 0.008],
+                [0.025, 0.010, 0.004],
+                [0.38, 0.22, 0.035],
+                [0.48, 0.30, 0.045],
+                [0.52, 0.34, 0.065]
+              ],
+              "petal_transmittance": [0.14, 0.008, 0.001],
+              "rim_transmittance": [0.42, 0.028, 0.003],
+              "reflectance_variants": [
+                [0.92, 0.055, 0.004],
+                [0.98, 0.12, 0.006],
+                [1.00, 0.28, 0.010],
+                [0.96, 0.20, 0.075],
+                [0.96, 0.46, 0.13],
+                [0.96, 0.62, 0.12],
+                [0.92, 0.80, 0.55]
+              ]
+            },
+            "population": {
+              "count": 3500,
+              "seed": 131,
+              "region": { "center": [-400.0, -700.0], "size": [3000.0, 2800.0] },
+              "scale": [16.0, 47.0],
+              "camera_frustum": {
+                "enabled": true,
+                "placement_reference": "flower",
+                "depth_fade": {
+                  "enabled": false,
+                  "start": 1800.0,
+                  "end": 2425.0,
+                  "minimum_density": 0.0
+                }
+              },
+              "extension": {
+                "enabled": true,
+                "target_distant_hill": "broad_rise",
+                "count": 2500,
+                "seed": 613,
+                "lateral_range": [-1.0, 1.0],
+                "depth_range": [0.0, 0.56],
+                "ridge_fade": {
+                  "enabled": true,
+                  "start": 0.44,
+                  "end": 0.53,
+                  "minimum_density": 0.0
+                },
+                "scale": [9.0, 26.0],
+                "max_slope_degrees": 65.0,
+                "y_offset": 0.05,
+                "patchiness": { "strength": 0.52, "frequency": 0.007 }
+              },
+              "max_slope_degrees": 65.0,
+              "patchiness": { "strength": 0.62, "frequency": 0.007 },
+              "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
+              "y_offset": 0.05,
+              "variants": 7
+            }
           }
         ]
       }
@@ -520,97 +618,6 @@
     "landscape": {
       "ground": {
         "details": {
-          "poppies": {
-            "enabled": true,
-            "count": 3500,
-            "seed": 131,
-            "region": { "center": [-400.0, -700.0], "size": [3000.0, 2800.0] },
-            "scale": [16.0, 47.0],
-            "camera_frustum": {
-              "enabled": true,
-              "placement_reference": "flower",
-              "depth_fade": {
-                "enabled": false,
-                "start": 1800.0,
-                "end": 2425.0,
-                "minimum_density": 0.0
-              }
-            },
-            "extension": {
-              "enabled": true,
-              "target_distant_hill": "broad_rise",
-              "count": 2500,
-              "seed": 613,
-              "lateral_range": [-1.0, 1.0],
-              "depth_range": [0.0, 0.56],
-              "ridge_fade": {
-                "enabled": true,
-                "start": 0.44,
-                "end": 0.53,
-                "minimum_density": 0.0
-              },
-              "scale": [9.0, 26.0],
-              "max_slope_degrees": 65.0,
-              "y_offset": 0.05,
-              "patchiness": { "strength": 0.52, "frequency": 0.007 }
-            },
-            "max_slope_degrees": 65.0,
-            "patchiness": { "strength": 0.62, "frequency": 0.007 },
-            "exclusion": { "center": [-315.5, -134.2], "radius": 10.75 },
-            "y_offset": 0.05,
-            "variants": 7,
-            "stem_reflectance": [0.035, 0.16, 0.025],
-            "foliage_reflectance": [0.08, 0.21, 0.065],
-            "tropism": {
-              "main_stem": {
-                "direction_degrees": 88.0,
-                "height": 0.765,
-                "bend": 0.135,
-                "lateral_sway": 0.045
-              },
-              "emerging_buds": {
-                "count": 2,
-                "direction_degrees": 4.0,
-                "reach": 0.28,
-                "droop": 0.30
-              },
-              "foliage": {
-                "direction_degrees": 205.0,
-                "spread_degrees": 115.0,
-                "droop": 0.52
-              }
-            },
-            "center_reflectance": [0.012, 0.006, 0.004],
-            "capsule_reflectance": [0.16, 0.30, 0.09],
-            "anther_reflectance": [0.055, 0.010, 0.025],
-            "stigma_reflectance": [0.42, 0.10, 0.12],
-            "stigma_center_reflectance": [0.018, 0.002, 0.008],
-            "basal_blotch_reflectance": [0.012, 0.003, 0.009],
-            "basal_blotch_variants": [true, true, true, true, false, false, false],
-            "color_names": [
-              "scarlet", "vermilion", "orange", "coral", "apricot", "gold", "cream"
-            ],
-            "center_reflectance_variants": [
-              [0.012, 0.006, 0.004],
-              [0.016, 0.007, 0.003],
-              [0.12, 0.055, 0.008],
-              [0.025, 0.010, 0.004],
-              [0.38, 0.22, 0.035],
-              [0.48, 0.30, 0.045],
-              [0.52, 0.34, 0.065]
-            ],
-            "petal_transmittance": [0.14, 0.008, 0.001],
-            "rim_transmittance": [0.42, 0.028, 0.003],
-            "reflectance_variants": [
-              [0.92, 0.055, 0.004],
-              [0.98, 0.12, 0.006],
-              [1.00, 0.28, 0.010],
-              [0.96, 0.20, 0.075],
-              [0.96, 0.46, 0.13],
-              [0.96, 0.62, 0.12],
-              [0.92, 0.80, 0.55]
-            ]
-          },
           "litter": {
             "enabled": false,
             "count": 950,

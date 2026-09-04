@@ -514,8 +514,8 @@ order:
    alternatives, their geometry/topography, material, and texture now live in
    `scene_description.landforms`. Their old paths are absent, every known
    consumer uses the new locations, and bounded rebuilds reproduced the
-   pre-migration PBRT scene byte for byte. Stage 5B is in progress: grass is
-   migrated, and poppies are next.
+   pre-migration PBRT scene byte for byte. Stage 5B is in progress: grass and
+   poppies are migrated, and litter is next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -655,6 +655,21 @@ exact 117,462,947-byte PBRT scene and SHA-256 above. The complete `.venv` suite
 now runs 111 tests (102 passed and nine dependency-aware skips), and all 97
 system-Python non-GUI tests pass. No PBRT render was launched. The next
 one-generator substage is poppies.
+
+Stage 5B poppies is also complete in the working implementation. Poppies are
+the `generator: "poppy"` surface object immediately after grass under enabled
+`flat_landform`. `construction` owns all stem, foliage, reproductive-part,
+petal, color-variant, transmission, and tropism values. `population` owns count,
+seed, scale, variants, region, slope, patchiness, exclusion, Y offset,
+camera-frustum placement reference/depth fade, and the enabled distant-hill
+extension. The builder, distant-hill extension, validator, snapshot boundary,
+Qt Poppies page, scene summary, shaft pass, tests, and local-only preview helper
+all resolve the new owner. The old ground-detail poppy path is absent and
+rejected.
+
+An in-memory migration of archived `020525` again emitted the exact
+117,462,947-byte PBRT scene and SHA-256 above, without launching PBRT. The next
+one-generator substage is litter.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

@@ -585,16 +585,27 @@ class Inspector(QtWidgets.QWidget):
             "full camera frame. Choose whether the reference is the flower or "
             "its root; plant geometry may be cropped at an edge.",
         )
-        base = GROUND_PATH + ("details", "poppies")
+        base = self.config.surface_object_path("poppy")
+        population = base + ("population",)
         self._check(form, "Enabled", base + ("enabled",))
-        self._integer(form, "Instances", base + ("count",))
-        self._pair(form, "Scale", base + ("scale",), 0.0, 10_000.0, 3)
+        self._integer(form, "Instances", population + ("count",))
+        self._pair(
+            form,
+            "Scale",
+            population + ("scale",),
+            0.0,
+            10_000.0,
+            3,
+        )
         self._check(
             form,
             "Constrain placement to frame",
-            base + ("camera_frustum", "enabled"),
+            population + ("camera_frustum", "enabled"),
         )
-        reference_path = base + ("camera_frustum", "placement_reference")
+        reference_path = population + (
+            "camera_frustum",
+            "placement_reference",
+        )
         reference = QtWidgets.QComboBox()
         reference.setObjectName("poppy_placement_reference")
         reference.addItem("Flower placement", "flower")

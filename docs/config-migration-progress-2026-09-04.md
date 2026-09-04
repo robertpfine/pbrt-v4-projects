@@ -742,3 +742,106 @@ archived artifact were not modified.
 
 Grass is fully migrated with no old/new compatibility ownership. The next
 one-generator substage is poppies.
+
+The grass commit is `975b731` (`Migrate grass surface object`) and is pushed to
+`origin/pbrt-v4-art-studio`. Its single continuity-copy attempt immediately
+failed with Google Drive `RATE_LIMIT_EXCEEDED`; per the artist's instruction,
+it was not retried.
+
+## Stage 5B.2 — poppy surface-object generator
+
+Status: implementation and validation complete from pushed grass checkpoint
+`975b731`
+
+### Exact ownership move
+
+The sole legacy `scene.landscape.ground.details.poppies` object moved directly
+after grass under enabled `flat_landform.surface_objects[]` with generator
+`poppy`.
+
+`construction` contains every prior botanical/material field:
+
+```text
+stem_reflectance, foliage_reflectance, tropism, center_reflectance,
+capsule_reflectance, anther_reflectance, stigma_reflectance,
+stigma_center_reflectance, basal_blotch_reflectance,
+basal_blotch_variants, color_names, center_reflectance_variants,
+petal_transmittance, rim_transmittance, reflectance_variants
+```
+
+`population` contains every scatter/repetition field:
+
+```text
+count, seed, region, scale, camera_frustum, extension,
+max_slope_degrees, patchiness, exclusion, y_offset, variants
+```
+
+All nested values—including seven color variants, reproductive-part colors,
+stem/foliage tropism, flower-vs-root framing, depth fade, and the enabled
+`broad_rise` extension—are unchanged. Litter, rocks, and undergrowth remain at
+their single temporary paths.
+
+### Consumers and safeguards
+
+- The scene builder resolves and flattens the `poppy` surface object at the
+  generator call. Foreground poppies and the distant-hill extension consume the
+  same object.
+- Configuration validation checks surface-object uniqueness plus poppy count,
+  ascending scale, camera-frustum enable type, placement reference, and depth
+  fade at the new population path, and rejects legacy poppy ownership.
+- Render snapshotting rejects the obsolete ground-detail poppy path and malformed
+  or duplicate new poppy ownership before rendering.
+- The Qt Poppies page edits enabled, count, scale, frustum, and placement
+  reference at the new paths; the scene summary reads the new population count.
+- Shaft-pass reflectance scaling continues to treat poppies as terrain-owned
+  surface objects.
+- The local-only ignored flat-landform preview helper resolves migrated poppies
+  without adding another configuration.
+
+### Mechanical ownership audit
+
+The complete parsed JSON comparison against a mechanical transformation of
+`975b731` reports:
+
+```text
+stage5b_poppy_only True
+owner flat_landform
+surface_generators ['grass', 'poppy']
+construction_keys ['stem_reflectance', 'foliage_reflectance', 'tropism',
+                   'center_reflectance', 'capsule_reflectance',
+                   'anther_reflectance', 'stigma_reflectance',
+                   'stigma_center_reflectance',
+                   'basal_blotch_reflectance', 'basal_blotch_variants',
+                   'color_names', 'center_reflectance_variants',
+                   'petal_transmittance', 'rim_transmittance',
+                   'reflectance_variants']
+population_keys ['count', 'seed', 'region', 'scale', 'camera_frustum',
+                 'extension', 'max_slope_degrees', 'patchiness',
+                 'exclusion', 'y_offset', 'variants']
+legacy_detail_keys ['litter', 'rocks', 'undergrowth']
+```
+
+### Exact structural PBRT comparison
+
+Archived `020525` was migrated through the poppy move entirely in memory and
+built in a temporary workspace. Its disabled poppy state was resolved through
+the new surface object. No second JSON was written and PBRT was not launched.
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5B.2 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The temporary comparison directory was removed; live and archived artifacts
+were not modified.
+
+### Tests and result
+
+- The complete `.venv` suite ran 113 tests: 104 passed and nine skips.
+- System Python passed all 99 non-GUI tests.
+- Live JSON validation reports zero errors.
+- No production PBRT render was launched.
+
+Poppies are fully migrated with no old/new ownership bridge. Litter is next.

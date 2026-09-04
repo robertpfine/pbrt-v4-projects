@@ -89,16 +89,22 @@ class ArtStudioTests(unittest.TestCase):
 
     def test_control_change_saves_to_the_single_configuration(self):
         path = (
-            "scene", "landscape", "ground", "details", "poppies", "count"
+            "scene_description",
+            "landforms",
+            1,
+            "surface_objects",
+            1,
+            "population",
+            "count",
         )
         self.window.inspector._set(path, 2700)
         self.assertTrue(self.window.config.dirty)
         self.assertTrue(self.window.save_config())
         result = json.loads(self.config_path.read_text(encoding="utf-8"))
         self.assertEqual(
-            result["scene"]["landscape"]["ground"]["details"]["poppies"][
-                "count"
-            ],
+            result["scene_description"]["landforms"][1]["surface_objects"][1][
+                "population"
+            ]["count"],
             2700,
         )
         self.assertNotIn("project", result)
@@ -114,7 +120,7 @@ class ArtStudioTests(unittest.TestCase):
         self.application.processEvents()
         self.assertEqual(
             self.window.config.get(
-                "scene.landscape.ground.details.poppies."
+                "scene_description.landforms.1.surface_objects.1.population."
                 "camera_frustum.placement_reference"
             ),
             "root",

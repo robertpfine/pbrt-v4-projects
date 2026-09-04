@@ -332,8 +332,9 @@ The nested `terrain_surface_texture` controls are:
 ### Shared scatter controls
 
 The `grass`, `poppies`, `litter`, `rocks`, and `undergrowth` blocks share these
-controls. Grass now owns them below its landform surface object; the other four
-blocks retain their temporary ground-detail paths until their migration turns:
+controls. Grass and poppies now own them below their landform surface objects;
+the other three blocks retain temporary ground-detail paths until their
+migration turns:
 
 - `enabled` activates the layer.
 - `count` is the requested number of object instances, not the number of blades
@@ -386,6 +387,15 @@ The normalized lateral/depth ranges, patchiness, scale, slope limit, and
 `ridge_fade` are configured beside the foreground grass rather than hidden in
 the hill definition. Poppies expose the same extension concept. These
 extensions are dormant when the distant-hills module is disabled.
+
+### Poppies
+
+Poppies are the `generator: "poppy"` entry under the enabled foreground
+landform's `surface_objects`. `construction` owns every botanical shape,
+tropism, material, color-variant, and transmission value. `population` owns
+count, seed, variants, scale, region, slope/offset/exclusion, patchiness,
+camera-frustum framing, and the distant-hill extension. The former
+`scene.landscape.ground.details.poppies` path is rejected.
 
 ### Ground litter
 

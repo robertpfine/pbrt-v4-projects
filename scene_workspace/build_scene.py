@@ -3271,8 +3271,10 @@ def write_scene(cfg, scene_root, medium_rel_path):
     terrain_landform = terrain_landforms[0]
     terrain = create_terrain(terrain_landform)
     grass_config = configured_surface_object(terrain_landform, "grass")
+    poppy_config = configured_surface_object(terrain_landform, "poppy")
     terrain_details = dict(ground_config.get("details", {}))
     terrain_details["grass"] = grass_config
+    terrain_details["poppies"] = poppy_config
     lights = []
     background = sky_config.get("background")
     if background:
@@ -3306,7 +3308,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
         lines,
         landscape_config.get("distant_hills", {}),
         grass_config,
-        ground_config.get("details", {}).get("poppies", {}),
+        poppy_config,
     )
     write_planar_phyllotaxis(lines, scene.get("planar_phyllotaxis", []))
     write_lsystem_trees(lines, scene.get("lsystem_trees", []), terrain)

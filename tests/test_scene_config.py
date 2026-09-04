@@ -91,6 +91,19 @@ class SceneConfigTests(unittest.TestCase):
             "layers": [{ "count": 10 }],
             "camera_frustum": { "enabled": false }
           }
+        }, {
+          "name": "poppies",
+          "enabled": true,
+          "generator": "poppy",
+          "construction": {},
+          "population": {
+            "count": 20,
+            "scale": [1.0, 2.0],
+            "camera_frustum": {
+              "enabled": true,
+              "placement_reference": "flower"
+            }
+          }
         }]
       },
       {
@@ -127,17 +140,7 @@ class SceneConfigTests(unittest.TestCase):
   "scene": {
     "landscape": {
       "ground": {
-        "details": {
-          "poppies": {
-            "enabled": true,
-            "count": 20,
-            "scale": [1.0, 2.0],
-            "camera_frustum": {
-              "enabled": true,
-              "placement_reference": "flower"
-            }
-          }
-        }
+        "details": {}
       },
       "water": { "enabled": false },
       "distant_hills": { "enabled": false }
@@ -161,7 +164,10 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)
             config = SceneConfig(path)
-            config.set("scene.landscape.ground.details.poppies.count", 2600)
+            config.set(
+                "scene_description.landforms.0.surface_objects.1.population.count",
+                2600,
+            )
             config.set("camera_settings.look_at.eye", [4, 5, 6])
             config.save()
             result = path.read_text(encoding="utf-8")
@@ -175,7 +181,10 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             config = SceneConfig(path)
-            config.set("scene.landscape.ground.details.poppies.count", 21)
+            config.set(
+                "scene_description.landforms.0.surface_objects.1.population.count",
+                21,
+            )
             path.write_text(path.read_text() + "\n", encoding="utf-8")
             with self.assertRaises(SceneConfigConflictError):
                 config.save()
@@ -185,7 +194,7 @@ class SceneConfigTests(unittest.TestCase):
             path, source = self.make_config(directory)
             config = SceneConfig(path)
             config.set(
-                "scene.landscape.ground.details.poppies.scale",
+                "scene_description.landforms.0.surface_objects.1.population.scale",
                 [5.0, 1.0],
             )
             with self.assertRaises(SceneConfigError):
@@ -197,7 +206,7 @@ class SceneConfigTests(unittest.TestCase):
             path, source = self.make_config(directory)
             config = SceneConfig(path)
             config.set(
-                "scene.landscape.ground.details.poppies."
+                "scene_description.landforms.0.surface_objects.1.population."
                 "camera_frustum.placement_reference",
                 "whole_plant",
             )
@@ -210,7 +219,8 @@ class SceneConfigTests(unittest.TestCase):
             path, source = self.make_config(directory)
             config = SceneConfig(path)
             config.set(
-                "scene.landscape.ground.details.poppies.camera_frustum",
+                "scene_description.landforms.0.surface_objects.1.population."
+                "camera_frustum",
                 {
                     "enabled": True,
                     "placement_reference": "flower",
@@ -344,6 +354,16 @@ class SceneConfigTests(unittest.TestCase):
                     0,
                 ),
             )
+            self.assertEqual(
+                config.surface_object_path("poppy"),
+                (
+                    "scene_description",
+                    "landforms",
+                    0,
+                    "surface_objects",
+                    1,
+                ),
+            )
 
     def test_obsolete_ground_grass_is_reported(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -356,6 +376,20 @@ class SceneConfigTests(unittest.TestCase):
             self.assertIn(
                 "obsolete scene.landscape.ground.details.grass must be "
                 "removed after grass migration",
+                SceneConfig(path).validate(),
+            )
+
+    def test_obsolete_ground_poppies_are_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["landscape"]["ground"]["details"]["poppies"] = {
+                "enabled": False
+            }
+            path.write_text(json.dumps(data), encoding="utf-8")
+            self.assertIn(
+                "obsolete scene.landscape.ground.details.poppies must be "
+                "removed after poppy migration",
                 SceneConfig(path).validate(),
             )
 

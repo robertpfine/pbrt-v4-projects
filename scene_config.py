@@ -631,8 +631,10 @@ class SceneConfig:
                             if not isinstance(item.get("enabled"), bool):
                                 errors.append(f"{object_prefix}.enabled must be boolean")
                             generator = item.get("generator")
-                            if generator != "grass":
-                                errors.append(f"{object_prefix}.generator must be grass")
+                            if generator not in {"grass", "poppy"}:
+                                errors.append(
+                                    f"{object_prefix}.generator must be grass or poppy"
+                                )
                             else:
                                 object_generators.append(generator)
                             construction = item.get("construction")
@@ -676,6 +678,42 @@ class SceneConfig:
                                     if not isinstance(count, int) or count < 0:
                                         errors.append(
                                             "grass.population.layers.0.count must be non-negative"
+                                        )
+                            elif generator == "poppy":
+                                count = population.get("count")
+                                if not isinstance(count, int) or count < 0:
+                                    errors.append(
+                                        "poppies.population.count must be a non-negative integer"
+                                    )
+                                scale = population.get("scale")
+                                if (
+                                    not isinstance(scale, list)
+                                    or len(scale) != 2
+                                    or not all(
+                                        isinstance(value, (int, float))
+                                        for value in scale
+                                    )
+                                    or scale[0] > scale[1]
+                                ):
+                                    errors.append(
+                                        "poppies.population.scale must be an ascending pair"
+                                    )
+                                frustum = population.get("camera_frustum", {})
+                                validate_depth_fade("poppies", frustum)
+                                if isinstance(frustum, dict):
+                                    if not isinstance(
+                                        frustum.get("enabled", False), bool
+                                    ):
+                                        errors.append(
+                                            "poppies visible-ground placement must be boolean"
+                                        )
+                                    placement_reference = frustum.get(
+                                        "placement_reference", "root"
+                                    )
+                                    if placement_reference not in {"root", "flower"}:
+                                        errors.append(
+                                            "poppies.camera_frustum.placement_reference "
+                                            "must be root or flower"
                                         )
                         if len(object_names) != len(set(object_names)):
                             errors.append(f"{prefix}.surface object names must be unique")
@@ -926,6 +964,11 @@ class SceneConfig:
                     "obsolete scene.landscape.ground.details.grass must be "
                     "removed after grass migration"
                 )
+            if isinstance(details, dict) and "poppies" in details:
+                errors.append(
+                    "obsolete scene.landscape.ground.details.poppies must be "
+                    "removed after poppy migration"
+                )
 
         sky = require(SKY_PATH, dict)
         if sky is not None:
@@ -1155,31 +1198,6 @@ class SceneConfig:
                         f"obsolete scene.{name} must be removed after render migration"
                     )
 
-        poppies = require(GROUND_PATH + ("details", "poppies"), dict)
-        if poppies is not None:
-            count = poppies.get("count")
-            if not isinstance(count, int) or count < 0:
-                errors.append("poppies.count must be a non-negative integer")
-            scale = poppies.get("scale")
-            if (
-                not isinstance(scale, list)
-                or len(scale) != 2
-                or not all(isinstance(value, (int, float)) for value in scale)
-                or scale[0] > scale[1]
-            ):
-                errors.append("poppies.scale must be an ascending pair")
-            frustum = poppies.get("camera_frustum", {})
-            validate_depth_fade("poppies", frustum)
-            if isinstance(frustum, dict):
-                if not isinstance(frustum.get("enabled", False), bool):
-                    errors.append("poppies visible-ground placement must be boolean")
-                placement_reference = frustum.get("placement_reference", "root")
-                if placement_reference not in {"root", "flower"}:
-                    errors.append(
-                        "poppies.camera_frustum.placement_reference must be "
-                        "root or flower"
-                    )
-
         return errors
 
     def describe(self) -> str:
@@ -1198,7 +1216,12 @@ class SceneConfig:
             **grass_object["construction"],
             **grass_object["population"],
         }
-        poppies = self.get(GROUND_PATH + ("details", "poppies"))
+        poppy_object = self.get(self.surface_object_path("poppy"))
+        poppies = {
+            "enabled": poppy_object["enabled"],
+            **poppy_object["construction"],
+            **poppy_object["population"],
+        }
         distant_hills = self.get(HILLS_PATH)
         water = self.get(("scene", "landscape", "water"))
         sky = self.get(SKY_PATH)
