@@ -1834,3 +1834,12 @@ A fresh non-rendering build completed in 19.44 seconds. It produced a
 byte-for-byte identical to archived `075647`. This proves the formatting pass
 has no scene-construction or rendering-input effect. No PBRT render was
 launched.
+# Post-migration cloud boundary extension
+
+After the structural migration, the artist's horizon-deck experiments exposed
+the limitation of the migrated `depth_slope` control: it offsets density with
+depth but leaves an axis-aligned medium boundary. The subsequent explicit
+corner-prism implementation, validation, Python/C++ parity work, and projection
+diagnostic are recorded in `docs/engineering-progress-2026-09-04.md` and
+specified in `docs/cloud-boundary-controls.md`. The extension is opt-in and did
+not rewrite or reorder the artist's live cloud settings.

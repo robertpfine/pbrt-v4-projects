@@ -10,6 +10,8 @@ import subprocess
 import sys
 from typing import Any
 
+from cloud_boundary import CloudBoundary, normalized_edge_fades
+
 
 CONTRACT_VERSION = 1
 
@@ -69,6 +71,9 @@ def normalized_cloud_job(cloud_config: dict, formation: dict, index: int = 0) ->
     noise = _merged(cloud_config, formation, "fractal_noise")
     depth_slope = _merged(cloud_config, formation, "depth_slope")
     depth_profile = _merged(cloud_config, formation, "depth_profile")
+    boundary = CloudBoundary(
+        formation.get("boundary", {}), center, dimensions, depth_slope, name
+    )
     shared_appearance = cloud_config.get("appearance", {})
     local_appearance = formation.get("appearance", {})
     appearance = {**shared_appearance, **local_appearance}
@@ -105,6 +110,7 @@ def normalized_cloud_job(cloud_config: dict, formation: dict, index: int = 0) ->
         "generator": generator,
         "center": center,
         "dimensions": dimensions,
+        "boundary": boundary.contract(),
         "resolution": resolution,
         "density_field": {
             "shape": {
@@ -124,9 +130,8 @@ def normalized_cloud_job(cloud_config: dict, formation: dict, index: int = 0) ->
                 "detail_frequency_scale": float(
                     noise.get("detail_frequency_scale", 2.7)
                 ),
-                "edge_fade_fraction": _vector3(
-                    noise.get("edge_fade_fraction", [0.08, 0.22, 0.25]),
-                    "edge_fade_fraction",
+                "edge_fade_fraction": normalized_edge_fades(
+                    noise.get("edge_fade_fraction", [0.08, 0.22, 0.25])
                 ),
                 "edge_influence": float(noise.get("edge_influence", 0.28)),
                 "density_contrast": float(noise.get("density_contrast", 0.65)),

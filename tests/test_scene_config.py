@@ -274,6 +274,40 @@ class SceneConfigTests(unittest.TestCase):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
+    def test_corner_prism_containing_camera_is_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set("scene_description.sky.clouds", [{
+                "name": "test_deck",
+                "enabled": True,
+                "placement": {"position": [0.0, 2.5, 0.0]},
+                "dimensions": [20.0, 5.0, 20.0],
+                "boundary": {
+                    "mode": "corner_prism",
+                    "bottom_corners": {
+                        "near_left": [-10.0, 0.0, 10.0],
+                        "near_right": [10.0, 0.0, 10.0],
+                        "far_right": [10.0, 0.0, -10.0],
+                        "far_left": [-10.0, 0.0, -10.0],
+                    },
+                    "thickness": 5.0,
+                },
+                "density_field": {
+                    "generator": "mottled_veil",
+                    "resolution": [4, 4, 4],
+                    "shape": {}, "noise": {},
+                    "depth_slope": {"enabled": False},
+                    "depth_profile": {}, "lobes": [],
+                },
+                "medium": {"type": "uniformgrid"},
+            }])
+            with self.assertRaisesRegex(
+                SceneConfigError, "boundary contains camera eye"
+            ):
+                config.save()
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
     def test_invalid_render_settings_are_not_saved(self):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)

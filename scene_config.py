@@ -13,6 +13,8 @@ import tempfile
 from typing import Any, Iterable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from cloud_boundary import CloudBoundary
+
 
 JsonPath = tuple[str | int, ...]
 _MISSING = object()
@@ -1275,6 +1277,13 @@ class SceneConfig:
                         )
                     ):
                         errors.append(f"{prefix}.dimensions requires 3 positive values")
+                    boundary = cloud.get("boundary", {})
+                    if not isinstance(boundary, dict):
+                        errors.append(f"{prefix}.boundary must be an object")
+                    elif boundary.get("mode", "axis_aligned") not in {
+                        "axis_aligned", "corner_prism"
+                    }:
+                        errors.append(f"{prefix}.boundary.mode is unsupported")
                     density = cloud.get("density_field")
                     if not isinstance(density, dict):
                         errors.append(f"{prefix}.density_field must be an object")
@@ -1292,6 +1301,21 @@ class SceneConfig:
                             expected = list if field == "lobes" else dict
                             if not isinstance(density.get(field), expected):
                                 errors.append(f"{prefix}.density_field.{field} is invalid")
+                        if (
+                            isinstance(position, list) and len(position) == 3
+                            and isinstance(dimensions, list) and len(dimensions) == 3
+                            and all(isinstance(value, (int, float)) and value > 0
+                                    for value in dimensions)
+                            and isinstance(boundary, dict)
+                            and isinstance(density.get("depth_slope"), dict)
+                        ):
+                            try:
+                                CloudBoundary(
+                                    boundary, position, dimensions,
+                                    density["depth_slope"], str(name),
+                                )
+                            except (TypeError, ValueError) as error:
+                                errors.append(f"{prefix}.boundary is invalid: {error}")
                     medium = cloud.get("medium")
                     if not isinstance(medium, dict) or medium.get("type") not in {"uniformgrid", "rgbgrid"}:
                         errors.append(f"{prefix}.medium is invalid")
@@ -1464,6 +1488,29 @@ class SceneConfig:
                     errors.append(
                         "camera_settings up vector must not be parallel to view"
                     )
+                if isinstance(sky, dict) and isinstance(sky.get("clouds"), list):
+                    for index, cloud in enumerate(sky["clouds"]):
+                        if not isinstance(cloud, dict) or not cloud.get("enabled", False):
+                            continue
+                        boundary = cloud.get("boundary", {})
+                        if not isinstance(boundary, dict) or boundary.get("mode") != "corner_prism":
+                            continue
+                        try:
+                            cloud_boundary = CloudBoundary(
+                                boundary,
+                                cloud.get("placement", {}).get("position", []),
+                                cloud.get("dimensions", []),
+                                cloud.get("density_field", {}).get("depth_slope", {}),
+                                str(cloud.get("name", "cloud")),
+                            )
+                            if cloud_boundary.contains(eye):
+                                errors.append(
+                                    f"sky.clouds.{index}.boundary contains camera eye"
+                                )
+                        except (IndexError, TypeError, ValueError):
+                            # The cloud-specific validation above reports the
+                            # actionable geometry error without duplicating it.
+                            pass
             fov = camera.get("fov")
             if (
                 not isinstance(fov, (int, float))

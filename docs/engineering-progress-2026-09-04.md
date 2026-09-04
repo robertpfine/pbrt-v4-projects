@@ -267,3 +267,88 @@ The implementation is recorded by the Git checkpoint containing this log on
 `pbrt-v4-art-studio`. As always, the continuity checkpoint is complete only
 after that commit is pushed and `docs/continuity.md` is copied to the required
 Google Drive handoff path.
+
+## Explicit cloud boundary implementation
+
+The horizon-cloud investigation after configuration migration established that
+the sharp vertical split was a finite cloud-volume face, not an unexplained
+noise seam. Increasing samples and grid density sharpened the face; changing
+the box width symmetrically did not reliably move the projected edge; aligning
+the camera and box X axes removed the oblique side-face view. Raising and
+extending the deck demonstrated that a finite volume can cover the practical
+horizon, while also showing that `depth_slope` is not a true rotated boundary.
+
+The artist authorized a more precise geometry control after confirming these
+requirements: four explicit bottom vertices, derived top/thickness,
+independent face fades, camera/geometry validation, and a projected-boundary
+diagnostic. Implementation deliberately preserved the live manually edited
+`scene_workspace/config.json`; no new cloud values or boundary mode were
+silently activated.
+
+### Geometry and density work
+
+- Added `cloud_boundary.py` as the renderer-independent geometry model.
+- Added the optional `corner_prism` mode with world-space `near_left`,
+  `near_right`, `far_right`, and `far_left` bottom points plus a positive
+  vertical `thickness`.
+- Required a convex, non-crossing XZ footprint and one coplanar bottom. This
+  guarantees that the closed triangle boundary and analytic density support
+  describe the same solid.
+- Derived all eight boundary vertices and the enclosing PBRT grid bounds.
+- Kept `axis_aligned` as the absent-field/default mode and retained the exact
+  established `depth_slope` path for old configurations.
+- Made `corner_prism` and enabled `depth_slope` mutually exclusive.
+- Clipped density to the prism in both Python and C++, while retaining an
+  axis-aligned PBRT storage grid around it.
+- Evaluated vertical density variation and underside optical coefficients
+  relative to the local authored bottom plane.
+- Extended mottled-veil edge fades from the compatible XYZ triple to optional
+  independent `left`, `right`, `bottom`, `top`, `near`, and `far` fractions.
+  Explicit zero means no fade at that face.
+- Changed the PBRT medium boundary writer to emit the authored prism rather
+  than the enclosing grid box.
+
+### Validation and diagnostics
+
+- Extended `SceneConfig` boundary validation and added the same strict geometry
+  checks at cloud construction.
+- Reject an enabled corner prism containing the camera eye before expensive
+  density generation begins.
+- Added executable `cloud_boundary_diagnostic.py`. It projects all eight
+  boundary vertices through the configured PBRT perspective camera, reports
+  pixel/depth/frame status, reports whether the camera is inside, emits JSON on
+  request, and can write an SVG wireframe without building or rendering a
+  scene.
+- Ran the diagnostic against the untouched live `overcast_cloud_deck`. It
+  parsed successfully, identified the legacy `axis_aligned` mode, and reported
+  the current camera outside the volume. A disposable SVG was written under
+  `/tmp`, not into the scene workspace.
+- Added `docs/cloud-boundary-controls.md` with the schema, fade semantics,
+  validation rules, diagnostic commands, generator behavior, and the finite
+  perspective limitation.
+
+### Verification record
+
+- The compiled cloud-grid helper rebuilt successfully after the C++ changes.
+- A focused 44-test run passed with five dependency-aware skips.
+- New tests cover exact prism bounds and mesh vertices, density exclusion,
+  asymmetric near-face fade, twisted-bottom rejection, slope conflict,
+  camera containment, PBRT camera projection, SVG output, and tilted/skewed
+  RGB-grid parity between Python and C++.
+- The first full 132-test run found one snapshot-fixture dependency omission:
+  the frozen standalone `cloud_grid_contract.py` now imports the lightweight
+  `cloud_boundary.py`, but that synthetic fixture copied only the contract.
+  The snapshot source set already captures root Python files in production;
+  the fixture and compatibility sidecar list were corrected to make the new
+  dependency explicit.
+- The corrected full project-virtual-environment suite passed all applicable
+  tests: 133 run, 12 dependency-aware skips, zero failures.
+- System Python passed all 118 non-GUI tests, including the NumPy/Pillow-backed
+  atmosphere and exact authored boundary-mesh checks. Its only full-discovery
+  omission is the expected unavailable PySide6 GUI module, which is covered by
+  the project virtual environment.
+- The C++ source also compiled separately with `-Wall -Wextra -Wpedantic`
+  without warnings.
+- The authoritative live JSON passed `SceneConfig` validation with zero
+  errors. `git diff --check` and Python bytecode compilation passed. No PBRT
+  production render was launched.

@@ -13,6 +13,7 @@ class CloudFormationTests(unittest.TestCase):
                 "enabled": True,
                 "placement": {"position": [1, 2, 3]},
                 "dimensions": [4, 5, 6],
+                "boundary": {"mode": "axis_aligned"},
                 "density_field": {
                     "generator": "mottled_veil",
                     "resolution": [7, 8, 9],
@@ -38,6 +39,7 @@ class CloudFormationTests(unittest.TestCase):
         self.assertEqual(formation["center"], [1, 2, 3])
         self.assertEqual(formation["form"], "mottled_veil")
         self.assertEqual(formation["appearance"]["density"], 0.9)
+        self.assertEqual(formation["boundary"], {"mode": "axis_aligned"})
 
     def setUp(self):
         self.config = {
@@ -194,6 +196,83 @@ class CloudFormationTests(unittest.TestCase):
         near_optical = cloud.optical_coefficients(0.5, 9.0, 0.0)
         far_optical = cloud.optical_coefficients(0.5, 6.0, -20.0)
         self.assertEqual(near_optical, far_optical)
+
+    def corner_veil(self, fades=None):
+        config = {
+            "name": "corner_deck",
+            "form": "mottled_veil",
+            "center": [0.0, 5.0, 0.0],
+            "size": [20.0, 4.0, 20.0],
+            "resolution": [7, 5, 7],
+            "boundary": {
+                "mode": "corner_prism",
+                "bottom_corners": {
+                    "near_left": [-10.0, 10.0, 10.0],
+                    "near_right": [10.0, 10.0, 10.0],
+                    "far_right": [10.0, 0.0, -10.0],
+                    "far_left": [-10.0, 0.0, -10.0],
+                },
+                "thickness": 4.0,
+            },
+        }
+        module = {
+            "appearance": {"density": 1.0},
+            "fractal_noise": {
+                "frequency": [0.0, 0.0, 0.0],
+                "coverage": -1.0,
+                "softness": 0.1,
+                "edge_fade_fraction": fades or {
+                    "left": 0.0, "right": 0.0,
+                    "bottom": 0.0, "top": 0.0,
+                    "near": 0.0, "far": 0.0,
+                },
+            },
+        }
+        return CloudFormation(config, module)
+
+    def test_corner_prism_derives_watertight_vertices_and_density_support(self):
+        cloud = self.corner_veil()
+        self.assertEqual(cloud.bounds_min, (-10.0, 0.0, -10.0))
+        self.assertEqual(cloud.bounds_max, (10.0, 14.0, 10.0))
+        self.assertEqual(cloud.boundary.bottom_y(0.0, 0.0), 5.0)
+        self.assertTrue(cloud.boundary.contains((0.0, 7.0, 0.0)))
+        self.assertFalse(cloud.boundary.contains((0.0, 4.0, 0.0)))
+        self.assertGreater(cloud.density(0.0, 7.0, 0.0), 0.9)
+        self.assertEqual(cloud.density(20.0, 7.0, 0.0), 0.0)
+        self.assertEqual(
+            cloud.boundary.vertices()[0:4],
+            ((-10.0, 0.0, -10.0), (10.0, 0.0, -10.0),
+             (10.0, 4.0, -10.0), (-10.0, 4.0, -10.0)),
+        )
+
+    def test_corner_prism_supports_independent_near_face_fade(self):
+        fades = {
+            "left": 0.0, "right": 0.0,
+            "bottom": 0.0, "top": 0.0,
+            "near": 0.5, "far": 0.0,
+        }
+        cloud = self.corner_veil(fades)
+        near = cloud.density(0.0, 11.5, 9.0)
+        middle = cloud.density(0.0, 7.0, 0.0)
+        self.assertGreater(middle, near)
+        self.assertGreater(near, 0.0)
+
+    def test_corner_prism_rejects_twisted_bottom_and_depth_slope(self):
+        cloud = self.corner_veil()
+        source = {
+            "name": "bad",
+            "form": "mottled_veil",
+            "center": [0, 0, 0],
+            "size": [2, 2, 2],
+            "boundary": cloud.boundary.contract(),
+        }
+        source["boundary"]["bottom_corners"]["far_left"][1] += 1.0
+        with self.assertRaisesRegex(ValueError, "coplanar"):
+            CloudFormation(source)
+        source["boundary"] = cloud.boundary.contract()
+        source["depth_slope"] = {"enabled": True, "far_y_offset": -1.0}
+        with self.assertRaisesRegex(ValueError, "depth_slope must be disabled"):
+            CloudFormation(source)
 
 if __name__ == "__main__":
     unittest.main()

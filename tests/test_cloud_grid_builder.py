@@ -182,6 +182,61 @@ class CompiledCloudGridParityTests(unittest.TestCase):
         parallel = self.compile_formation(shared, formation, threads=4)
         self.assertEqual(single, parallel)
 
+    def test_corner_prism_grid_matches_python_reference(self):
+        shared = {
+            "appearance": {
+                "density": 0.8,
+                "scattering": [0.003, 0.0031, 0.0032],
+                "absorption": [0.0004, 0.0005, 0.0006],
+                "underside": {
+                    "enabled": True,
+                    "height_fraction": 0.5,
+                    "transition": 0.2,
+                    "scattering_scale": 0.5,
+                    "absorption_scale": 2.0,
+                },
+            },
+            "fractal_noise": {
+                "seed": 31,
+                "frequency": [0.015, 0.025, 0.018],
+                "octaves": 2.0,
+                "roughness": 0.5,
+                "frequency_jump": 2.0,
+                "coverage": 0.25,
+                "softness": 0.3,
+                "edge_fade_fraction": {
+                    "left": 0.1, "right": 0.2,
+                    "bottom": 0.15, "top": 0.25,
+                    "near": 0.05, "far": 0.0,
+                },
+            },
+        }
+        formation = {
+            "name": "corner_parity",
+            "form": "mottled_veil",
+            "center": [0.0, 50.0, 0.0],
+            "size": [200.0, 40.0, 200.0],
+            "resolution": [9, 8, 10],
+            "boundary": {
+                "mode": "corner_prism",
+                "bottom_corners": {
+                    "near_left": [-100.0, 90.0, 100.0],
+                    "near_right": [120.0, 100.0, 80.0],
+                    "far_right": [90.0, 20.0, -130.0],
+                    "far_left": [-130.0, 10.0, -110.0],
+                },
+                "thickness": 45.0,
+            },
+        }
+        source = self.compile_formation(shared, formation, threads=3)
+        actual_absorption = pbrt_array(source, "rgb sigma_a")
+        actual_scattering = pbrt_array(source, "rgb sigma_s")
+        expected_absorption, expected_scattering = CloudFormation(
+            formation, shared
+        ).optical_grids()
+        self.assert_grid_close(actual_absorption, expected_absorption)
+        self.assert_grid_close(actual_scattering, expected_scattering)
+
     def test_adapter_rejects_dangerous_thread_count(self):
         with self.assertRaisesRegex(ValueError, "between 0 and 256"):
             run_compiled_builder(

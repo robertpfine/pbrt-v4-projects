@@ -207,6 +207,9 @@ for review; this block is not a runnable configuration.
             "position": [-15000.0, 850.0, -10000.0]
           },
           "dimensions": [50000.0, 800.0, 26000.0],
+          "boundary": {
+            "mode": "axis_aligned"
+          },
           "density_field": {
             "generator": "mottled_veil",
             "resolution": [160, 40, 120],
@@ -807,6 +810,14 @@ Each cloud has three explicit responsibilities:
 
 All existing cloud controls move intact into these blocks without a detailed
 value-by-value review. The structural migration is not a visual redesign.
+
+After migration, an opt-in `corner_prism` boundary provides exact horizon
+composition with four ordered, coplanar world-space bottom corners and a
+vertical thickness. It emits a matching closed PBRT boundary and clips the
+density grid to the same prism. The existing axis-aligned mode remains the
+default. Mottled veils may independently fade their left, right, bottom, top,
+near, and far faces. Exact semantics and the camera-frame projection diagnostic
+are in `docs/cloud-boundary-controls.md`.
 
 ### Issue 9: atmosphere systems and placeholders
 

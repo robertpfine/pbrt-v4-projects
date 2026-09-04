@@ -498,6 +498,9 @@ Each cloud is self-contained:
     "position": [-15000.0, 850.0, -10000.0]
   },
   "dimensions": [50000.0, 800.0, 26000.0],
+  "boundary": {
+    "mode": "axis_aligned"
+  },
   "density_field": {
     "generator": "mottled_veil",
     "resolution": [160, 40, 120],
@@ -521,6 +524,9 @@ Each cloud is self-contained:
 |---|---|
 | `placement.position` | vec3 cloud center |
 | `dimensions` | positive vec3 |
+| `boundary.mode` | `axis_aligned` (legacy default) or `corner_prism` |
+| `boundary.bottom_corners` | four named world-space vec3 values for `corner_prism` |
+| `boundary.thickness` | positive vertical extrusion for `corner_prism` |
 | `density_field.generator` | `lobed` or `mottled_veil` initially |
 | `density_field.resolution` | three integers, each at least `2` |
 | `density_field.shape` | current fades/profile fields moved intact |
@@ -533,6 +539,32 @@ Each cloud is self-contained:
 | `medium.scattering`, `medium.absorption` | nonnegative RGB |
 | `medium.anisotropy` | greater than `-1` and less than `1` |
 | `medium.underside` | current underside controls moved intact |
+
+`corner_prism` makes the four bottom vertices authoritative for the medium
+boundary. The required order is `near_left`, `near_right`, `far_right`, then
+`far_left`; the names must trace a non-crossing convex footprint in the XZ
+plane. The four points must be coplanar. `thickness` derives the top vertices
+by adding `[0, thickness, 0]`, so the result is a closed vertical extrusion.
+`density_field.depth_slope.enabled` must be false in this mode.
+
+For a mottled veil, `noise.edge_fade_fraction` may remain the legacy
+`[x, y, z]` triple, which applies symmetric fades to opposite faces, or become
+an explicit face object:
+
+```json
+"edge_fade_fraction": {
+  "left": 0.08,
+  "right": 0.08,
+  "bottom": 0.15,
+  "top": 0.15,
+  "near": 0.10,
+  "far": 0.0
+}
+```
+
+Each value is a fraction from `0` through `1`. In explicit face form, zero
+means no density fade at that face. The camera eye is rejected if it lies
+inside an enabled corner prism.
 
 For every current `scene.sky.clouds.formations[]` item, `center`, `size`,
 `resolution`, `form`, `lobes`, and local overrides move to the corresponding
@@ -553,6 +585,9 @@ cloud into this versioned job:
   "generator": "mottled_veil",
   "center": [-15000.0, 850.0, -10000.0],
   "dimensions": [50000.0, 800.0, 26000.0],
+  "boundary": {
+    "mode": "axis_aligned"
+  },
   "resolution": [160, 40, 120],
   "density_field": {
     "shape": {},

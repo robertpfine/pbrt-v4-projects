@@ -414,10 +414,22 @@ def _cloud_medium_name(index, formation):
     return f"cloud_{index}_{safe_name}"
 
 
-def write_cloud_media(lines, cloud_config, scene_root, scene_files_root):
+def write_cloud_media(
+    lines, cloud_config, scene_root, scene_files_root, camera_settings=None
+):
     """Declare bounded heterogeneous media for enabled sky formations."""
 
     formations = create_clouds(cloud_config)
+    if camera_settings:
+        eye = camera_settings.get("look_at", {}).get("eye")
+        if eye is not None:
+            for formation in formations:
+                if (formation.boundary.mode == "corner_prism"
+                        and formation.boundary.contains(eye)):
+                    raise ValueError(
+                        f"{formation.name}: camera eye lies inside the cloud "
+                        "corner_prism; move the camera or boundary before rendering"
+                    )
     enabled_configs = [
         item
         for item in cloud_config.get("formations", [])
@@ -538,12 +550,16 @@ def write_cloud_boundaries(lines, formations, exterior_medium=""):
         "3 6 2  3 7 6"
     )
     for index, formation in enumerate(formations):
-        x0, y0, z0 = formation.bounds_min
-        x1, y1, z1 = formation.bounds_max
-        points = (
-            x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0,
-            x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1,
-        )
+        if hasattr(formation, "boundary"):
+            vertices = formation.boundary.vertices()
+            points = tuple(value for point in vertices for value in point)
+        else:
+            x0, y0, z0 = formation.bounds_min
+            x1, y1, z1 = formation.bounds_max
+            points = (
+                x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0,
+                x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1,
+            )
         lines += [
             f'# Cloud boundary: {formation.name}',
             'AttributeBegin',
@@ -3350,7 +3366,8 @@ def write_scene(cfg, scene_root, medium_rel_path):
     write_fog_boundary(lines, fog_config)
     sky_config = scene_description.get("sky", {})
     cloud_formations = write_cloud_media(
-        lines, configured_cloud_module(sky_config), scene_root, scene_files_root
+        lines, configured_cloud_module(sky_config), scene_root, scene_files_root,
+        camera_settings=camera_settings,
     )
     rain_curtains = write_rain_media(lines, configured_rain(scene_description))
     

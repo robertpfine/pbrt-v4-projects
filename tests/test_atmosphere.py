@@ -1,13 +1,20 @@
 import re
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
 from atmosphere import configured_fog
+from clouds import CloudFormation
 
 try:
-    from scene_workspace.build_scene import write_cloud_boundaries, write_fog_medium
+    from scene_workspace.build_scene import (
+        write_cloud_boundaries,
+        write_cloud_media,
+        write_fog_medium,
+    )
 except ModuleNotFoundError:
     write_cloud_boundaries = None
+    write_cloud_media = None
     write_fog_medium = None
 
 
@@ -99,6 +106,55 @@ class FogHeightFalloffTests(unittest.TestCase):
             '    MediumInterface "cloud_0_test_cloud" "fog"',
             lines,
         )
+
+    def test_corner_prism_boundary_mesh_uses_authored_vertices(self):
+        formation = CloudFormation({
+            "name": "corner",
+            "form": "mottled_veil",
+            "center": [0, 0, 0],
+            "size": [2, 2, 2],
+            "boundary": {
+                "mode": "corner_prism",
+                "bottom_corners": {
+                    "near_left": [-2, 3, 4],
+                    "near_right": [2, 3, 4],
+                    "far_right": [2, 1, -4],
+                    "far_left": [-2, 1, -4],
+                },
+                "thickness": 5,
+            },
+        })
+        lines = []
+        write_cloud_boundaries(lines, [formation])
+        points = next(line for line in lines if '"point3 P"' in line)
+        self.assertIn("-2.0 1.0 -4.0 2.0 1.0 -4.0 2.0 6.0 -4.0", points)
+        self.assertIn("-2.0 3.0 4.0 2.0 3.0 4.0 2.0 8.0 4.0", points)
+
+    def test_camera_inside_corner_prism_stops_before_grid_generation(self):
+        module = {
+            "enabled": True,
+            "formations": [{
+                "name": "camera_trap",
+                "enabled": True,
+                "form": "mottled_veil",
+                "center": [0, 0, 0],
+                "size": [4, 4, 4],
+                "resolution": [2, 2, 2],
+                "boundary": {
+                    "mode": "corner_prism",
+                    "bottom_corners": {
+                        "near_left": [-2, -2, 2],
+                        "near_right": [2, -2, 2],
+                        "far_right": [2, -2, -2],
+                        "far_left": [-2, -2, -2],
+                    },
+                    "thickness": 4,
+                },
+            }],
+        }
+        camera = {"look_at": {"eye": [0, 0, 0]}}
+        with self.assertRaisesRegex(ValueError, "camera eye lies inside"):
+            write_cloud_media([], module, Path("."), Path("."), camera)
 
 
 if __name__ == "__main__":

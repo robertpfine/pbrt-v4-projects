@@ -162,6 +162,12 @@ class Parser {
 
 struct Vec3 { double x, y, z; };
 
+struct BoundaryEdge {
+    Vec3 begin, end;
+    double sign = 1.0;
+    double denominator = 1.0;
+};
+
 static Vec3 vec3(const json::Value& value) {
     if (value.kind != json::Value::Kind::Array || value.array.size() != 3)
         throw std::runtime_error("expected a three-number array");
@@ -176,6 +182,11 @@ static double clamp(double value, double low = 0.0, double high = 1.0) {
 static double smoothstep(double value) {
     value = clamp(value);
     return value * value * (3.0 - 2.0 * value);
+}
+
+static double cross_xz(const Vec3& origin, const Vec3& end, const Vec3& point) {
+    return ((end.x - origin.x) * (point.z - origin.z)
+            - (end.z - origin.z) * (point.x - origin.x));
 }
 
 using Noise3 = float (*)(float, float, float, int, int, int, int);
@@ -259,7 +270,13 @@ class CloudGrid {
         broad_strength_ = noise_config.at("broad_strength").as_number();
         detail_strength_ = noise_config.at("detail_strength").as_number();
         detail_frequency_scale_ = noise_config.at("detail_frequency_scale").as_number();
-        edge_fade_ = vec3(noise_config.at("edge_fade_fraction"));
+        const auto& edge_fade = noise_config.at("edge_fade_fraction");
+        fade_left_ = edge_fade.at("left").as_number();
+        fade_right_ = edge_fade.at("right").as_number();
+        fade_bottom_ = edge_fade.at("bottom").as_number();
+        fade_top_ = edge_fade.at("top").as_number();
+        fade_near_ = edge_fade.at("near").as_number();
+        fade_far_ = edge_fade.at("far").as_number();
         edge_influence_ = noise_config.at("edge_influence").as_number();
         density_contrast_ = noise_config.at("density_contrast").as_number();
         modulation_min_ = noise_config.at("density_modulation_min").as_number();
@@ -278,6 +295,7 @@ class CloudGrid {
             bounds_min_.y += std::min(0.0, far_y_offset_);
             bounds_max_.y += std::max(0.0, far_y_offset_);
         }
+        configure_boundary(root.at("boundary"));
         const auto& profile = field.at("depth_profile");
         profile_enabled_ = profile.at("enabled").as_bool();
         full_density_until_z_ = profile.at("full_density_until_z").as_number();
@@ -377,7 +395,9 @@ class CloudGrid {
                 const int iz = static_cast<int>(yz / ny_);
                 const double y = coordinate(bounds_min_.y, bounds_max_.y, iy, ny_);
                 const double z = coordinate(bounds_min_.z, bounds_max_.z, iz, nz_);
-                append_optics(density_values[index], y, z, absorption, scattering);
+                const int ix = static_cast<int>(index % nx_);
+                const double x = coordinate(bounds_min_.x, bounds_max_.x, ix, nx_);
+                append_optics(density_values[index], x, y, z, absorption, scattering);
             }
             write_values(output, "rgb sigma_a", absorption, 12);
             write_values(output, "rgb sigma_s", scattering, 12);
@@ -395,6 +415,11 @@ class CloudGrid {
     const NativeNoise& noise_;
     std::string name_, medium_name_, generator_, medium_type_;
     Vec3 center_{}, dimensions_{}, base_min_{}, base_max_{}, bounds_min_{}, bounds_max_{};
+    std::string boundary_mode_ = "axis_aligned";
+    std::vector<Vec3> bottom_corners_;
+    BoundaryEdge boundary_edges_[4];
+    double boundary_a_ = 0, boundary_b_ = 0, boundary_c_ = 0,
+           boundary_thickness_ = 0, reference_bottom_y_ = 0;
     int nx_ = 0, ny_ = 0, nz_ = 0, seed_ = 0;
     double bottom_fade_ = 0, top_fade_ = 0, octaves_ = 0, roughness_ = 0,
            frequency_jump_ = 0, coverage_ = 0, softness_ = 0, broad_strength_ = 0,
@@ -404,14 +429,111 @@ class CloudGrid {
            falloff_distance_ = 0, far_density_scale_ = 0, density_scale_ = 0,
            anisotropy_ = 0, underside_height_fraction_ = 0,
            underside_transition_ = 0, underside_scattering_scale_ = 0,
-           underside_absorption_scale_ = 0;
-    Vec3 frequency_{}, edge_fade_{}, warp_frequency_{}, warp_strength_{}, sigma_s_{}, sigma_a_{};
+           underside_absorption_scale_ = 0, fade_left_ = 0, fade_right_ = 0,
+           fade_bottom_ = 0, fade_top_ = 0, fade_near_ = 0, fade_far_ = 0;
+    Vec3 frequency_{}, warp_frequency_{}, warp_strength_{}, sigma_s_{}, sigma_a_{};
     bool warp_enabled_ = false, slope_enabled_ = false, profile_enabled_ = false,
          underside_enabled_ = false;
     std::vector<Lobe> lobes_;
 
     static double coordinate(double low, double high, int index, int count) {
         return low + (high - low) * index / (count - 1);
+    }
+    void configure_boundary(const json::Value& boundary) {
+        boundary_mode_ = boundary.at("mode").as_string();
+        if (boundary_mode_ == "axis_aligned") return;
+        if (boundary_mode_ != "corner_prism")
+            throw std::runtime_error("unsupported cloud boundary mode: " + boundary_mode_);
+        if (slope_enabled_)
+            throw std::runtime_error("depth_slope must be disabled for corner_prism");
+        const auto& corners = boundary.at("bottom_corners");
+        const char* names[4] = {"near_left", "near_right", "far_right", "far_left"};
+        for (const char* name : names) bottom_corners_.push_back(vec3(corners.at(name)));
+        boundary_thickness_ = boundary.at("thickness").as_number();
+        if (boundary_thickness_ <= 0.0)
+            throw std::runtime_error("corner_prism thickness must be positive");
+
+        const Vec3& p0 = bottom_corners_[0];
+        const Vec3& p1 = bottom_corners_[1];
+        const Vec3& p2 = bottom_corners_[2];
+        const Vec3& p3 = bottom_corners_[3];
+        const double determinant = ((p1.x - p0.x) * (p2.z - p0.z)
+                                    - (p2.x - p0.x) * (p1.z - p0.z));
+        if (std::abs(determinant) <= 1e-12)
+            throw std::runtime_error("corner_prism footprint has zero area");
+        boundary_b_ = (((p1.y - p0.y) * (p2.z - p0.z)
+                        - (p2.y - p0.y) * (p1.z - p0.z)) / determinant);
+        boundary_c_ = (((p1.x - p0.x) * (p2.y - p0.y)
+                        - (p2.x - p0.x) * (p1.y - p0.y)) / determinant);
+        boundary_a_ = p0.y - boundary_b_ * p0.x - boundary_c_ * p0.z;
+        const double scale = std::max(
+            {std::abs(p0.x) + std::abs(p0.z), std::abs(p1.x) + std::abs(p1.z),
+             std::abs(p2.x) + std::abs(p2.z), std::abs(p3.x) + std::abs(p3.z), 1.0});
+        const double plane_tolerance = std::max(
+            {1e-6, boundary_thickness_ * 1e-8, scale * 1e-8});
+        if (std::abs(boundary_a_ + boundary_b_ * p3.x + boundary_c_ * p3.z - p3.y)
+            > plane_tolerance)
+            throw std::runtime_error("corner_prism bottom corners must be coplanar");
+
+        Vec3 centroid{};
+        for (const Vec3& point : bottom_corners_) {
+            centroid.x += point.x / 4.0;
+            centroid.y += point.y / 4.0;
+            centroid.z += point.z / 4.0;
+        }
+        reference_bottom_y_ = centroid.y;
+        const int edge_indices[4][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
+        double turn_sign = 0.0;
+        for (int index = 0; index < 4; ++index) {
+            const Vec3& begin = bottom_corners_[edge_indices[index][0]];
+            const Vec3& end = bottom_corners_[edge_indices[index][1]];
+            const Vec3& next = bottom_corners_[edge_indices[(index + 1) % 4][1]];
+            const double turn = cross_xz(begin, end, next);
+            if (std::abs(turn) <= 1e-12 || (turn_sign != 0.0 && turn * turn_sign < 0.0))
+                throw std::runtime_error(
+                    "corner_prism bottom corners must form a non-crossing convex footprint");
+            turn_sign = turn;
+            const double interior = cross_xz(begin, end, centroid);
+            const double sign = interior > 0.0 ? 1.0 : -1.0;
+            double denominator = 0.0;
+            for (const Vec3& point : bottom_corners_)
+                denominator = std::max(denominator, sign * cross_xz(begin, end, point));
+            boundary_edges_[index] = {begin, end, sign, denominator};
+        }
+
+        bounds_min_ = {bottom_corners_[0].x, bottom_corners_[0].y,
+                       bottom_corners_[0].z};
+        bounds_max_ = bounds_min_;
+        for (const Vec3& point : bottom_corners_) {
+            bounds_min_.x = std::min(bounds_min_.x, point.x);
+            bounds_min_.y = std::min(bounds_min_.y, point.y);
+            bounds_min_.z = std::min(bounds_min_.z, point.z);
+            bounds_max_.x = std::max(bounds_max_.x, point.x);
+            bounds_max_.y = std::max(bounds_max_.y, point.y + boundary_thickness_);
+            bounds_max_.z = std::max(bounds_max_.z, point.z);
+        }
+        base_min_ = bounds_min_;
+        base_max_ = bounds_max_;
+    }
+    double boundary_bottom(double x, double z) const {
+        return boundary_a_ + boundary_b_ * x + boundary_c_ * z;
+    }
+    bool boundary_coordinates(double x, double y, double z, double result[6]) const {
+        // result order: left, right, bottom, top, near, far
+        const Vec3 point{x, y, z};
+        const int result_indices[4] = {4, 1, 5, 0}; // near, right, far, left
+        for (int edge = 0; edge < 4; ++edge) {
+            const auto& item = boundary_edges_[edge];
+            const double value = item.sign * cross_xz(item.begin, item.end, point)
+                                 / item.denominator;
+            if (value < -1e-9) return false;
+            result[result_indices[edge]] = value;
+        }
+        const double vertical = (y - boundary_bottom(x, z)) / boundary_thickness_;
+        if (vertical < -1e-9 || vertical > 1.0 + 1e-9) return false;
+        result[2] = vertical;
+        result[3] = 1.0 - vertical;
+        return true;
     }
     double fractal(double x, double y, double z, int seed) const {
         return noise_.fractal(x, y, z, seed, octaves_, roughness_, frequency_jump_);
@@ -440,8 +562,13 @@ class CloudGrid {
         return combined;
     }
     double density(double x, double y, double z) const {
+        double local[6]{};
+        const bool corner_prism = boundary_mode_ == "corner_prism";
+        if (corner_prism && !boundary_coordinates(x, y, z, local)) return 0.0;
         if (generator_ == "mottled_veil") {
-            const double reference_y = y - slope_offset(z);
+            const double reference_y = corner_prism
+                ? y - (boundary_bottom(x, z) - reference_bottom_y_)
+                : y - slope_offset(z);
             const double primary = fractal(x * frequency_.x, reference_y * frequency_.y,
                                            z * frequency_.z, seed_);
             const double detail = fractal(x * frequency_.x * detail_frequency_scale_,
@@ -450,16 +577,25 @@ class CloudGrid {
             const double field = 0.5 + broad_strength_ * primary + detail_strength_ * detail;
             const double mottle = smoothstep((field - coverage_) / std::max(softness_, 1e-6));
             double edge_weight = 1.0;
-            const double coordinates[3] = {x, reference_y, z};
-            const double minimums[3] = {base_min_.x, base_min_.y, base_min_.z};
-            const double maximums[3] = {base_max_.x, base_max_.y, base_max_.z};
-            const double fades[3] = {edge_fade_.x, edge_fade_.y, edge_fade_.z};
-            for (int axis = 0; axis < 3; ++axis) {
-                const double normalized = (coordinates[axis] - minimums[axis]) /
-                                          (maximums[axis] - minimums[axis]);
-                const double fade = std::max(fades[axis], 1e-6);
-                edge_weight *= smoothstep(normalized / fade);
-                edge_weight *= smoothstep((1.0 - normalized) / fade);
+            const double face_fades[6] = {fade_left_, fade_right_, fade_bottom_,
+                                          fade_top_, fade_near_, fade_far_};
+            if (corner_prism) {
+                for (int face = 0; face < 6; ++face)
+                    if (face_fades[face] > 0.0)
+                        edge_weight *= smoothstep(local[face] / face_fades[face]);
+            } else {
+                const double coordinates[3] = {x, reference_y, z};
+                const double minimums[3] = {base_min_.x, base_min_.y, base_min_.z};
+                const double maximums[3] = {base_max_.x, base_max_.y, base_max_.z};
+                const double low_fades[3] = {fade_left_, fade_bottom_, fade_far_};
+                const double high_fades[3] = {fade_right_, fade_top_, fade_near_};
+                for (int axis = 0; axis < 3; ++axis) {
+                    const double normalized = (coordinates[axis] - minimums[axis]) /
+                                              (maximums[axis] - minimums[axis]);
+                    edge_weight *= smoothstep(normalized / std::max(low_fades[axis], 1e-6));
+                    edge_weight *= smoothstep((1.0 - normalized) /
+                                              std::max(high_fades[axis], 1e-6));
+                }
             }
             return clamp(density_scale_ * mottle * edge_weight * depth_weight(z),
                          0.0, density_scale_);
@@ -477,8 +613,10 @@ class CloudGrid {
         }
         const double body = envelope(wx, wy, wz);
         if (body <= 0.0) return 0.0;
-        const double bottom = smoothstep((y - bounds_min_.y) / std::max(bottom_fade_, 1e-9));
-        const double top = smoothstep((bounds_max_.y - y) / std::max(top_fade_, 1e-9));
+        const double bottom_y = corner_prism ? boundary_bottom(x, z) : bounds_min_.y;
+        const double top_y = corner_prism ? bottom_y + boundary_thickness_ : bounds_max_.y;
+        const double bottom = smoothstep((y - bottom_y) / std::max(bottom_fade_, 1e-9));
+        const double top = smoothstep((top_y - y) / std::max(top_fade_, 1e-9));
         const double density_noise = fractal(wx * frequency_.x, wy * frequency_.y,
                                              wz * frequency_.z, seed_ + 307);
         const double support = smoothstep(
@@ -490,12 +628,13 @@ class CloudGrid {
                               modulation * bottom * top;
         return clamp(result, 0.0, density_scale_);
     }
-    void append_optics(double density_value, double y, double z,
+    void append_optics(double density_value, double x, double y, double z,
                        std::vector<double>& absorption,
                        std::vector<double>& scattering) const {
-        const double reference_y = y - slope_offset(z);
-        const double normalized_y = (reference_y - base_min_.y) /
-                                    std::max(base_max_.y - base_min_.y, 1e-9);
+        const double normalized_y = boundary_mode_ == "corner_prism"
+            ? (y - boundary_bottom(x, z)) / boundary_thickness_
+            : (y - slope_offset(z) - base_min_.y) /
+              std::max(base_max_.y - base_min_.y, 1e-9);
         const double transition_start = underside_height_fraction_ -
                                         0.5 * underside_transition_;
         const double underside_weight = 1.0 - smoothstep(

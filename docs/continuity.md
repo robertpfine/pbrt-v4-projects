@@ -38,6 +38,43 @@ historical development line for that tree system. New application-level GUI,
 configuration, landscape, sky, atmosphere, and rendering work belongs on
 `pbrt-v4-art-studio`.
 
+## 2026-09-04 precise cloud-boundary controls
+
+The artist's post-migration overcast study established that the sharp vertical
+split in several renders was a projected face of the finite axis-aligned cloud
+volume. Sample-count and grid-density increases made it sharper; camera/volume
+alignment and later very large-volume tests confirmed the geometry diagnosis.
+The artist values render `075647` as the starting visual reference without
+grass and poppies. Later renders are exploratory cloud/camera tests rather than
+replacement accepted checkpoints.
+
+An opt-in `corner_prism` cloud boundary is now implemented in Python, in the
+compiled C++ grid builder, in scene validation, and in PBRT boundary emission.
+It uses four ordered, convex, coplanar world-space bottom vertices and a
+vertical thickness. Density and underside optics follow that plane; voxels
+outside the prism are zero; the emitted closed mesh matches it. The older
+axis-aligned mode is still the default and its `depth_slope` behavior is
+unchanged. `corner_prism` and enabled `depth_slope` are intentionally mutually
+exclusive.
+
+Mottled cloud decks may now replace the legacy symmetric XYZ
+`edge_fade_fraction` triple with independent left, right, bottom, top, near,
+and far fractions. Enabled corner prisms are rejected before grid generation
+if malformed or if they contain the camera eye.
+
+Run `./cloud_boundary_diagnostic.py --cloud overcast_cloud_deck` to project the
+current boundary vertices into the configured camera frame without building or
+rendering the scene. Add `--svg /tmp/overcast-boundary.svg` for a wireframe.
+Exact schema, semantics, limitations, and workflow are in
+`docs/cloud-boundary-controls.md`; the implementation record is in
+`docs/engineering-progress-2026-09-04.md`.
+
+The artist's current manual camera/cloud experiments in
+`scene_workspace/config.json` were deliberately not rewritten or reordered by
+this implementation. The live cloud therefore remains in legacy axis-aligned
+mode until the artist chooses actual corner coordinates. Do not automatically
+activate `corner_prism` or replace those in-progress values.
+
 ## 2026-08-29 PBRT-v4 Art Studio checkpoint
 
 The artist selected **PBRT-v4 Art Studio** as the application name. The term

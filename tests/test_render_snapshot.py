@@ -320,6 +320,7 @@ class RenderSnapshotTests(unittest.TestCase):
         executable.write_bytes(b"compiled cloud builder")
         executable.chmod(0o755)
         shutil.copy2(Path("cloud_grid_contract.py"), self.root / "cloud_grid_contract.py")
+        shutil.copy2(Path("cloud_boundary.py"), self.root / "cloud_boundary.py")
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene_description"]["name"] = "Compiled Scene"
         config["scene_description"]["sky"]["cloud_grid_builder"] = {

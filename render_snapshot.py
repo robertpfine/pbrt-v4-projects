@@ -742,6 +742,8 @@ def finalize_snapshot(
     }
     for filename in (
         "clouds.py",
+        "cloud_boundary.py",
+        "cloud_boundary_diagnostic.py",
         "rain.py",
         "distant_hills.py",
         "vista_surface_texture.py",
