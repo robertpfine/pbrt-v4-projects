@@ -413,6 +413,29 @@
               "patchiness": { "strength": 0.48, "frequency": 0.035 },
               "attraction": { "center": [0.0, 0.0], "radius": 150.0, "strength": 0.75 }
             }
+          },
+          {
+            "name": "rocks",
+            "enabled": false,
+            "generator": "rock_scatter",
+            "construction": {
+              "variants": 3,
+              "scale": [1.6, 5.8],
+              "reflectance_variants": [
+                [0.14, 0.13, 0.105],
+                [0.095, 0.10, 0.075],
+                [0.18, 0.16, 0.12]
+              ]
+            },
+            "population": {
+              "seed": 67,
+              "count": 48,
+              "region": { "center": [0.0, 0.0], "size": [620.0, 620.0] },
+              "max_slope_degrees": 48.0,
+              "y_offset": -1.0,
+              "exclusion": { "center": [0.0, 0.0], "radius": 14.0 },
+              "patchiness": { "strength": 0.64, "frequency": 0.012 }
+            }
           }
         ]
       }
@@ -641,23 +664,6 @@
     "landscape": {
       "ground": {
         "details": {
-          "rocks": {
-            "enabled": false,
-            "count": 48,
-            "seed": 67,
-            "region": { "center": [0.0, 0.0], "size": [620.0, 620.0] },
-            "scale": [1.6, 5.8],
-            "max_slope_degrees": 48.0,
-            "patchiness": { "strength": 0.64, "frequency": 0.012 },
-            "exclusion": { "center": [0.0, 0.0], "radius": 14.0 },
-            "y_offset": -1.0,
-            "variants": 3,
-            "reflectance_variants": [
-              [0.14, 0.13, 0.105],
-              [0.095, 0.10, 0.075],
-              [0.18, 0.16, 0.12]
-            ]
-          },
           "undergrowth": {
             "enabled": false,
             "count": 140,

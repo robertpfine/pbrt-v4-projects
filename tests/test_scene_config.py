@@ -407,6 +407,20 @@ class SceneConfigTests(unittest.TestCase):
                 SceneConfig(path).validate(),
             )
 
+    def test_obsolete_ground_rocks_are_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["landscape"]["ground"]["details"]["rocks"] = {
+                "enabled": False
+            }
+            path.write_text(json.dumps(data), encoding="utf-8")
+            self.assertIn(
+                "obsolete scene.landscape.ground.details.rocks must be "
+                "removed after rock migration",
+                SceneConfig(path).validate(),
+            )
+
     def test_current_scene_uses_explicit_landscape_and_sky_boundaries(self):
         root = Path(__file__).resolve().parents[1]
         config = json.loads(

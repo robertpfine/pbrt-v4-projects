@@ -411,6 +411,11 @@ attraction strength for a more sharply defined accumulation below the crown.
 
 ### Rocks
 
+Rocks are the disabled `generator: "rock_scatter"` surface object under
+`flat_landform`. Construction owns variants, scale, and reflectance colors;
+population owns count, seed, region, slope limit, Y offset, exclusion, and
+patchiness. The former ground-detail rocks path is rejected.
+
 Rocks are non-uniformly scaled and randomly rotated sphere instances. Their
 independent axis variation makes ellipsoidal forms, and a negative `y_offset`
 partly buries them. The system intentionally uses few rocks so they become

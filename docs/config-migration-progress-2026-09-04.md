@@ -891,3 +891,52 @@ The temporary directory was removed. The complete `.venv` suite ran 115 tests
 (106 passed, nine skips), and system Python passed all 101 non-GUI tests. Live
 JSON validation reports zero errors. Litter has no old/new ownership bridge;
 rocks are next.
+
+The litter commit is `b0faa40` (`Migrate litter surface object`) and is pushed
+to `origin/pbrt-v4-art-studio`. Its required Google Drive continuity copy
+succeeded immediately.
+
+## Stage 5B.4 — rock-scatter surface-object generator
+
+Status: implementation and validation complete from pushed litter checkpoint
+`b0faa40`
+
+The disabled `rocks` block moved to the fourth surface object under enabled
+`flat_landform` and uses the approved `rock_scatter` generator name:
+
+```text
+construction: variants, scale, reflectance_variants
+population:   seed, count, region, max_slope_degrees, y_offset,
+              exclusion, patchiness
+```
+
+The builder resolves that generator into the existing `rocks` detail layer;
+validation checks nonnegative count and ascending construction scale, and both
+configuration and snapshot boundaries reject the old path.
+
+Mechanical ownership audit:
+
+```text
+stage5b_rocks_only True
+surface_generators ['grass', 'poppy', 'litter', 'rock_scatter']
+legacy_detail_keys ['undergrowth']
+```
+
+Archived `020525` was migrated in memory and built without launching PBRT:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5B.4 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The comparison itself completed normally. Deleting its temporary directory
+then stalled within the filesystem tool call for roughly ten minutes before
+completing; no renderer was active, and no live or archived artifact changed.
+Future comparison and cleanup calls are kept separate so cleanup latency cannot
+hide a completed result.
+
+The complete `.venv` suite ran 117 tests (108 passed, nine skips); system Python
+passed all 103 non-GUI tests. Live validation reports zero errors. Rocks have no
+old/new ownership bridge; undergrowth is next.

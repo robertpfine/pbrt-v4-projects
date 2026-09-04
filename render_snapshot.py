@@ -175,6 +175,21 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "litter requires one surface object with construction and population"
         )
+    rock_objects = [
+        item
+        for landform in landforms
+        if isinstance(landform, dict)
+        for item in landform.get("surface_objects", [])
+        if isinstance(item, dict) and item.get("generator") == "rock_scatter"
+    ]
+    if rock_objects and (
+        len(rock_objects) != 1
+        or not isinstance(rock_objects[0].get("construction"), dict)
+        or not isinstance(rock_objects[0].get("population"), dict)
+    ):
+        raise RenderSnapshotError(
+            "rock_scatter requires one surface object with construction and population"
+        )
     ground = (
         scene.get("landscape", {}).get("ground", {})
         if isinstance(scene, dict)
@@ -202,6 +217,10 @@ def configured_scene_name(config: dict) -> str:
         if isinstance(details, dict) and "litter" in details:
             raise RenderSnapshotError(
                 "obsolete scene.landscape.ground.details.litter is not supported"
+            )
+        if isinstance(details, dict) and "rocks" in details:
+            raise RenderSnapshotError(
+                "obsolete scene.landscape.ground.details.rocks is not supported"
             )
     return name
 

@@ -515,7 +515,7 @@ order:
    `scene_description.landforms`. Their old paths are absent, every known
    consumer uses the new locations, and bounded rebuilds reproduced the
    pre-migration PBRT scene byte for byte. Stage 5B is in progress: grass and
-   poppies, and litter are migrated; rocks are next.
+   poppies, litter, and rocks are migrated; undergrowth is next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -679,6 +679,15 @@ absent and rejected, and an in-memory `020525` migration remains exactly
 117,462,947 bytes with SHA-256
 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
 No PBRT render was launched. Rocks are next.
+
+Stage 5B rocks is complete in the working implementation. Disabled rocks are
+the `generator: "rock_scatter"` surface object after litter. Construction owns
+variants, scale, and reflectance variants; population owns seed, count, region,
+slope limit, Y offset, exclusion, and patchiness. Old ownership is absent and
+rejected. The archived `020525` structural proof remains byte-identical at
+117,462,947 bytes and SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+No PBRT render was launched. Undergrowth is next.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

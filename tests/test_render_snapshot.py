@@ -318,6 +318,17 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "details.litter"):
             create_snapshot(self.root, self.config, "20260904_010224")
 
+    def test_snapshot_rejects_obsolete_ground_rocks(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"] = {
+            "landscape": {
+                "ground": {"details": {"rocks": {"enabled": False}}}
+            }
+        }
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "details.rocks"):
+            create_snapshot(self.root, self.config, "20260904_010225")
+
     def test_snapshot_requires_one_enabled_terrain_landform(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene_description"]["landforms"][0]["enabled"] = False
