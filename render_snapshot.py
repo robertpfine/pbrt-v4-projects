@@ -184,6 +184,21 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 f"scene_description.objects.{index}.construction must be an object"
             )
+        medium = item.get("medium")
+        if medium is not None:
+            interior = medium.get("interior") if isinstance(medium, dict) else None
+            if (
+                not isinstance(interior, dict)
+                or interior.get("type") != "rgbgrid"
+                or not isinstance(interior.get("name"), str)
+                or not interior["name"].strip()
+                or not isinstance(interior.get("zones"), list)
+                or not interior["zones"]
+                or not isinstance(medium.get("exterior"), str)
+            ):
+                raise RenderSnapshotError(
+                    f"scene_description.objects.{index}.medium is invalid"
+                )
     if len(names) != len(set(names)):
         raise RenderSnapshotError("scene_description object names must be unique")
     grass_objects = [
@@ -355,6 +370,11 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 "obsolete scene.planar_phyllotaxis is not supported"
             )
+        for legacy_name in ("grid", "zones"):
+            if legacy_name in scene:
+                raise RenderSnapshotError(
+                    f"obsolete scene.{legacy_name} is not supported"
+                )
         geometry = scene.get("geometry", [])
         if isinstance(geometry, list) and any(
             isinstance(item, dict) and item.get("label") == "vista_plane"
@@ -362,6 +382,14 @@ def configured_scene_name(config: dict) -> str:
         ):
             raise RenderSnapshotError(
                 "obsolete scene.geometry vista_plane is not supported"
+            )
+        if isinstance(geometry, list) and any(
+            isinstance(item, dict)
+            and item.get("label") in {"volume_sphere", "volume_box"}
+            for item in geometry
+        ):
+            raise RenderSnapshotError(
+                "obsolete scene.geometry independent volumes are not supported"
             )
     landscape = scene.get("landscape", {}) if isinstance(scene, dict) else {}
     if isinstance(landscape, dict) and "distant_hills" in landscape:

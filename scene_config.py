@@ -1085,6 +1085,7 @@ class SceneConfig:
                         elif geometry.get("generator") not in {
                             None,
                             "planar_phyllotaxis",
+                            "box",
                         }:
                             errors.append(
                                 f"{prefix}.geometry.generator is not registered"
@@ -1130,6 +1131,88 @@ class SceneConfig:
                                     f"{prefix}.construction.zones must be a "
                                     "non-empty array"
                                 )
+                        elif geometry.get("generator") == "box":
+                            for minimum, maximum in (
+                                ("x_min", "x_max"),
+                                ("y_min", "y_max"),
+                                ("z_min", "z_max"),
+                            ):
+                                low = construction.get(minimum)
+                                high = construction.get(maximum)
+                                if (
+                                    not isinstance(low, (int, float))
+                                    or isinstance(low, bool)
+                                    or not isinstance(high, (int, float))
+                                    or isinstance(high, bool)
+                                    or low >= high
+                                ):
+                                    errors.append(
+                                        f"{prefix}.construction requires {minimum} "
+                                        f"less than {maximum}"
+                                    )
+                    if isinstance(geometry, dict) and "pbrt_shape" in geometry:
+                        if geometry.get("pbrt_shape") != "sphere":
+                            errors.append(
+                                f"{prefix}.geometry.pbrt_shape is not supported"
+                            )
+                        parameters = geometry.get("parameters")
+                        radius = (
+                            parameters.get("radius")
+                            if isinstance(parameters, dict)
+                            else None
+                        )
+                        if (
+                            not isinstance(radius, (int, float))
+                            or isinstance(radius, bool)
+                            or radius <= 0
+                        ):
+                            errors.append(
+                                f"{prefix}.geometry.parameters.radius must be positive"
+                            )
+                    medium = item.get("medium")
+                    if medium is not None:
+                        if not isinstance(medium, dict):
+                            errors.append(f"{prefix}.medium must be an object")
+                        else:
+                            interior = medium.get("interior")
+                            if not isinstance(interior, dict):
+                                errors.append(
+                                    f"{prefix}.medium.interior must be an object"
+                                )
+                            elif interior.get("type") != "rgbgrid":
+                                errors.append(
+                                    f"{prefix}.medium.interior.type must be rgbgrid"
+                                )
+                            else:
+                                if not isinstance(interior.get("name"), str) or not interior["name"].strip():
+                                    errors.append(
+                                        f"{prefix}.medium.interior.name must be non-empty"
+                                    )
+                                for field in ("nx", "ny", "nz"):
+                                    value = interior.get(field)
+                                    if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                                        errors.append(
+                                            f"{prefix}.medium.interior.{field} must be positive"
+                                        )
+                                if interior.get("axis") not in {"X", "Y", "Z"}:
+                                    errors.append(
+                                        f"{prefix}.medium.interior.axis must be X, Y, or Z"
+                                    )
+                                for field in ("world_min", "world_max"):
+                                    vector = interior.get(field)
+                                    if not isinstance(vector, list) or len(vector) != 3:
+                                        errors.append(
+                                            f"{prefix}.medium.interior.{field} must "
+                                            "contain three values"
+                                        )
+                                if not isinstance(interior.get("zones"), list) or not interior["zones"]:
+                                    errors.append(
+                                        f"{prefix}.medium.interior.zones must be non-empty"
+                                    )
+                            if not isinstance(medium.get("exterior"), str):
+                                errors.append(
+                                    f"{prefix}.medium.exterior must be a string"
+                                )
                 if len(object_names) != len(set(object_names)):
                     errors.append("scene_description object names must be unique")
 
@@ -1161,6 +1244,12 @@ class SceneConfig:
                     "obsolete scene.planar_phyllotaxis must be removed after "
                     "independent-object migration"
                 )
+            for name in ("grid", "zones"):
+                if name in scene_root:
+                    errors.append(
+                        f"obsolete scene.{name} must be removed after "
+                        "independent-volume migration"
+                    )
             geometry = scene_root.get("geometry", [])
             if isinstance(geometry, list) and any(
                 isinstance(item, dict) and item.get("label") == "vista_plane"
@@ -1169,6 +1258,15 @@ class SceneConfig:
                 errors.append(
                     "obsolete scene.geometry vista_plane must be removed after "
                     "vista landform migration"
+                )
+            if isinstance(geometry, list) and any(
+                isinstance(item, dict)
+                and item.get("label") in {"volume_sphere", "volume_box"}
+                for item in geometry
+            ):
+                errors.append(
+                    "obsolete scene.geometry independent volumes must be removed "
+                    "after independent-volume migration"
                 )
 
         landscape = require(("scene", "landscape"), dict)

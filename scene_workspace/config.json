@@ -1283,8 +1283,16 @@
         "name": "sunflower_head_vogel_pattern",
         "enabled": false,
         "placement": {
-          "position": [0.0, 0.0, 0.0],
-          "rotation_degrees": [0.0, 0.0, 0.0]
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation_degrees": [
+            0.0,
+            0.0,
+            0.0
+          ]
         },
         "geometry": {
           "generator": "planar_phyllotaxis"
@@ -1294,7 +1302,11 @@
           "count": 630,
           "divergence_angle": 137.5,
           "spacing": 1.3,
-          "center": [0.0, 72.0, 0.0],
+          "center": [
+            0.0,
+            72.0,
+            0.0
+          ],
           "head_pitch": 85.0,
           "surface": {
             "type": "area_dome",
@@ -1305,7 +1317,11 @@
             "enabled": true,
             "radius": 32.0,
             "height": 8.0,
-            "reflectance": [0.006, 0.010, 0.001]
+            "reflectance": [
+              0.006,
+              0.01,
+              0.001
+            ]
           },
           "support": {
             "enabled": true,
@@ -1313,7 +1329,11 @@
               "enabled": true,
               "height": 4.2,
               "offset_y": -5.0,
-              "reflectance": [0.07, 0.20, 0.022]
+              "reflectance": [
+                0.07,
+                0.2,
+                0.022
+              ]
             },
             "bracts": {
               "enabled": true,
@@ -1327,7 +1347,13 @@
               "camber": 0.35,
               "droop": 1.2,
               "segments": 9,
-              "material": { "reflectance": [0.055, 0.18, 0.018] }
+              "material": {
+                "reflectance": [
+                  0.055,
+                  0.18,
+                  0.018
+                ]
+              }
             },
             "stem": {
               "enabled": false,
@@ -1340,8 +1366,16 @@
               "sway": 1.5,
               "rib_count": 12,
               "rib_radius": 0.055,
-              "rib_reflectance": [0.12, 0.34, 0.035],
-              "reflectance": [0.08, 0.25, 0.025]
+              "rib_reflectance": [
+                0.12,
+                0.34,
+                0.035
+              ],
+              "reflectance": [
+                0.08,
+                0.25,
+                0.025
+              ]
             },
             "leaves": {
               "enabled": false,
@@ -1349,14 +1383,20 @@
               "count": 9,
               "divergence_angle": 137.5,
               "lower_fraction": 0.16,
-              "upper_fraction": 0.80,
+              "upper_fraction": 0.8,
               "inclination": 18.0,
               "length": 16.0,
               "width": 7.5,
               "camber": 1.2,
               "droop": 1.7,
               "segments": 14,
-              "material": { "reflectance": [0.055, 0.22, 0.025] }
+              "material": {
+                "reflectance": [
+                  0.055,
+                  0.22,
+                  0.025
+                ]
+              }
             }
           },
           "zones": [
@@ -1372,12 +1412,18 @@
                 "tilt": 0.0,
                 "tilt_by_radius": 0.0,
                 "tilt_jitter": 0.6,
-                "altitude": -0.10,
+                "altitude": -0.1,
                 "altitude_jitter": 0.035,
                 "rotation_jitter": 3.0,
                 "scale_by_radius": 0.08,
                 "scale_jitter": 0.015,
-                "material": { "reflectance": [0.28, 0.32, 0.035] }
+                "material": {
+                  "reflectance": [
+                    0.28,
+                    0.32,
+                    0.035
+                  ]
+                }
               }
             },
             {
@@ -1385,8 +1431,8 @@
               "index_max": 565,
               "organ": {
                 "shape": "ray_floret",
-                "radius": 2.30,
-                "height": 3.10,
+                "radius": 2.3,
+                "height": 3.1,
                 "segments": 8,
                 "radial_segments": 20,
                 "lobes": 5,
@@ -1395,11 +1441,17 @@
                 "tilt_by_radius": 18.0,
                 "radial_offset": 1.8,
                 "altitude": 0.45,
-                "altitude_jitter": 0.10,
+                "altitude_jitter": 0.1,
                 "rotation_jitter": 12.0,
                 "scale_by_radius": 0.12,
                 "scale_jitter": 0.08,
-                "material": { "reflectance": [0.28, 0.30, 0.018] }
+                "material": {
+                  "reflectance": [
+                    0.28,
+                    0.3,
+                    0.018
+                  ]
+                }
               }
             },
             {
@@ -1410,20 +1462,30 @@
                 "length": 15.5,
                 "width": 6.2,
                 "camber": 0.75,
-                "droop": 0.10,
+                "droop": 0.1,
                 "cup": 0.18,
                 "ripple": 0.12,
                 "twist": -2.0,
                 "segments": 10,
                 "vein_height": 0.12,
-                "vein_width": 0.10,
-                "vein_reflectance": [0.64, 0.52, 0.008],
+                "vein_width": 0.1,
+                "vein_reflectance": [
+                  0.64,
+                  0.52,
+                  0.008
+                ],
                 "altitude": 0.25,
                 "tilt": -4.0,
                 "tilt_jitter": 3.0,
                 "rotation_jitter": 2.5,
                 "scale_jitter": 0.05,
-                "material": { "reflectance": [0.92, 0.82, 0.015] }
+                "material": {
+                  "reflectance": [
+                    0.92,
+                    0.82,
+                    0.015
+                  ]
+                }
               }
             },
             {
@@ -1441,13 +1503,23 @@
                 "segments": 11,
                 "vein_height": 0.14,
                 "vein_width": 0.11,
-                "vein_reflectance": [0.70, 0.58, 0.008],
-                "altitude": 0.10,
+                "vein_reflectance": [
+                  0.7,
+                  0.58,
+                  0.008
+                ],
+                "altitude": 0.1,
                 "tilt": -8.0,
                 "tilt_jitter": 4.0,
                 "rotation_jitter": 3.0,
                 "scale_jitter": 0.06,
-                "material": { "reflectance": [1.0, 0.90, 0.018] }
+                "material": {
+                  "reflectance": [
+                    1.0,
+                    0.9,
+                    0.018
+                  ]
+                }
               }
             },
             {
@@ -1459,19 +1531,29 @@
                 "width": 8.0,
                 "camber": 1.2,
                 "droop": 0.48,
-                "cup": 0.30,
-                "ripple": 0.20,
+                "cup": 0.3,
+                "ripple": 0.2,
                 "twist": -3.5,
                 "segments": 12,
                 "vein_height": 0.16,
                 "vein_width": 0.12,
-                "vein_reflectance": [0.66, 0.54, 0.007],
+                "vein_reflectance": [
+                  0.66,
+                  0.54,
+                  0.007
+                ],
                 "altitude": -0.08,
                 "tilt": -12.0,
                 "tilt_jitter": 5.0,
                 "rotation_jitter": 3.5,
                 "scale_jitter": 0.07,
-                "material": { "reflectance": [0.94, 0.82, 0.012] }
+                "material": {
+                  "reflectance": [
+                    0.94,
+                    0.82,
+                    0.012
+                  ]
+                }
               }
             },
             {
@@ -1482,23 +1564,236 @@
                 "length": 24.5,
                 "width": 8.8,
                 "camber": 1.35,
-                "droop": 0.90,
+                "droop": 0.9,
                 "cup": 0.36,
                 "ripple": 0.24,
                 "twist": 4.0,
                 "segments": 13,
                 "vein_height": 0.18,
                 "vein_width": 0.13,
-                "vein_reflectance": [0.70, 0.57, 0.008],
+                "vein_reflectance": [
+                  0.7,
+                  0.57,
+                  0.008
+                ],
                 "altitude": -0.25,
                 "tilt": -17.0,
                 "tilt_jitter": 6.0,
                 "rotation_jitter": 4.0,
                 "scale_jitter": 0.08,
-                "material": { "reflectance": [1.0, 0.88, 0.015] }
+                "material": {
+                  "reflectance": [
+                    1.0,
+                    0.88,
+                    0.015
+                  ]
+                }
               }
             }
           ]
+        }
+      },
+      {
+        "name": "volume_sphere",
+        "enabled": false,
+        "placement": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation_degrees": [
+            20,
+            150,
+            0
+          ]
+        },
+        "geometry": {
+          "pbrt_shape": "sphere",
+          "parameters": {
+            "radius": 1.5
+          }
+        },
+        "material": {
+          "type": "interface"
+        },
+        "medium": {
+          "interior": {
+            "name": "volume_sphere_rgbgrid",
+            "type": "rgbgrid",
+            "nx": 256,
+            "ny": 64,
+            "nz": 128,
+            "axis": "Y",
+            "sigma_a": 0.4,
+            "world_min": [
+              -18.0,
+              -2.0,
+              -9.0
+            ],
+            "world_max": [
+              18.0,
+              16.0,
+              -1.0
+            ],
+            "emission": {
+              "enabled": true,
+              "le_scale": 0.01
+            },
+            "noise": {
+              "enabled": true,
+              "mode": "position",
+              "position": {
+                "frequency": 1.5,
+                "amplitude": 0.3,
+                "octaves": 4,
+                "persistence": 0.5,
+                "lacunarity": 2.0
+              },
+              "density": {
+                "frequency": 2.0,
+                "amplitude": 0.8,
+                "octaves": 6,
+                "persistence": 0.6,
+                "lacunarity": 2.0
+              }
+            },
+            "zones": [
+              {
+                "enabled": true,
+                "position": 0.2,
+                "wavelength": 650,
+                "width": 0.15,
+                "strength": 12.0
+              },
+              {
+                "enabled": true,
+                "position": 0.4,
+                "wavelength": 580,
+                "width": 0.15,
+                "strength": 12.0
+              },
+              {
+                "enabled": true,
+                "position": 0.6,
+                "wavelength": 510,
+                "width": 0.15,
+                "strength": 12.5
+              },
+              {
+                "enabled": true,
+                "position": 0.8,
+                "wavelength": 450,
+                "width": 0.15,
+                "strength": 12.0
+              }
+            ]
+          },
+          "exterior": ""
+        }
+      },
+      {
+        "name": "volume_box",
+        "enabled": false,
+        "placement": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation_degrees": [
+            0,
+            0,
+            0
+          ]
+        },
+        "geometry": {
+          "generator": "box"
+        },
+        "material": {
+          "type": "interface"
+        },
+        "construction": {
+          "x_min": -18.0,
+          "x_max": 18.0,
+          "y_min": -2.0,
+          "y_max": 16.0,
+          "z_min": -9.0,
+          "z_max": -1.0
+        },
+        "medium": {
+          "interior": {
+            "name": "volume_box_rgbgrid",
+            "type": "rgbgrid",
+            "nx": 256,
+            "ny": 64,
+            "nz": 128,
+            "axis": "Y",
+            "sigma_a": 0.4,
+            "world_min": [
+              -18.0,
+              -2.0,
+              -9.0
+            ],
+            "world_max": [
+              18.0,
+              16.0,
+              -1.0
+            ],
+            "emission": {
+              "enabled": true,
+              "le_scale": 0.01
+            },
+            "noise": {
+              "enabled": true,
+              "mode": "position",
+              "position": {
+                "frequency": 1.5,
+                "amplitude": 0.3,
+                "octaves": 4,
+                "persistence": 0.5,
+                "lacunarity": 2.0
+              },
+              "density": {
+                "frequency": 2.0,
+                "amplitude": 0.8,
+                "octaves": 6,
+                "persistence": 0.6,
+                "lacunarity": 2.0
+              }
+            },
+            "zones": [
+              {
+                "enabled": true,
+                "position": 0.2,
+                "wavelength": 650,
+                "width": 0.15,
+                "strength": 12.0
+              },
+              {
+                "enabled": true,
+                "position": 0.4,
+                "wavelength": 580,
+                "width": 0.15,
+                "strength": 12.0
+              },
+              {
+                "enabled": true,
+                "position": 0.6,
+                "wavelength": 510,
+                "width": 0.15,
+                "strength": 12.5
+              },
+              {
+                "enabled": true,
+                "position": 0.8,
+                "wavelength": 450,
+                "width": 0.15,
+                "strength": 12.0
+              }
+            ]
+          },
+          "exterior": ""
         }
       }
     ]
@@ -1732,89 +2027,30 @@
     "geometry": [
       {
         "enabled": false,
-        "label": "volume_sphere",
-        "material": { "type": "interface" },
-        "medium": "rgb_vol",
+        "label": "fog_volume",
+        "material": {
+          "type": "interface"
+        },
+        "medium_interior": "fog",
+        "medium_exterior": "",
         "transform": {
-          "translate": [0, 0, 0],
-          "rotate": [
-            { "angle": 150, "axis": [0, 1, 0] },
-            { "angle": 20,  "axis": [1, 0, 0] }
+          "translate": [
+            0,
+            0,
+            0
           ]
         },
         "shape": {
-          "type": "sphere",
-          "radius": 1.5
-        }
-      },
-      {
-        "enabled": false,
-        "label": "volume_box",
-        "material": { "type": "interface" },
-        "medium": "rgb_vol",
-        "transform": { "translate": [0, 0, 0], "rotate": [] },
-        "shape": {
           "type": "box",
-          "x_min": -18.0, "x_max": 18.0,
-          "y_min": -2.0,   "y_max": 16.0,
-          "z_min": -9.0,  "z_max": -1.0
-        }
-      },
-      {
-        "enabled": false,
-        "label": "fog_volume",
-        "material": { "type": "interface" },
-        "medium_interior": "fog",
-        "medium_exterior": "",
-        "transform": { "translate": [0, 0, 0] },
-        "shape": {
-          "type": "box",
-          "x_min": -750.0, "x_max": 750.0,
-          "y_min": -0.9,   "y_max": 250.0,
-          "z_min": -1550.0, "z_max": 130.0
+          "x_min": -750.0,
+          "x_max": 750.0,
+          "y_min": -0.9,
+          "y_max": 250.0,
+          "z_min": -1550.0,
+          "z_max": 130.0
         }
       }
-    ],
-
-    "grid": {
-      "enabled": false,
-      "nx": 256,
-      "ny": 64,
-      "nz": 128,
-      "axis": "Y",
-      "sigma_a": 0.4,
-      "world_min": [-18.0, -2.0, -9.0],
-      "world_max": [ 18.0, 16.0, -1.0],
-      "emission": {
-        "enabled": true,
-        "le_scale": 0.010
-      },
-      "noise": {
-        "enabled": true,
-        "mode": "position",
-        "position": {
-          "frequency": 1.5,
-          "amplitude": 0.3,
-          "octaves": 4,
-          "persistence": 0.5,
-          "lacunarity": 2.0
-        },
-        "density": {
-          "frequency": 2.0,
-          "amplitude": 0.8,
-          "octaves": 6,
-          "persistence": 0.6,
-          "lacunarity": 2.0
-        }
-      }
-    },
-
-
-    "zones": [
-      { "enabled": true, "position": 0.2, "wavelength": 650, "width": 0.150, "strength": 12.0 },
-      { "enabled": true, "position": 0.4, "wavelength": 580, "width": 0.150, "strength": 12.0 },
-      { "enabled": true, "position": 0.6, "wavelength": 510, "width": 0.150, "strength": 12.5 },
-      { "enabled": true, "position": 0.8, "wavelength": 450, "width": 0.150, "strength": 12.0 }
     ]
+
   }
 }

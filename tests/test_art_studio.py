@@ -151,6 +151,10 @@ class ArtStudioTests(unittest.TestCase):
         )
         self.assertIsNotNone(selector)
         self.assertEqual(selector.currentText(), "sunflower_head_vogel_pattern")
+        self.assertEqual(
+            [selector.itemText(index) for index in range(selector.count())],
+            ["sunflower_head_vogel_pattern", "volume_sphere", "volume_box"],
+        )
 
     def test_no_add_control_is_present(self):
         buttons = self.window.findChildren(QtWidgets.QAbstractButton)

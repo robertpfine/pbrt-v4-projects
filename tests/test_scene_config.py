@@ -584,6 +584,32 @@ class SceneConfigTests(unittest.TestCase):
                 [],
             )
 
+    def test_obsolete_independent_volume_paths_are_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["grid"] = {"enabled": False}
+            data["scene"]["zones"] = []
+            data["scene"]["geometry"] = [{"label": "volume_box"}]
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+
+            self.assertIn(
+                "obsolete scene.grid must be removed after "
+                "independent-volume migration",
+                errors,
+            )
+            self.assertIn(
+                "obsolete scene.zones must be removed after "
+                "independent-volume migration",
+                errors,
+            )
+            self.assertIn(
+                "obsolete scene.geometry independent volumes must be removed "
+                "after independent-volume migration",
+                errors,
+            )
+
     def test_obsolete_geometry_vista_plane_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)

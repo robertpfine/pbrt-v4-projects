@@ -275,6 +275,13 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.name"):
             create_snapshot(self.root, self.config, "20260904_010219")
 
+    def test_snapshot_rejects_obsolete_independent_volume_paths(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["grid"] = {"enabled": False}
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.grid"):
+            create_snapshot(self.root, self.config, "20260904_010221")
+
     def test_snapshot_rejects_obsolete_ground_landform_core(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene"] = {

@@ -32,11 +32,53 @@ from scene_workspace.build_scene import (
     write_geometry,
     write_integrator,
     write_lsystem_trees,
+    write_medium,
     write_sampler,
 )
 
 
 class ConfiguredFileLayoutTests(unittest.TestCase):
+    def test_independent_object_medium_uses_owned_name_and_configuration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scene_root = Path(directory) / "scene_workspace"
+            scene_root.mkdir()
+            config = {
+                "file_paths": {"scene_files": "scene_workspace/scene_files"},
+                "scene_description": {
+                    "objects": [{
+                        "name": "volume_box",
+                        "enabled": True,
+                        "medium": {
+                            "interior": {
+                                "name": "volume_box_rgbgrid",
+                                "type": "rgbgrid",
+                                "nx": 1,
+                                "ny": 1,
+                                "nz": 1,
+                                "axis": "Y",
+                                "sigma_a": 0.4,
+                                "world_min": [-1, -1, -1],
+                                "world_max": [1, 1, 1],
+                                "emission": {"enabled": False},
+                                "zones": [{}],
+                            },
+                            "exterior": "",
+                        },
+                    }]
+                },
+            }
+            with mock.patch(
+                "scene_workspace.build_scene.compute_rgbgrid",
+                return_value=([0.1, 0.2, 0.3], [0.4, 0.4, 0.4], []),
+            ) as compute:
+                relative = write_medium(config, scene_root)
+
+            output = scene_root / relative
+            content = output.read_text(encoding="utf-8")
+            self.assertIn('MakeNamedMedium "volume_box_rgbgrid"', content)
+            self.assertNotIn('MakeNamedMedium "rgb_vol"', content)
+            self.assertEqual(compute.call_args.args[1], [{}])
+
     def test_scene_builder_resolves_repository_relative_scene_files(self):
         with tempfile.TemporaryDirectory() as directory:
             scene_root = Path(directory) / "working_scene"

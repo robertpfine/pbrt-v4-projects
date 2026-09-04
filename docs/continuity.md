@@ -521,8 +521,9 @@ order:
    space-colonization trees are landform surface objects, and the grove is folded
    into its selected tree population. Stage 6.1 is complete: the disabled
    planar-phyllotaxis sunflower is the first `scene_description.objects` entry.
-   Stage 6.2 migrates the disabled legacy sphere and box volume experiments;
-   `fog_volume` remains for the atmosphere stage.
+   Stage 6.2 is also complete: the disabled legacy sphere and box volume
+   experiments are self-contained objects with owned media. Stage 7 begins sky
+   migration; `fog_volume` remains for the atmosphere stage.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -779,6 +780,22 @@ The complete `.venv` suite runs 135 tests (126 passed, nine skips), and all 120
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 6.2 moves
 the disabled experimental `volume_sphere` and `volume_box`; the fog boundary
 stays with the later atmosphere migration.
+
+Stage 6.2 independent-volume migration is complete in the working
+implementation. Disabled `volume_sphere` and `volume_box` now follow the
+sunflower in `scene_description.objects[]`. The sphere uses native PBRT sphere
+geometry; the box uses the registered Art Studio box generator. Both own
+explicit placement, interface material, and a full copy of the former rgbgrid
+construction and spectral zones. The obsolete shared `scene.grid` and
+`scene.zones` paths are absent and rejected. Only disabled `fog_volume` remains
+in `scene.geometry[]` for absorption into the Stage 8 fog object. The new
+dependency-free `scene_objects.py` routes object geometry and media and is
+automatically frozen by immutable snapshots. The archived `020525` proof
+remains byte-identical at 117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 139 tests (130 passed, nine skips), and all 124
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 6 is
+complete; Stage 7 begins sky background, sun, and self-contained clouds.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 

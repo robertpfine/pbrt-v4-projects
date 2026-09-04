@@ -2,10 +2,81 @@ import math
 import unittest
 
 from phyllotaxis import dome_height, vogel_points
-from scene_workspace.build_scene import configured_scene_objects
+from scene_objects import (
+    configured_independent_geometry,
+    configured_rgbgrid_media,
+    configured_scene_objects,
+)
 
 
 class VogelPointTests(unittest.TestCase):
+    def test_disabled_volume_objects_keep_geometry_and_owned_media(self):
+        description = {
+            "objects": [
+                {
+                    "name": "volume_sphere",
+                    "enabled": False,
+                    "placement": {
+                        "position": [0, 0, 0],
+                        "rotation_degrees": [20, 150, 0],
+                    },
+                    "geometry": {
+                        "pbrt_shape": "sphere",
+                        "parameters": {"radius": 1.5},
+                    },
+                    "material": {"type": "interface"},
+                    "medium": {
+                        "interior": {
+                            "name": "volume_sphere_rgbgrid",
+                            "type": "rgbgrid",
+                            "zones": [{}],
+                        },
+                        "exterior": "",
+                    },
+                },
+                {
+                    "name": "volume_box",
+                    "enabled": False,
+                    "placement": {
+                        "position": [0, 0, 0],
+                        "rotation_degrees": [0, 0, 0],
+                    },
+                    "geometry": {"generator": "box"},
+                    "material": {"type": "interface"},
+                    "construction": {
+                        "x_min": -1,
+                        "x_max": 1,
+                        "y_min": -2,
+                        "y_max": 2,
+                        "z_min": -3,
+                        "z_max": 3,
+                    },
+                    "medium": {
+                        "interior": {
+                            "name": "volume_box_rgbgrid",
+                            "type": "rgbgrid",
+                            "zones": [{}],
+                        },
+                        "exterior": "",
+                    },
+                },
+            ]
+        }
+
+        geometry = configured_independent_geometry(description)
+        self.assertEqual([item["label"] for item in geometry], [
+            "volume_sphere",
+            "volume_box",
+        ])
+        self.assertEqual(geometry[0]["shape"], {"type": "sphere", "radius": 1.5})
+        self.assertEqual(geometry[1]["shape"]["type"], "box")
+        self.assertEqual(configured_rgbgrid_media(description), [])
+        description["objects"][1]["enabled"] = True
+        self.assertEqual(
+            configured_rgbgrid_media(description)[0]["name"],
+            "volume_box_rgbgrid",
+        )
+
     def test_independent_object_adapter_preserves_generator_inputs(self):
         description = {
             "objects": [

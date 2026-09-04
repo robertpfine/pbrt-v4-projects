@@ -57,6 +57,11 @@ from terrain_surface_texture import generate_terrain_surface_maps
 from vista_surface_texture import generate_vista_surface_mottle
 from terrain import create_terrain
 from terrain_details import alignment_rotation, scatter_points, spatial_direction_offset
+from scene_objects import (
+    configured_independent_geometry,
+    configured_rgbgrid_media,
+    configured_scene_objects,
+)
 
 
 # ==============================================================
@@ -630,65 +635,46 @@ def write_rain_boundaries(lines, curtains, exterior_medium=""):
 
 
 def write_medium(cfg, scene_root):
-    """
-    Generate scene_files/volumes/rgbgrid.pbrt.
+    """Generate the media owned by enabled independent volume objects."""
 
-    This file contains a single MakeNamedMedium block named "rgb_vol".
-    It must be Included in the scene file BEFORE WorldBegin — pbrt
-    requires named media to be declared in the pre-world section.
-
-    Config reads:
-      scene.grid            — grid dimensions, bounds, sigma_a
-      scene.zones           — spectral zone definitions
-      file_paths.scene_files — generator output directory
-
-    Output file: the MakeNamedMedium "rgb_vol" block with
-                 fully expanded sigma_s and sigma_a arrays.
-
-    Returns: the relative path string (for use as the Include argument
-             in the scene file).
-    """
-    scene  = cfg["scene"]
-    g_cfg  = scene["grid"]
-    if not g_cfg.get("enabled", True):
-        print("  Grid disabled — skipping rgbgrid generation.")
+    media = configured_rgbgrid_media(cfg["scene_description"])
+    if not media:
+        print("  Independent rgbgrid objects disabled — skipping generation.")
         return None
-    zones  = scene["zones"]
     out = configured_scene_files(cfg, scene_root) / "volumes" / "rgbgrid.pbrt"
-
-    print(f"  Building {g_cfg['nx']}x{g_cfg['ny']}x{g_cfg['nz']} rgbgrid "
-          f"(axis={g_cfg['axis']}, sigma_a={g_cfg['sigma_a']})...")
-
-    sigma_s, sigma_a_flat, le_flat = compute_rgbgrid(g_cfg, zones)
-
-    emission_cfg = g_cfg.get("emission", {})
-    emission_enabled = emission_cfg.get("enabled", False)
-    le_scale = emission_cfg.get("le_scale", 1.0)
-
-    le_block = (
-        f'    "float Lescale" [ {le_scale} ]\n'
-        f'    "rgb Le"   [\n'
-        f'{fmt_floats(le_flat)}\n'
-        f'    ]\n'
-    ) if emission_enabled else ""
-
-    content = (
-        f'MakeNamedMedium "rgb_vol"\n'
-        f'    "string type"   [ "rgbgrid" ]\n'
-        f'    "integer nx"    [ {g_cfg["nx"]} ]\n'
-        f'    "integer ny"    [ {g_cfg["ny"]} ]\n'
-        f'    "integer nz"    [ {g_cfg["nz"]} ]\n'
-        f'    "point3 p0"     [ {g_cfg["world_min"][0]} {g_cfg["world_min"][1]} {g_cfg["world_min"][2]} ]\n'
-        f'    "point3 p1"     [ {g_cfg["world_max"][0]} {g_cfg["world_max"][1]} {g_cfg["world_max"][2]} ]\n'
-        f'    "float g"       [ 0.0 ]\n'
-        f'    "rgb sigma_a"   [\n'
-        f'{fmt_floats(sigma_a_flat)}\n'
-        f'    ]\n'
-        f'    "rgb sigma_s"   [\n'
-        f'{fmt_floats(sigma_s)}\n'
-        f'    ]\n'
-        f'{le_block}'
-    )
+    blocks = []
+    for g_cfg in media:
+        zones = g_cfg["zones"]
+        print(f"  Building {g_cfg['nx']}x{g_cfg['ny']}x{g_cfg['nz']} rgbgrid "
+              f"(axis={g_cfg['axis']}, sigma_a={g_cfg['sigma_a']})...")
+        sigma_s, sigma_a_flat, le_flat = compute_rgbgrid(g_cfg, zones)
+        emission_cfg = g_cfg.get("emission", {})
+        emission_enabled = emission_cfg.get("enabled", False)
+        le_scale = emission_cfg.get("le_scale", 1.0)
+        le_block = (
+            f'    "float Lescale" [ {le_scale} ]\n'
+            f'    "rgb Le"   [\n'
+            f'{fmt_floats(le_flat)}\n'
+            f'    ]\n'
+        ) if emission_enabled else ""
+        blocks.append(
+            f'MakeNamedMedium "{g_cfg["name"]}"\n'
+            f'    "string type"   [ "rgbgrid" ]\n'
+            f'    "integer nx"    [ {g_cfg["nx"]} ]\n'
+            f'    "integer ny"    [ {g_cfg["ny"]} ]\n'
+            f'    "integer nz"    [ {g_cfg["nz"]} ]\n'
+            f'    "point3 p0"     [ {g_cfg["world_min"][0]} {g_cfg["world_min"][1]} {g_cfg["world_min"][2]} ]\n'
+            f'    "point3 p1"     [ {g_cfg["world_max"][0]} {g_cfg["world_max"][1]} {g_cfg["world_max"][2]} ]\n'
+            f'    "float g"       [ 0.0 ]\n'
+            f'    "rgb sigma_a"   [\n'
+            f'{fmt_floats(sigma_a_flat)}\n'
+            f'    ]\n'
+            f'    "rgb sigma_s"   [\n'
+            f'{fmt_floats(sigma_s)}\n'
+            f'    ]\n'
+            f'{le_block}'
+        )
+    content = "\n".join(blocks)
 
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
@@ -2629,28 +2615,6 @@ def configured_surface_objects(landform, generator):
     return result
 
 
-def configured_scene_objects(scene_description, generator):
-    """Flatten independent objects registered to one generator family."""
-
-    result = []
-    for item in scene_description.get("objects", []):
-        geometry = item.get("geometry", {})
-        if not isinstance(geometry, dict) or geometry.get("generator") != generator:
-            continue
-        construction = item.get("construction", {})
-        if not isinstance(construction, dict):
-            raise ValueError(
-                f"scene object {item.get('name')!r} requires a construction object"
-            )
-        result.append({
-            "enabled": item.get("enabled", False),
-            "label": item.get("name", generator),
-            "_placement": item.get("placement", {}),
-            **construction,
-        })
-    return result
-
-
 def write_terrain_details(lines, terrain, config, camera=None, film=None):
     """Write reusable ground-detail objects and terrain-aware instances."""
 
@@ -3445,7 +3409,11 @@ def write_scene(cfg, scene_root, medium_rel_path):
         scene_files_root,
     )
     write_geometry(
-        lines, scene.get("geometry", []), scene_root, scene_files_root
+        lines,
+        configured_independent_geometry(scene_description)
+        + scene.get("geometry", []),
+        scene_root,
+        scene_files_root,
     )
     write_terrain(lines, terrain, terrain_landform, scene_root, scene_files_root)
     write_terrain_details(

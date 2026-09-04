@@ -1,6 +1,6 @@
 # Live Configuration Migration Progress — 2026-09-04
 
-Status: Stages 1–5 and Stage 6.1 implementation and validation complete
+Status: Stages 1–6 implementation and validation complete
 
 ## Authority and starting point
 
@@ -1313,3 +1313,74 @@ production render was launched. Stage 6.2 migrates the disabled legacy
 `volume_sphere` and `volume_box` into self-contained independent objects; the
 legacy direct-grid construction will move with them, while `fog_volume` waits
 for the atmosphere stage.
+
+## Stage 6.2 — self-contained legacy volume objects
+
+Status: implementation and validation complete from pushed Stage 6.1
+checkpoint `93e199d`
+
+The disabled `volume_sphere` and `volume_box` moved in their stable order from
+`scene.geometry[]` into `scene_description.objects[]` after the phyllotaxis
+sunflower. The sphere explicitly selects native PBRT `pbrt_shape: "sphere"`
+with radius parameters. The box explicitly selects the registered Art Studio
+`generator: "box"`, with its six retained bounds under `construction`. Both
+objects own their interface material, explicit position and rotation, and a
+complete interior/exterior medium definition.
+
+The former shared disabled `scene.grid` and `scene.zones` configuration was
+copied in full into each boundary's `medium.interior`, as required by the
+approved self-contained-volume design, and both shared paths were removed.
+Each object has a distinct configured medium name while preserving all former
+resolution, axis, absorption, bounds, emission, two noise layers, and four
+spectral-zone values. Object enabled state replaces the old grid switch. The
+remaining `scene.geometry[]` contains only disabled `fog_volume`; it is
+intentionally retained until the fog object absorbs its boundary in Stage 8.
+
+The dependency-free `scene_objects.py` now routes generated objects, native/box
+boundary geometry, and enabled object-owned rgbgrid media. Separating this
+logic also removed a test-order dependency in which a focused adapter test
+could import NumPy-heavy scene-builder modules only after another test had
+installed dependency stubs. The immutable snapshot already freezes every root
+Python source, so the new routing module is included without a special case.
+The existing builder writes one pre-world medium include containing each
+enabled object's distinct declaration, then emits independent boundaries ahead
+of the retained fog boundary in the original relative order.
+
+Configuration and snapshot validation now reject old grid/zones and sphere/box
+geometry ownership. They validate supported native/generated shapes, box
+bounds, sphere radius, object placement, material, and the self-contained
+rgbgrid medium shell. A focused 1×1×1 writer test verifies that the configured
+owned name—not the former global `rgb_vol` name—is emitted. The Qt object
+selector exposes all three independent objects and retains dynamic placement
+binding.
+
+Mechanical ownership audit:
+
+```text
+object_order          ['sunflower_head_vogel_pattern', 'volume_sphere', 'volume_box']
+enabled_objects       []
+legacy_geometry       ['fog_volume']
+legacy_grid_present   False
+legacy_zones_present  False
+volume_sphere grid/zones preserved  True / True
+volume_box grid/zones preserved     True / True
+```
+
+The archived `020525` diagnostic migration was built in memory without a
+second JSON or PBRT launch:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 6.2 size:      117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The proof workspace remains at `/tmp/pbrt-volumes-stage6.FczgRq` to avoid an
+unattended destructive-cleanup prompt. The complete `.venv` suite runs 139
+tests (130 passed, nine dependency-aware skips), and system Python passes all
+124 non-GUI tests. Live validation reports zero errors,
+`render_pipeline.sh` passes `bash -n`, and the authoritative JSON parses
+cleanly. No production render was launched. Stage 6 is complete; Stage 7 begins
+with the sky background and sun before migrating each cloud as a self-contained
+sky object.
