@@ -26,15 +26,15 @@
   "render_settings": {
     "film": {
       "x_resolution": 2000,
-      "y_resolution": 1450
+      "y_resolution": 1500
     },
     "sampler": {
       "type": "halton",
-      "pixel_samples": 512
+      "pixel_samples": 8
     },
     "integrator": {
       "type": "volpath",
-      "max_depth": 80
+      "max_depth": 20
     },
     "backend": {
       "type": "gpu",
@@ -201,7 +201,7 @@
         "surface_objects": [
           {
             "name": "grass",
-            "enabled": true,
+            "enabled": false,
             "generator": "grass",
             "construction": {
               "blade": {
@@ -295,7 +295,7 @@
           },
           {
             "name": "poppies",
-            "enabled": true,
+            "enabled": false,
             "generator": "poppy",
             "construction": {
               "stem_reflectance": [0.035, 0.16, 0.025],

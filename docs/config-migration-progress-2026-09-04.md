@@ -1735,28 +1735,61 @@ overcast diagnostic. The complete immutable bundle and manifest are in
 the existing Google Drive API rate limit, and was not retried. There was no
 fatal loop, no PBRT hang, and no post-migration image difference.
 
-### Artist-visible log follow-up
+### Readable-terminal verification and full-cost abort
 
 The successful `072547` host-GPU run was captured by automation. It validated
 the migrated builder, C++ cloud-grid path, PBRT/CUDA execution, and archived
-output equivalence, but it did **not** validate the artist-facing live-log
-workflow.
+output equivalence, but it did not initially validate the requested visible
+terminal. A clean-environment GNOME probe started no render and opened with
+tiny text because `env -i` discarded the artist's normal GNOME profile.
 
-An attempted GNOME Terminal correction after `072547` ran only a no-render
-probe. The visible terminal opened, but its text was again too small to read.
-Historical session evidence confirms that this recurring issue was already
-resolved by using the Art Studio's readable, persistent docked render log. The
-canonical artist-facing launch command is:
+A direct Codex execution then froze run `20260904_074407`, but its output was
+visible only inside the tool session. When the artist reported no terminal, the
+run was interrupted during `terrain_details.scatter_points`, before PBRT. Its
+incomplete snapshot is retained and no image was produced.
+
+The canonical artist-facing launch command is:
 
 ```bash
-./run_art_studio.sh
+./run_render_terminal.sh
 ```
 
-The artist then uses the toolbar's **Render** control. The application saves and
-validates the one authoritative `scene_workspace/config.json`, runs
-`render_pipeline.sh` through a merged-output `QProcess`, streams the output into
-the docked log, and displays the completed local PNG before remote archive sync
-finishes. `run_render_terminal.sh` is only a fallback when a separate GNOME
-Terminal is explicitly requested; XTerm and further external-terminal probes
-are not solutions. A successful render initiated through the Studio remains
-the only open workflow-validation check. No render was launched by this probe.
+It selectively removes Snap GTK/GIO variables while preserving the normal GNOME
+profile. It must not be replaced by `env -i`, XTerm, a hidden direct pipeline,
+or Art Studio when the artist asks for a terminal. Run `20260904_074733` used
+this wrapper, and the artist explicitly confirmed that the readable terminal
+was visible. The live-log workflow is therefore validated.
+
+Run `074733` completed the 160×40×120 C++ grid and wrote the expected
+39,936,339-byte medium. Full scene assembly completed at 07:51:01 EDT with an
+expected 1,044,724,173-byte `scene.pbrt`. PBRT then ran the committed full-cost
+settings: 2000×1450, 512 samples, `volpath` depth 80, GPU. Its estimated time to
+completion increased instead of converging. The artist identified the known
+death-loop behavior and ordered termination. `pkill -INT -x pbrt` returned zero;
+a host-level `pgrep -a -x pbrt` returned no process. No PNG or finalized archive
+bundle exists for `074733`.
+
+### Accepted `075647` state and vertical split diagnosis
+
+The artist reset to the bounded `072547` controls, then rendered accepted image
+`20260904_075647` at 2000×1500, eight samples, depth 20, with grass and poppies
+disabled. The archived and authoritative live configurations are byte-for-byte
+identical with SHA-256
+`29902ce336bd8ae01b46f71e5cd9de77303d1c84e97798eb56465205b2360d68`.
+The 4,180,493-byte PNG is the current visual reference.
+
+The apparent grass-detail boundary is not generated grass. It crosses the sky,
+horizon, and foreground at about column 1210 of 2000; the same normalized split
+appears near column 387 of the 640-wide `072547` control. Analysis of the
+compiled `rgbgrid` found nonzero density in every interior X column, excluding
+a half-written or mis-indexed C++ grid.
+
+The leading diagnosis is a cloud-medium boundary/start-state error. The
+overcast center `[−15000, 850, −10000]`, dimensions `[50000, 800, 26000]`, and
+far-Y slope `−300` produce an axis-aligned medium proxy spanning Y=150–1250.
+The camera begins at Y=165, inside that proxy, although the actual sloped cloud
+bottom at the camera is approximately Y=420 and contains no density there.
+Different view rays can therefore acquire inconsistent medium transitions,
+affecting both sky noise and ground illumination. This is a strong, testable
+cause, not yet a proven fix. Preserve `075647`; next run one bounded,
+single-variable boundary control before changing production geometry.

@@ -155,7 +155,6 @@ Do not include those items in commits unless the user explicitly changes this po
 2. Show or review the accepted render before proposing a new visual direction.
 3. Preserve the accepted configuration as the baseline; make one controlled visual
    change per render whenever practical.
-4. Continue rendering from PBRT-v4 Art Studio so progress remains in its
-   readable, persistent docked log; follow `docs/continuity.md` for the current
-   launch procedure.
+4. Continue visible-log rendering through the canonical host-terminal wrapper;
+   follow `docs/continuity.md` for the current launch procedure.
 5. Establish and push Git checkpoints after the user accepts a meaningful state.
