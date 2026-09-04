@@ -139,9 +139,6 @@ class SceneConfigTests(unittest.TestCase):
   },
   "scene": {
     "landscape": {
-      "ground": {
-        "details": {}
-      },
       "water": { "enabled": false },
       "distant_hills": { "enabled": false }
     },
@@ -369,8 +366,8 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"]["details"]["grass"] = {
-                "enabled": False
+            data["scene"]["landscape"]["ground"] = {
+                "details": {"grass": {"enabled": False}}
             }
             path.write_text(json.dumps(data), encoding="utf-8")
             self.assertIn(
@@ -383,8 +380,8 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"]["details"]["poppies"] = {
-                "enabled": False
+            data["scene"]["landscape"]["ground"] = {
+                "details": {"poppies": {"enabled": False}}
             }
             path.write_text(json.dumps(data), encoding="utf-8")
             self.assertIn(
@@ -397,8 +394,8 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"]["details"]["litter"] = {
-                "enabled": False
+            data["scene"]["landscape"]["ground"] = {
+                "details": {"litter": {"enabled": False}}
             }
             path.write_text(json.dumps(data), encoding="utf-8")
             self.assertIn(
@@ -411,14 +408,34 @@ class SceneConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)
             data = json.loads(path.read_text(encoding="utf-8"))
-            data["scene"]["landscape"]["ground"]["details"]["rocks"] = {
-                "enabled": False
+            data["scene"]["landscape"]["ground"] = {
+                "details": {"rocks": {"enabled": False}}
             }
             path.write_text(json.dumps(data), encoding="utf-8")
             self.assertIn(
                 "obsolete scene.landscape.ground.details.rocks must be "
                 "removed after rock migration",
                 SceneConfig(path).validate(),
+            )
+
+    def test_obsolete_ground_undergrowth_is_reported(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["landscape"]["ground"] = {
+                "details": {"undergrowth": {"enabled": False}}
+            }
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+            self.assertIn(
+                "obsolete scene.landscape.ground must be removed after "
+                "surface-object migration",
+                errors,
+            )
+            self.assertIn(
+                "obsolete scene.landscape.ground.details.undergrowth must be "
+                "removed after undergrowth migration",
+                errors,
             )
 
     def test_current_scene_uses_explicit_landscape_and_sky_boundaries(self):
@@ -455,14 +472,10 @@ class SceneConfigTests(unittest.TestCase):
             ],
             ["flat_landform"],
         )
-        self.assertEqual(
-            set(data["landscape"]["ground"]),
-            {"details"},
-        )
-        self.assertNotIn("surface", data["landscape"]["ground"]["details"])
+        self.assertNotIn("ground", data["landscape"])
         self.assertEqual(
             set(data["landscape"]),
-            {"ground", "water", "distant_hills"},
+            {"water", "distant_hills"},
         )
         self.assertEqual(set(data["sky"]), {"background", "clouds"})
         self.assertEqual(data["sky"]["background"]["type"], "infinite")

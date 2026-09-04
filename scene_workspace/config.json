@@ -436,6 +436,28 @@
               "exclusion": { "center": [0.0, 0.0], "radius": 14.0 },
               "patchiness": { "strength": 0.64, "frequency": 0.012 }
             }
+          },
+          {
+            "name": "undergrowth",
+            "enabled": false,
+            "generator": "undergrowth",
+            "construction": {
+              "variants": 2,
+              "scale": [2.0, 4.8],
+              "reflectance_variants": [
+                [0.025, 0.13, 0.030],
+                [0.040, 0.18, 0.040]
+              ]
+            },
+            "population": {
+              "seed": 79,
+              "count": 140,
+              "region": { "center": [0.0, 0.0], "size": [440.0, 440.0] },
+              "max_slope_degrees": 30.0,
+              "y_offset": 0.04,
+              "exclusion": { "center": [0.0, 0.0], "radius": 24.0 },
+              "patchiness": { "strength": 0.88, "frequency": 0.020 }
+            }
           }
         ]
       }
@@ -662,26 +684,6 @@
     },
 
     "landscape": {
-      "ground": {
-        "details": {
-          "undergrowth": {
-            "enabled": false,
-            "count": 140,
-            "seed": 79,
-            "region": { "center": [0.0, 0.0], "size": [440.0, 440.0] },
-            "scale": [2.0, 4.8],
-            "max_slope_degrees": 30.0,
-            "patchiness": { "strength": 0.88, "frequency": 0.020 },
-            "exclusion": { "center": [0.0, 0.0], "radius": 24.0 },
-            "y_offset": 0.04,
-            "variants": 2,
-            "reflectance_variants": [
-              [0.025, 0.13, 0.030],
-              [0.040, 0.18, 0.040]
-            ]
-          }
-        }
-      },
       "water": {
         "enabled": false
       },

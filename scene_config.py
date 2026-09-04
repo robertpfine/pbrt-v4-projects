@@ -16,7 +16,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 JsonPath = tuple[str | int, ...]
 _MISSING = object()
-GROUND_PATH: JsonPath = ("scene", "landscape", "ground")
 LANDFORMS_PATH: JsonPath = ("scene_description", "landforms")
 HILLS_PATH: JsonPath = ("scene", "landscape", "distant_hills")
 SKY_PATH: JsonPath = ("scene", "sky")
@@ -636,10 +635,11 @@ class SceneConfig:
                                 "poppy",
                                 "litter",
                                 "rock_scatter",
+                                "undergrowth",
                             }:
                                 errors.append(
                                     f"{object_prefix}.generator must be grass, poppy, "
-                                    "litter, or rock_scatter"
+                                    "litter, rock_scatter, or undergrowth"
                                 )
                             else:
                                 object_generators.append(generator)
@@ -759,6 +759,25 @@ class SceneConfig:
                                     errors.append(
                                         "rocks.construction.scale must be an ascending pair"
                                     )
+                            elif generator == "undergrowth":
+                                count = population.get("count")
+                                if not isinstance(count, int) or count < 0:
+                                    errors.append(
+                                        "undergrowth.population.count must be non-negative"
+                                    )
+                                scale = construction.get("scale")
+                                if (
+                                    not isinstance(scale, list)
+                                    or len(scale) != 2
+                                    or not all(
+                                        isinstance(value, (int, float))
+                                        for value in scale
+                                    )
+                                    or scale[0] > scale[1]
+                                ):
+                                    errors.append(
+                                        "undergrowth.construction.scale must be an ascending pair"
+                                    )
                         if len(object_names) != len(set(object_names)):
                             errors.append(f"{prefix}.surface object names must be unique")
                         if len(object_generators) != len(set(object_generators)):
@@ -787,7 +806,7 @@ class SceneConfig:
                     )
 
         landscape = require(("scene", "landscape"), dict)
-        ground = require(GROUND_PATH, dict) if landscape is not None else None
+        ground = landscape.get("ground") if landscape is not None else None
         if landscape is not None:
             distant_hills = landscape.get("distant_hills")
             if not isinstance(distant_hills, dict):
@@ -989,6 +1008,11 @@ class SceneConfig:
             elif not isinstance(water.get("enabled", False), bool):
                 errors.append("water.enabled must be boolean")
         if ground is not None:
+            errors.append(
+                "obsolete scene.landscape.ground must be removed after "
+                "surface-object migration"
+            )
+        if isinstance(ground, dict):
             for name in ("enabled", "active_landform", "landforms", "material"):
                 if name in ground:
                     errors.append(
@@ -1022,6 +1046,11 @@ class SceneConfig:
                 errors.append(
                     "obsolete scene.landscape.ground.details.rocks must be "
                     "removed after rock migration"
+                )
+            if isinstance(details, dict) and "undergrowth" in details:
+                errors.append(
+                    "obsolete scene.landscape.ground.details.undergrowth must be "
+                    "removed after undergrowth migration"
                 )
 
         sky = require(SKY_PATH, dict)

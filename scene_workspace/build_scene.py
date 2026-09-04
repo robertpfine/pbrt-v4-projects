@@ -3255,7 +3255,6 @@ def write_scene(cfg, scene_root, medium_rel_path):
     if medium_rel_path is not None:
         write_medium_include(lines, medium_rel_path)
     landscape_config = scene.get("landscape", {})
-    ground_config = landscape_config.get("ground", {})
     terrain_landforms = [
         landform
         for landform in scene_description.get("landforms", [])
@@ -3274,11 +3273,16 @@ def write_scene(cfg, scene_root, medium_rel_path):
     poppy_config = configured_surface_object(terrain_landform, "poppy")
     litter_config = configured_surface_object(terrain_landform, "litter")
     rock_config = configured_surface_object(terrain_landform, "rock_scatter")
-    terrain_details = dict(ground_config.get("details", {}))
-    terrain_details["grass"] = grass_config
-    terrain_details["poppies"] = poppy_config
-    terrain_details["litter"] = litter_config
-    terrain_details["rocks"] = rock_config
+    undergrowth_config = configured_surface_object(
+        terrain_landform, "undergrowth"
+    )
+    terrain_details = {
+        "grass": grass_config,
+        "poppies": poppy_config,
+        "litter": litter_config,
+        "rocks": rock_config,
+        "undergrowth": undergrowth_config,
+    }
     lights = []
     background = sky_config.get("background")
     if background:

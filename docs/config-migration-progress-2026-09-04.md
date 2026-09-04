@@ -940,3 +940,55 @@ hide a completed result.
 The complete `.venv` suite ran 117 tests (108 passed, nine skips); system Python
 passed all 103 non-GUI tests. Live validation reports zero errors. Rocks have no
 old/new ownership bridge; undergrowth is next.
+
+The rock-scatter commit is `97c5a7c` (`Migrate rock scatter surface object`) and
+is pushed to `origin/pbrt-v4-art-studio`. Its single Google Drive continuity
+attempt immediately rate-limited and was not retried.
+
+## Stage 5B.5 — undergrowth and legacy-ground removal
+
+Status: implementation and validation complete from pushed rock checkpoint
+`97c5a7c`
+
+Disabled undergrowth moved to the fifth surface object under enabled
+`flat_landform`:
+
+```text
+construction: variants, scale, reflectance_variants
+population:   seed, count, region, max_slope_degrees, y_offset,
+              exclusion, patchiness
+```
+
+This was the final child of temporary `scene.landscape.ground.details`.
+Consequently, the migration removes the now-empty complete
+`scene.landscape.ground` wrapper, its path constant/import, and builder and
+shaft-composite dependencies. The builder now assembles all five terrain-detail
+inputs solely from the enabled landform's surface objects. Configuration and
+snapshot validation reject the complete obsolete ground wrapper as well as
+specific old child paths for useful diagnostics.
+
+Mechanical ownership audit against `97c5a7c`:
+
+```text
+stage5b_undergrowth_only True
+surface_generators ['grass', 'poppy', 'litter', 'rock_scatter', 'undergrowth']
+legacy_ground_present False
+```
+
+Archived `020525` was migrated in memory and built in an isolated temporary
+workspace without a second JSON or PBRT launch:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 5B.5 size:     117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The comparison completed normally. The separately invoked temporary cleanup
+took about 95 seconds in the filesystem layer, confirming the prior delay was
+cleanup latency rather than a render or generator loop.
+
+The complete `.venv` suite ran 119 tests (110 passed, nine skips); system Python
+passed all 105 non-GUI tests. Live validation reports zero errors. No production
+render was launched. Stage 5B is complete; Stage 5C begins with the vista plane.

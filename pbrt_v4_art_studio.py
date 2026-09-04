@@ -24,7 +24,6 @@ except ImportError as error:  # pragma: no cover - exercised before Qt starts
     ) from error
 
 from scene_config import (
-    GROUND_PATH,
     HILLS_PATH,
     LANDFORMS_PATH,
     SKY_PATH,

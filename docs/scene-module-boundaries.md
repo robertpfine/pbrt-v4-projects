@@ -19,8 +19,6 @@ scene (temporary migration root)
 ├── fog
 ├── rain
 ├── landscape
-│   ├── ground.details
-│   │   └── undergrowth
 │   ├── water
 │   └── distant_hills
 └── sky
@@ -34,10 +32,10 @@ scene (temporary migration root)
 topography, material, and surface texture. The retained `right_dip_rise` and
 `flat_landform` alternatives are independent entries; `flat_landform` is the
 sole enabled terrain heightfield. The temporary
-`scene.landscape.ground.details` object contains only surface-object generators
-that have not reached their individual migration substages. Grass, poppies,
-litter, and rocks have completed that move and are the first four
-`surface_objects[]` entries under `flat_landform`.
+All five former ground-detail generators have completed their individual moves
+to `flat_landform.surface_objects[]`, in order: grass, poppies, litter, rocks,
+and undergrowth. The emptied `scene.landscape.ground` wrapper is removed rather
+than retained as a compatibility shell.
 
 `scene.landscape.distant_hills` is the explicit boundary for receding-horizon
 geometry. Its generator and Qt controls remain independent of the accepted

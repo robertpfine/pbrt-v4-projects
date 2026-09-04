@@ -4,9 +4,9 @@ Procedural terrain is implemented in [`terrain.py`](../terrain.py), written to
 PBRT by [`scene_workspace/build_scene.py`](../scene_workspace/build_scene.py), and
 configured as entries in `scene_description.landforms`. One authoritative JSON
 contains independently enabled landforms, each with adjacent geometry,
-topography, material, texture, and surface-object ownership. During the staged
-migration, not-yet-moved ecosystem generators remain temporarily under
-`scene.landscape.ground.details`.
+topography, material, texture, and surface-object ownership. All five former
+ground-detail generators now live under the enabled foreground landform; the
+obsolete `scene.landscape.ground` wrapper is absent.
 
 Each named landform currently uses the `RollingHillside` implementation. It
 combines a planar incline with deterministic, smooth, multi-octave value noise:
@@ -247,10 +247,9 @@ contact and landform lighting without adding grass geometry.
 ## Surface and ecosystem details
 
 The landform's `surface.texture` enriches the terrain itself. Five independently
-switchable instanced layers still temporarily live at
-`scene.landscape.ground.details` until their one-generator-at-a-time migration.
-All placement is deterministic for a given seed and samples the actual terrain
-height, normal, and local slope.
+switchable instanced layers live in its `surface_objects`. All placement is
+deterministic for a given seed and samples the actual terrain height, normal,
+and local slope.
 
 Object layers may also constrain placement to the active camera with a
 `camera_frustum` block:
@@ -331,10 +330,8 @@ The nested `terrain_surface_texture` controls are:
 
 ### Shared scatter controls
 
-The `grass`, `poppies`, `litter`, `rocks`, and `undergrowth` blocks share these
-controls. Grass and poppies now own them below their landform surface objects;
-the other three blocks retain temporary ground-detail paths until their
-migration turns:
+The `grass`, `poppies`, `litter`, `rocks`, and `undergrowth` surface objects
+share these controls beneath their explicit construction/population boundary:
 
 - `enabled` activates the layer.
 - `count` is the requested number of object instances, not the number of blades
@@ -422,6 +419,12 @@ partly buries them. The system intentionally uses few rocks so they become
 accents rather than a uniformly pebbled surface.
 
 ### Undergrowth
+
+Undergrowth is the disabled `generator: "undergrowth"` surface object under
+`flat_landform`. Construction owns variants, scale, and reflectance colors;
+population owns count, seed, region, slope limit, Y offset, exclusion, and
+patchiness. The former ground-detail undergrowth path and its now-empty parent
+wrapper are rejected.
 
 The first undergrowth organ is a reusable stylized fern composed of five curved
 fronds and paired leaflets. High patchiness forms separate colonies. This block

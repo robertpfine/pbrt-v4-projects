@@ -329,6 +329,17 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "details.rocks"):
             create_snapshot(self.root, self.config, "20260904_010225")
 
+    def test_snapshot_rejects_obsolete_ground_undergrowth(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"] = {
+            "landscape": {
+                "ground": {"details": {"undergrowth": {"enabled": False}}}
+            }
+        }
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "details.undergrowth"):
+            create_snapshot(self.root, self.config, "20260904_010226")
+
     def test_snapshot_requires_one_enabled_terrain_landform(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene_description"]["landforms"][0]["enabled"] = False
@@ -742,9 +753,7 @@ class ShaftCompositeSnapshotTests(unittest.TestCase):
             "scene": {
                 "sun_aperture": {"enabled": True},
                 "lights": [{"label": "shaft_sun", "enabled": True}],
-                "landscape": {
-                    "ground": {"details": {}}
-                },
+                "landscape": {},
             },
         }
         config["scene_description"]["landforms"][0]["surface"] = {

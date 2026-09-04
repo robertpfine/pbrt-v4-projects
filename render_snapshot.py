@@ -190,10 +190,24 @@ def configured_scene_name(config: dict) -> str:
         raise RenderSnapshotError(
             "rock_scatter requires one surface object with construction and population"
         )
+    undergrowth_objects = [
+        item
+        for landform in landforms
+        if isinstance(landform, dict)
+        for item in landform.get("surface_objects", [])
+        if isinstance(item, dict) and item.get("generator") == "undergrowth"
+    ]
+    if undergrowth_objects and (
+        len(undergrowth_objects) != 1
+        or not isinstance(undergrowth_objects[0].get("construction"), dict)
+        or not isinstance(undergrowth_objects[0].get("population"), dict)
+    ):
+        raise RenderSnapshotError(
+            "undergrowth requires one surface object with construction and population"
+        )
+    landscape = scene.get("landscape", {}) if isinstance(scene, dict) else {}
     ground = (
-        scene.get("landscape", {}).get("ground", {})
-        if isinstance(scene, dict)
-        else {}
+        landscape.get("ground", {}) if isinstance(landscape, dict) else {}
     )
     if isinstance(ground, dict):
         for field in ("enabled", "active_landform", "landforms", "material"):
@@ -222,6 +236,12 @@ def configured_scene_name(config: dict) -> str:
             raise RenderSnapshotError(
                 "obsolete scene.landscape.ground.details.rocks is not supported"
             )
+        if isinstance(details, dict) and "undergrowth" in details:
+            raise RenderSnapshotError(
+                "obsolete scene.landscape.ground.details.undergrowth is not supported"
+            )
+    if isinstance(landscape, dict) and "ground" in landscape:
+        raise RenderSnapshotError("obsolete scene.landscape.ground is not supported")
     return name
 
 

@@ -514,8 +514,9 @@ order:
    alternatives, their geometry/topography, material, and texture now live in
    `scene_description.landforms`. Their old paths are absent, every known
    consumer uses the new locations, and bounded rebuilds reproduced the
-   pre-migration PBRT scene byte for byte. Stage 5B is in progress: grass and
-   poppies, litter, and rocks are migrated; undergrowth is next.
+   pre-migration PBRT scene byte for byte. Stage 5B is complete: grass, poppies,
+   litter, rocks, and undergrowth are migrated and the empty legacy ground
+   wrapper is removed. Stage 5C migrates vista and distant landforms next.
 5. **Overcast and rain remain exploratory.** The live configuration is no
    longer the accepted sunrise master. It contains an unaccepted overcast deck
    extension and disabled rain-curtain experiment. Do not render or tune that
@@ -547,10 +548,9 @@ Additional continuity requirements:
 
 8. Preserve `scene_description.landforms` as the migrated home of foreground
    terrain geometry, topography, material, and texture. Until their individual
-   Stage 5B moves, preserve the remaining generators under the temporary
-   `scene.landscape.ground.details`. Preserve `scene.sky.background` until its
-   later sky stage. Do not create another scene JSON or change accepted rendered
-   behavior.
+   Preserve all migrated foreground surface generators under their owning
+   landform. Preserve `scene.sky.background` until its later sky stage. Do not
+   create another scene JSON or change accepted rendered behavior.
 9. Continue extending the Python model and Qt inspector in response to artistic
    use; substantial generator and interface development remains expected.
 10. Keep renderer implementations subordinate to artistic categories; in
@@ -688,6 +688,18 @@ rejected. The archived `020525` structural proof remains byte-identical at
 117,462,947 bytes and SHA-256
 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
 No PBRT render was launched. Undergrowth is next.
+
+Stage 5B undergrowth is complete in the working implementation. Disabled
+undergrowth is the fifth surface object under enabled `flat_landform`, with
+variants/scale/reflectance in construction and scatter controls in population.
+Because it was the final legacy detail, the emptied `scene.landscape.ground`
+wrapper and all builder/composite dependencies on that wrapper are removed.
+Configuration and snapshot validation reject the complete old ground path.
+The archived `020525` structural proof remains exactly 117,462,947 bytes with
+SHA-256 `c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 119 tests (110 passed, nine skips), and all 105
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 5C begins
+with the vista-plane landform.
 
 ## 2026-09-03 schema and overcast-work checkpoint
 
