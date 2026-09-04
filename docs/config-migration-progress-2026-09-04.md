@@ -1,6 +1,6 @@
 # Live Configuration Migration Progress — 2026-09-04
 
-Status: Stages 1–7 and Stage 8.1 implementation and validation complete
+Status: Stages 1–8 implementation and validation complete
 
 ## Authority and starting point
 
@@ -1519,3 +1519,60 @@ system Python passes all 128 non-GUI tests. Live validation reports zero
 errors, the JSON parses cleanly, Python compilation and shell syntax checks
 pass, and no production render was launched. Stage 8.2 migrates each retained
 rain curtain as a self-contained atmosphere object.
+
+The Stage 8.1 fog commit is `0803142` (`Migrate self-contained fog
+atmosphere`) and is pushed to `origin/pbrt-v4-art-studio`. Its single Google
+Drive continuity attempt immediately rate-limited and was not retried.
+
+## Stage 8.2 — self-contained rain atmosphere objects
+
+Status: implementation and validation complete from pushed fog checkpoint
+`0803142`
+
+The retained `left_cloud_distant_shower` moved from the shared
+`scene.rain.curtains[]` module into
+`scene_description.atmosphere.rain[]`. It now owns its placement, dimensions,
+voxel resolution, complete rain-curtain density pattern, and complete medium
+optics. The former shared `pattern` and `appearance` blocks are gone.
+
+The old module was disabled while its child curtain was enabled. Because the
+new schema intentionally has only an independent object switch, the migrated
+object is disabled, preserving the actual rendered state without retaining two
+contradictory switches. No rain medium or boundary is emitted in either form.
+Every non-switch field was compared mechanically with checkpoint `0803142`:
+
+```text
+legacy scene.rain present           False
+rain object count                   1
+effective enabled state preserved   True
+name preserved                      True
+placement preserved                 True
+dimensions preserved                True
+resolution preserved                True
+complete density pattern preserved  True
+complete medium optics preserved    True
+```
+
+`configured_rain()` provides a dependency-free normalized contract to the
+existing deterministic rain-grid writer without accepting the obsolete live
+path. Configuration and snapshot validation reject `scene.rain` and validate
+the new self-contained object shell. The Qt Atmosphere page exposes the rain
+object's independent switch, position, dimensions, and density. The focused
+rain guide now documents the migrated ownership and absence of shared defaults.
+
+The archived `020525` diagnostic configuration was rebuilt in memory without
+creating another JSON or launching PBRT:
+
+```text
+pre-migration size:  117,462,947 bytes
+Stage 8.2 size:      117,462,947 bytes
+both SHA-256:        c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64
+cmp result:          identical
+```
+
+The retained proof workspace is `/tmp/pbrt-rain-stage8.Au3l5I`. The complete
+`.venv` suite runs 146 tests (136 passed, ten dependency-aware skips), and
+system Python passes all 131 non-GUI tests. Live validation reports zero
+errors, the JSON parses cleanly, Python compilation and shell syntax checks
+pass, and no production render was launched. Stage 8 is complete; Stage 9
+migrates the disabled water placeholder.

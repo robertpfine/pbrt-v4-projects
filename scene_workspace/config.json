@@ -2322,76 +2322,76 @@
       ],
       "haze": [],
       "mist": [],
-      "rain": []
-    }
-  },
-
-  "scene": {
-    "rain": {
-      "enabled": false,
-      "appearance": {
-        "density": 1.0,
-        "scattering": [
-          0.001,
-          0.00125,
-          0.00155
-        ],
-        "absorption": [
-          0.00012,
-          0.0001,
-          8e-05
-        ],
-        "anisotropy": 0.35
-      },
-      "pattern": {
-        "seed": 751,
-        "broad_frequency": [
-          0.0015,
-          0.00035,
-          0.002
-        ],
-        "streak_frequency": [
-          0.03,
-          0.00045,
-          0.006
-        ],
-        "octaves": 3,
-        "roughness": 0.5,
-        "frequency_jump": 2.0,
-        "coverage": 0.42,
-        "softness": 0.18,
-        "base_density": 0.32,
-        "contrast": 0.9,
-        "wind_tilt_degrees": 5.0,
-        "wind_direction_degrees": 25.0,
-        "edge_fade_fraction": [
-          0.12,
-          0.1,
-          0.3
-        ]
-      },
-      "curtains": [
+      "rain": [
         {
           "name": "left_cloud_distant_shower",
-          "enabled": true,
-          "center": [
-            -500.0,
-            135.0,
-            -2200.0
-          ],
-          "size": [
+          "enabled": false,
+          "placement": {
+            "position": [
+              -500.0,
+              135.0,
+              -2200.0
+            ]
+          },
+          "dimensions": [
             1500.0,
             270.0,
             650.0
           ],
-          "resolution": [
-            120,
-            72,
-            36
-          ]
+          "density_field": {
+            "generator": "rain_curtain",
+            "resolution": [
+              120,
+              72,
+              36
+            ],
+            "seed": 751,
+            "broad_frequency": [
+              0.0015,
+              0.00035,
+              0.002
+            ],
+            "streak_frequency": [
+              0.03,
+              0.00045,
+              0.006
+            ],
+            "octaves": 3,
+            "roughness": 0.5,
+            "frequency_jump": 2.0,
+            "coverage": 0.42,
+            "softness": 0.18,
+            "base_density": 0.32,
+            "contrast": 0.9,
+            "wind_tilt_degrees": 5.0,
+            "wind_direction_degrees": 25.0,
+            "edge_fade_fraction": [
+              0.12,
+              0.1,
+              0.3
+            ]
+          },
+          "medium": {
+            "type": "uniformgrid",
+            "density_scale": 1.0,
+            "scattering": [
+              0.001,
+              0.00125,
+              0.00155
+            ],
+            "absorption": [
+              0.00012,
+              0.0001,
+              8e-05
+            ],
+            "anisotropy": 0.35
+          }
         }
       ]
-    },
+    }
+  },
+
+  "scene": {
     "landscape": {
       "water": {
         "enabled": false

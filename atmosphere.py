@@ -26,3 +26,32 @@ def configured_fog(scene_description):
         "boundary_radius": sphere.get("radius", 700.0),
         "noise": noise,
     }
+
+
+def configured_rain(scene_description):
+    """Flatten self-contained rain objects for the established grid writer."""
+
+    items = scene_description.get("atmosphere", {}).get("rain", [])
+    curtains = []
+    for item in items:
+        density = item.get("density_field", {})
+        medium = item.get("medium", {})
+        curtains.append({
+            "name": item.get("name", "rain_curtain"),
+            "enabled": item.get("enabled", False),
+            "center": item.get("placement", {}).get("position"),
+            "size": item.get("dimensions"),
+            "resolution": density.get("resolution"),
+            "pattern": {
+                key: value
+                for key, value in density.items()
+                if key not in {"generator", "resolution"}
+            },
+            "appearance": {
+                "density": medium.get("density_scale"),
+                "scattering": medium.get("scattering"),
+                "absorption": medium.get("absorption"),
+                "anisotropy": medium.get("anisotropy"),
+            },
+        })
+    return {"enabled": bool(items), "curtains": curtains}

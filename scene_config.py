@@ -1259,6 +1259,10 @@ class SceneConfig:
                 errors.append(
                     "obsolete scene.fog must be removed after atmosphere migration"
                 )
+            if "rain" in scene_root:
+                errors.append(
+                    "obsolete scene.rain must be removed after atmosphere migration"
+                )
             geometry = scene_root.get("geometry", [])
             if isinstance(geometry, list) and any(
                 isinstance(item, dict) and item.get("label") == "vista_plane"
@@ -1647,43 +1651,84 @@ class SceneConfig:
                         errors.append("atmosphere.fog.0.medium must name fog")
                 else:
                     errors.append("atmosphere.fog.0 must be an object")
-
-        rain = self.get(("scene", "rain"), None)
-        if rain is not None:
-            if not isinstance(rain, dict):
-                errors.append("rain must be an object")
-            elif not isinstance(rain.get("enabled", False), bool):
-                errors.append("rain.enabled must be boolean")
-            else:
-                curtains = rain.get("curtains", [])
-                if not isinstance(curtains, list):
-                    errors.append("rain.curtains must be an array")
-                else:
-                    for index, curtain in enumerate(curtains):
-                        prefix = f"rain.curtains.{index}"
-                        if not isinstance(curtain, dict):
-                            errors.append(f"{prefix} must be an object")
-                            continue
-                        if not isinstance(curtain.get("enabled", True), bool):
-                            errors.append(f"{prefix}.enabled must be boolean")
-                        for field in ("center", "size", "resolution"):
-                            value = curtain.get(field)
-                            if not isinstance(value, list) or len(value) != 3:
-                                errors.append(f"{prefix}.{field} must contain three values")
-                        size = curtain.get("size", [])
-                        if len(size) == 3 and not all(
-                            isinstance(value, (int, float)) and value > 0
-                            for value in size
-                        ):
-                            errors.append(f"{prefix}.size values must be positive")
-                        resolution = curtain.get("resolution", [])
-                        if len(resolution) == 3 and not all(
-                            isinstance(value, int) and value >= 2
-                            for value in resolution
+            rains = atmosphere.get("rain", [])
+            if isinstance(rains, list):
+                rain_names = []
+                for index, rain in enumerate(rains):
+                    prefix = f"atmosphere.rain.{index}"
+                    if not isinstance(rain, dict):
+                        errors.append(f"{prefix} must be an object")
+                        continue
+                    name = rain.get("name")
+                    if not isinstance(name, str) or not name.strip():
+                        errors.append(f"{prefix}.name must be non-empty")
+                    else:
+                        rain_names.append(name)
+                    if not isinstance(rain.get("enabled"), bool):
+                        errors.append(f"{prefix}.enabled must be boolean")
+                    position = rain.get("placement", {}).get("position")
+                    if (
+                        not isinstance(position, list)
+                        or len(position) != 3
+                        or any(
+                            not isinstance(value, (int, float))
+                            or isinstance(value, bool)
+                            or not math.isfinite(value)
+                            for value in position
+                        )
+                    ):
+                        errors.append(f"{prefix}.placement.position is invalid")
+                    dimensions = rain.get("dimensions")
+                    if (
+                        not isinstance(dimensions, list)
+                        or len(dimensions) != 3
+                        or any(
+                            not isinstance(value, (int, float))
+                            or isinstance(value, bool)
+                            or value <= 0
+                            for value in dimensions
+                        )
+                    ):
+                        errors.append(f"{prefix}.dimensions requires 3 positive values")
+                    density = rain.get("density_field")
+                    if not isinstance(density, dict):
+                        errors.append(f"{prefix}.density_field must be an object")
+                    else:
+                        if density.get("generator") != "rain_curtain":
+                            errors.append(
+                                f"{prefix}.density_field.generator must be rain_curtain"
+                            )
+                        resolution = density.get("resolution")
+                        if (
+                            not isinstance(resolution, list)
+                            or len(resolution) != 3
+                            or any(
+                                not isinstance(value, int)
+                                or isinstance(value, bool)
+                                or value < 2
+                                for value in resolution
+                            )
                         ):
                             errors.append(
-                                f"{prefix}.resolution values must be integers at least 2"
+                                f"{prefix}.density_field.resolution is invalid"
                             )
+                    medium = rain.get("medium")
+                    if not isinstance(medium, dict):
+                        errors.append(f"{prefix}.medium must be an object")
+                    else:
+                        if medium.get("type") != "uniformgrid":
+                            errors.append(f"{prefix}.medium.type must be uniformgrid")
+                        anisotropy = medium.get("anisotropy")
+                        if (
+                            not isinstance(anisotropy, (int, float))
+                            or isinstance(anisotropy, bool)
+                            or not -1.0 < anisotropy < 1.0
+                        ):
+                            errors.append(
+                                f"{prefix}.medium.anisotropy must be between -1 and 1"
+                            )
+                if len(rain_names) != len(set(rain_names)):
+                    errors.append("atmosphere rain names must be unique")
 
         camera = require(("camera_settings",), dict)
         if camera is not None:
@@ -1896,7 +1941,7 @@ class SceneConfig:
         ]
         water = self.get(("scene", "landscape", "water"))
         sky = self.get(SKY_PATH)
-        rain = self.get(("scene", "rain"), {})
+        rain = self.get(("scene_description", "atmosphere", "rain"), [])
         grass_count = sum(
             int(layer.get("count", 0)) for layer in grass.get("layers", [])
         )
@@ -1922,8 +1967,8 @@ class SceneConfig:
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
             f"Clouds: {'enabled' if any(cloud.get('enabled') for cloud in sky['clouds']) else 'disabled'}",
             f"Fog: {'enabled' if self.get(('scene_description', 'atmosphere', 'fog', 0, 'enabled'), False) else 'disabled'}",
-            f"Rain: {'enabled' if rain.get('enabled', False) else 'disabled'}, "
-            f"{sum(bool(item.get('enabled', True)) for item in rain.get('curtains', []))} curtains",
+            f"Rain: {'enabled' if any(item.get('enabled', False) for item in rain) else 'disabled'}, "
+            f"{len(rain)} {'object' if len(rain) == 1 else 'objects'}",
         ))
 
     def save(self) -> None:

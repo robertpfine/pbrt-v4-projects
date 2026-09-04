@@ -1,6 +1,7 @@
 import math
 import unittest
 
+from atmosphere import configured_rain
 from rain import RainCurtain, create_rain_curtains
 
 
@@ -53,6 +54,38 @@ class RainCurtainTests(unittest.TestCase):
         config["appearance"] = {"density": 0.25}
         curtain = RainCurtain(config, self.module)
         self.assertEqual(curtain.optical["density_scale"], 0.25)
+
+    def test_self_contained_rain_flattens_without_value_changes(self):
+        description = {
+            "atmosphere": {
+                "rain": [{
+                    "name": "test_shower",
+                    "enabled": True,
+                    "placement": {"position": self.config["center"]},
+                    "dimensions": self.config["size"],
+                    "density_field": {
+                        "generator": "rain_curtain",
+                        "resolution": self.config["resolution"],
+                        **self.module["pattern"],
+                    },
+                    "medium": {
+                        "type": "uniformgrid",
+                        "density_scale": 1.0,
+                        "scattering": [0.001, 0.002, 0.003],
+                        "absorption": [0.0001, 0.0002, 0.0003],
+                        "anisotropy": 0.35,
+                    },
+                }]
+            }
+        }
+        normalized = configured_rain(description)
+        curtain = normalized["curtains"][0]
+        self.assertTrue(normalized["enabled"])
+        self.assertEqual(curtain["center"], self.config["center"])
+        self.assertEqual(curtain["size"], self.config["size"])
+        self.assertEqual(curtain["resolution"], self.config["resolution"])
+        self.assertEqual(curtain["pattern"], self.module["pattern"])
+        self.assertEqual(curtain["appearance"]["density"], 1.0)
 
 
 if __name__ == "__main__":

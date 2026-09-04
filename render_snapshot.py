@@ -247,6 +247,18 @@ def configured_scene_name(config: dict) -> str:
         or not isinstance(fogs[0].get("medium"), dict)
     ):
         raise RenderSnapshotError("scene_description.atmosphere.fog is invalid")
+    for index, rain in enumerate(atmosphere["rain"]):
+        if (
+            not isinstance(rain, dict)
+            or not isinstance(rain.get("name"), str)
+            or not isinstance(rain.get("enabled"), bool)
+            or not isinstance(rain.get("placement"), dict)
+            or not isinstance(rain.get("density_field"), dict)
+            or not isinstance(rain.get("medium"), dict)
+        ):
+            raise RenderSnapshotError(
+                f"scene_description.atmosphere.rain.{index} is invalid"
+            )
     grass_objects = [
         item
         for landform in landforms
@@ -428,6 +440,8 @@ def configured_scene_name(config: dict) -> str:
                 )
         if "fog" in scene:
             raise RenderSnapshotError("obsolete scene.fog is not supported")
+        if "rain" in scene:
+            raise RenderSnapshotError("obsolete scene.rain is not supported")
         geometry = scene.get("geometry", [])
         if isinstance(geometry, list) and any(
             isinstance(item, dict) and item.get("label") == "vista_plane"

@@ -172,7 +172,7 @@ class RainCurtain:
 
 
 def create_rain_curtains(config):
-    """Return enabled rain curtains from the scene.rain module."""
+    """Return enabled rain curtains from the normalized writer contract."""
 
     if not config or not config.get("enabled", False):
         return []

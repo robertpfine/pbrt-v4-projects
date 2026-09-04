@@ -334,6 +334,13 @@ class RenderSnapshotTests(unittest.TestCase):
         with self.assertRaisesRegex(RenderSnapshotError, "geometry fog_volume"):
             create_snapshot(self.root, self.config, "20260904_010233")
 
+    def test_snapshot_rejects_obsolete_rain_path(self):
+        config = json.loads(self.config.read_text(encoding="utf-8"))
+        config["scene"]["rain"] = {"enabled": False}
+        self.config.write_text(json.dumps(config), encoding="utf-8")
+        with self.assertRaisesRegex(RenderSnapshotError, "obsolete scene.rain"):
+            create_snapshot(self.root, self.config, "20260904_010234")
+
     def test_snapshot_rejects_obsolete_ground_landform_core(self):
         config = json.loads(self.config.read_text(encoding="utf-8"))
         config["scene"] = {

@@ -514,6 +514,7 @@ class SceneConfigTests(unittest.TestCase):
         self.assertNotIn("sky", data)
         self.assertNotIn("lights", data)
         self.assertNotIn("fog", data)
+        self.assertNotIn("rain", data)
         self.assertTrue(
             all(item.get("label") != "fog_volume" for item in data["geometry"])
         )
@@ -526,6 +527,10 @@ class SceneConfigTests(unittest.TestCase):
         atmosphere = config["scene_description"]["atmosphere"]
         self.assertEqual(set(atmosphere), {"fog", "haze", "mist", "rain"})
         self.assertEqual([fog["name"] for fog in atmosphere["fog"]], ["ground_fog"])
+        self.assertEqual(
+            [rain["name"] for rain in atmosphere["rain"]],
+            ["left_cloud_distant_shower"],
+        )
         flat = next(
             landform
             for landform in config["scene_description"]["landforms"]
@@ -672,6 +677,18 @@ class SceneConfigTests(unittest.TestCase):
             self.assertIn(
                 "obsolete scene.geometry fog_volume must be absorbed by fog",
                 errors,
+            )
+
+    def test_obsolete_rain_path_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene"]["rain"] = {"enabled": False}
+            path.write_text(json.dumps(data), encoding="utf-8")
+
+            self.assertIn(
+                "obsolete scene.rain must be removed after atmosphere migration",
+                SceneConfig(path).validate(),
             )
 
     def test_obsolete_geometry_vista_plane_is_rejected(self):

@@ -62,7 +62,7 @@ from scene_objects import (
     configured_rgbgrid_media,
     configured_scene_objects,
 )
-from atmosphere import configured_fog
+from atmosphere import configured_fog, configured_rain
 
 
 # ==============================================================
@@ -3354,7 +3354,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
     cloud_formations = write_cloud_media(
         lines, configured_cloud_module(sky_config), scene_root, scene_files_root
     )
-    rain_curtains = write_rain_media(lines, scene.get("rain", {}))
+    rain_curtains = write_rain_media(lines, configured_rain(scene_description))
     
     if medium_rel_path is not None:
         write_medium_include(lines, medium_rel_path)

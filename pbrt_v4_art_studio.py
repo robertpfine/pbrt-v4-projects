@@ -1093,6 +1093,22 @@ class Inspector(QtWidgets.QWidget):
         self._number(form, "Scattering", base + ("medium", "scattering"), 0.0, 100.0, 7)
         self._number(form, "Anisotropy", base + ("medium", "anisotropy"), -0.999, 0.999, 4)
         self._check(form, "Density variation", base + ("density_field", "enabled"))
+        rain = self.config.get(
+            ("scene_description", "atmosphere", "rain"), []
+        )
+        if rain:
+            rain_base = ("scene_description", "atmosphere", "rain", 0)
+            self._check(form, "Rain enabled", rain_base + ("enabled",))
+            self._vector(form, "Rain position", rain_base + ("placement", "position"))
+            self._vector(form, "Rain dimensions", rain_base + ("dimensions",))
+            self._number(
+                form,
+                "Rain density",
+                rain_base + ("medium", "density_scale"),
+                0.0,
+                100.0,
+                4,
+            )
 
     def _build_lighting_page(self) -> None:
         form = self._page("lighting", "Lighting")

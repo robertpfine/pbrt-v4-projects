@@ -836,6 +836,19 @@ The complete `.venv` suite runs 143 tests (133 passed, ten skips), and all 128
 system-Python non-GUI tests pass. No PBRT render was launched. Stage 8.2 moves
 the disabled rain-curtain experiment into self-contained atmosphere objects.
 
+Stage 8.2 rain migration is complete in the working implementation. The
+retained `left_cloud_distant_shower` is now a self-contained object in
+`scene_description.atmosphere.rain[]`, owning its placement, dimensions,
+complete density construction, and medium optics. Its single independent
+switch is disabled, preserving the former outer-module-disabled behavior
+without retaining the contradictory enabled child switch. Old `scene.rain` is
+absent and rejected. The archived `020525` proof remains byte-identical at
+117,462,947 bytes with SHA-256
+`c82109823574ffb2365758988f1832052811f274eedd51db05003e7863cfbc64`.
+The complete `.venv` suite runs 146 tests (136 passed, ten skips), and all 131
+system-Python non-GUI tests pass. No PBRT render was launched. Stage 8 is
+complete; Stage 9 moves the disabled water placeholder.
+
 ## 2026-09-03 schema and overcast-work checkpoint
 
 The artist and assistant began the separate architectural draft
