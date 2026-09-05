@@ -437,3 +437,100 @@ cloud formations will remain available as ordinary finite volumes. The proof
 of concept must add schema, geometry, density, transition, camera, and path-risk
 validation before rendering, preserve legacy axis-aligned and corner-prism
 output, and begin with a low-sample run in the artist-visible terminal.
+
+### First spherical-shell render and depth ordering
+
+The first hybrid-shell implementation uses two concentric PBRT sphere
+interfaces around a hollow camera cavity and PBRT's built-in procedural
+`cloud` medium between them. Existing finite RGB-grid cloud formations remain
+available and unchanged. The new `spherical_shell` boundary validates positive
+inner radius and thickness, matching outer dimensions, camera placement inside
+the hollow cavity, and the resulting bounded camera-ray path. The associated
+`pbrt_cloud` density generator is restricted to this boundary and medium type.
+
+Focused tests, full project tests, bytecode compilation, live-config
+validation, and a non-rendering scene build passed. The first visible-terminal
+render, `223757`, used a camera-centered shell with inner radius 5,000,
+thickness 800, PBRT procedural density 0.65, wispiness 0.8, frequency 4.5, one
+sample, and depth 20. It completed and archived successfully. The spherical
+geometry eliminated both the rectangular box edge and the clear-sky horizon
+gap: every unobstructed camera ray traversed exactly 800 world units of cloud
+medium.
+
+The run was nevertheless too expensive for iteration: it required roughly 14
+minutes at one sample and remained strongly Monte Carlo noisy. Geometry is
+therefore proven, but these rendering/medium settings are not accepted as a
+production configuration.
+
+Image inspection also established an independent depth-ordering error. The
+shell began 5,000 units from the camera, while the three enabled fractal-tree
+placements are approximately 8,600, 9,600, and 10,500 units away, so the cloud
+medium necessarily appeared in front of all tree crowns. The vista plane is
+50,000 units square and spans both near and distant scene regions. The next
+single-variable geometry state moves the inner radius to 12,000 while retaining
+the 800-unit thickness and camera-centered shell. This places the tree line in
+the clear cavity while allowing a nearer portion of the vista to remain in
+front of the shell and its farther portion to appear behind it. No second
+render is authorized by this configuration edit alone; performance is to be
+isolated before another full-frame run.
+
+The artist authorized a reduced-resolution depth-ordering proof before another
+full-resolution attempt. Visible-terminal run `232917` used 500x375, one
+sample, and otherwise retained the `223757` camera, shell thickness, procedural
+density, optics, and depth-20 integrator. It completed and archived normally in
+about 17 seconds end-to-end. The PNG verifies the intended ordering: primary
+rays reach all three tree silhouettes before entering the cloud shell, while
+the procedural cloud remains visible behind them. Nearer vista surface is in
+the clear cavity and farther vista/horizon rays cross the shell. The live film
+resolution was restored to 2000x1500 immediately after inspection; the
+12,000/12,800 shell radii remain active for the next controlled experiment.
+
+Local PBRT-v4 source inspection identified the relevant procedural-cloud cost
+controls. Every sampled candidate medium event evaluates a fixed five-octave
+noise sum. Any positive `wispiness` adds two derivative-noise domain-warp
+evaluations. `frequency` changes feature scale but does not change those loop
+counts. Procedural `density` changes the returned point density, but PBRT's
+`CloudMedium` constructs a homogeneous majorant from `sigma_a + sigma_s`
+without multiplying by that procedural density, so reducing `density` alone
+does not proportionally reduce candidate-event work. The controlled levers
+that can materially reduce integration cost are zero wispiness, smaller
+scattering/absorption coefficients, and lower volumetric path depth. These
+must be tested independently at reduced resolution before increasing samples.
+
+### Full-resolution shell result and Blender architecture research
+
+At the artist's request for one image suitable for evaluation, render `014103`
+used 2000x1500, eight samples, depth 6, shell radii 12,000/12,800, density 0.65,
+frequency 4.5, zero wispiness, scattering
+`[0.00085, 0.00092, 0.001]`, and absorption
+`[0.00015, 0.00016, 0.00018]`. Snapshot creation began at 01:41:03 and the
+final PNG archived at 01:41:33, so the full pipeline completed in about 30
+seconds. The live and archived configs are byte-identical at SHA-256
+`5e2733c7c95b0f914e506cbeaf7ad3c256d3d4325be319b381bffcc82ee6b739`.
+
+The image has correct depth ordering and no box edge, but the artist rejects
+the dome-medium direction on visual grounds. It produces a large radial
+opening/halo, flat cloud structure, and residual stippling rather than a
+convincing overcast deck. Do not treat its speed or geometric correctness as
+artistic acceptance.
+
+Research against official Blender documentation establishes that Blender does
+not generally solve this distant-sky problem with a camera-centered procedural
+participating-medium shell. Its World surface is an infinitely distant
+directional background and can use an environment texture. True clouds are
+instead represented as bounded closed-mesh volumes or Volume objects, commonly
+using sparse OpenVDB data that Cycles converts to NanoVDB and samples with a
+bounding mesh. Blender explicitly warns that world volumes fill all space and
+recommends a surrounding volume object for atmospheric scattering. Cycles
+limits noisy multiple volume scattering in practice, supports adaptive
+sampling and denoising, and retains a biased ray-marching option with step-size
+and maximum-step safeguards. EEVEE uses a view-frustum 3D texture with an
+explicit depth range, and Blender Studio also documents production compositing
+of a fast EEVEE volume pass over a Cycles surface render.
+
+The directly applicable PBRT architecture is therefore a deterministic
+environment/background cloud image for the distant overcast and horizon, plus
+separate bounded RGB-grid or NanoVDB volumes only where local 3D interaction is
+artistically valuable. A background environment has no rectangular boundary,
+is always behind scene geometry, and cannot create a long cloud-medium path.
+This is the recommended replacement for the rejected volumetric shell.

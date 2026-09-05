@@ -131,6 +131,53 @@ validated with a low-sample visible-terminal render before any production
 adoption. A compact non-authoritative record of the prism risk setup is
 `docs/examples/cloud-grazing-trigger.json.example`.
 
+That first proof completed as visible-terminal render `223757`. Its
+camera-centered procedural shell had inner radius 5,000 and thickness 800. It
+successfully covered the full horizon without a box edge or clear-sky gap, but
+one sample required roughly 14 minutes and was extremely noisy. Treat the
+shell geometry as proven and the current PBRT cloud-medium settings as
+performance-rejected pending isolation.
+
+The `223757` shell also began in front of the enabled tree line: the tree
+placements are approximately 8,600 through 10,500 units from the camera. The
+live proof-of-concept geometry has consequently advanced to one controlled
+depth-ordering change: inner radius 12,000, outer radius 12,800, dimensions
+25,600 cubed, still centered on camera and still 800 units thick. This should
+leave all three trees and a nearer portion of the 50,000-unit vista plane in
+the clear cavity while putting the distant vista and sky behind the cloud
+shell. Validate performance before starting another full-frame render.
+
+Reduced-resolution visible-terminal run `232917` validated that prediction at
+500x375 and one sample, completing and archiving normally in about 17 seconds.
+The trees are now in front of the cloud shell; nearer vista is clear and the
+distant vista/horizon passes through the cloud. After inspection, the live film
+resolution was restored to 2000x1500. Keep the 12,000 inner radius for the next
+proof unless the artist explicitly chooses a different depth boundary.
+
+For procedural-shell performance work, do not assume that lower `frequency` or
+lower procedural `density` will make PBRT proportionally faster. Local source
+inspection shows a fixed five-noise density sum, two additional derivative
+noise warps whenever `wispiness` is positive, and a homogeneous event majorant
+based on `sigma_a + sigma_s`. Test zero wispiness, lower optical coefficients,
+and lower path depth as separate reduced-resolution experiments.
+
+Full-resolution render `014103` completed in about 30 seconds with eight
+samples, depth 6, zero wispiness, and reduced optical coefficients; its live
+and archived config SHA-256 is
+`5e2733c7c95b0f914e506cbeaf7ad3c256d3d4325be319b381bffcc82ee6b739`.
+Although depth ordering and shell geometry are correct, the artist rejects the
+dome-medium visual result: radial halo/opening, flat structure, and stippling.
+Do not continue tuning this procedural shell by default.
+
+Official Blender architecture research points to the replacement: distant sky
+appearance is normally a World/environment image at infinity, while actual
+cloud media are bounded closed-mesh or sparse OpenVDB/NanoVDB objects. Blender
+also uses adaptive sampling, denoising, strict volume bounce/step controls, and
+sometimes a separately composited fast volume pass. The PBRT equivalent should
+be a deterministic cloud environment/background for horizon coverage plus
+bounded RGB-grid or NanoVDB volumes only for local three-dimensional clouds.
+This avoids both finite box edges and all-frame participating-medium traversal.
+
 ## 2026-08-29 PBRT-v4 Art Studio checkpoint
 
 The artist selected **PBRT-v4 Art Studio** as the application name. The term

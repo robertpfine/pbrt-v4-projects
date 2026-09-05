@@ -414,6 +414,35 @@ def _cloud_medium_name(index, formation):
     return f"cloud_{index}_{safe_name}"
 
 
+def write_procedural_cloud_medium(lines, index, formation):
+    """Write PBRT's procedural cloud medium in the shell's outer AABB."""
+
+    medium_name = _cloud_medium_name(index, formation)
+    x0, y0, z0 = formation.bounds_min
+    x1, y1, z1 = formation.bounds_max
+    sigma_a = formation.optical["sigma_a"]
+    sigma_s = formation.optical["sigma_s"]
+    procedural = formation.procedural
+    lines += [
+        f'# Procedural cloud medium: {formation.name}',
+        'AttributeBegin',
+        f'    Translate {x0} {y0} {z0}',
+        f'    Scale {x1 - x0} {y1 - y0} {z1 - z0}',
+        f'    MakeNamedMedium "{medium_name}"',
+        '        "string type" [ "cloud" ]',
+        '        "point3 p0" [ 0 0 0 ]',
+        '        "point3 p1" [ 1 1 1 ]',
+        f'        "float density" [ {float(procedural["density"])} ]',
+        f'        "float wispiness" [ {float(procedural["wispiness"])} ]',
+        f'        "float frequency" [ {float(procedural["frequency"])} ]',
+        f'        "rgb sigma_a" [ {sigma_a[0]} {sigma_a[1]} {sigma_a[2]} ]',
+        f'        "rgb sigma_s" [ {sigma_s[0]} {sigma_s[1]} {sigma_s[2]} ]',
+        f'        "float g" [ {float(formation.optical["g"])} ]',
+        'AttributeEnd',
+        '',
+    ]
+
+
 def write_cloud_media(
     lines, cloud_config, scene_root, scene_files_root, camera_settings=None
 ):
@@ -429,6 +458,14 @@ def write_cloud_media(
                         f"{formation.name}: camera eye lies inside the cloud "
                         f"{formation.boundary.mode} boundary; move the camera or "
                         "boundary before rendering"
+                    )
+                if (
+                    formation.boundary.mode == "spherical_shell"
+                    and formation.boundary.camera_path_bounds(eye) is None
+                ):
+                    raise ValueError(
+                        f"{formation.name}: camera eye must lie inside the hollow "
+                        "spherical_shell cavity"
                     )
     enabled_configs = [
         item
@@ -455,6 +492,10 @@ def write_cloud_media(
         if len(sigma_a) != 3 or len(sigma_s) != 3:
             raise ValueError(f"{formation.name}: cloud sigma values require RGB triples")
         medium_name = _cloud_medium_name(index, formation)
+
+        if formation.form == "pbrt_cloud":
+            write_procedural_cloud_medium(lines, index, formation)
+            continue
 
         if backend == "cpp":
             generated_root = Path(scene_files_root) / "cloud_grid_jobs"
@@ -550,6 +591,30 @@ def write_cloud_boundaries(lines, formations, exterior_medium=""):
         "3 6 2  3 7 6"
     )
     for index, formation in enumerate(formations):
+        medium_name = _cloud_medium_name(index, formation)
+        if (
+            hasattr(formation, "boundary")
+            and formation.boundary.mode == "spherical_shell"
+        ):
+            boundary = formation.boundary
+            center = boundary.center
+            lines += [
+                f'# Cloud shell boundary: {formation.name}',
+                'AttributeBegin',
+                f'    Translate {center[0]} {center[1]} {center[2]}',
+                '    Material "interface"',
+                f'    MediumInterface "{exterior_medium}" "{medium_name}"',
+                f'    Shape "sphere"  "float radius" [ {boundary.inner_radius} ]',
+                'AttributeEnd',
+                'AttributeBegin',
+                f'    Translate {center[0]} {center[1]} {center[2]}',
+                '    Material "interface"',
+                f'    MediumInterface "{medium_name}" "{exterior_medium}"',
+                f'    Shape "sphere"  "float radius" [ {boundary.outer_radius} ]',
+                'AttributeEnd',
+                '',
+            ]
+            continue
         if hasattr(formation, "boundary"):
             vertices = formation.boundary.vertices()
             points = tuple(value for point in vertices for value in point)
@@ -565,7 +630,7 @@ def write_cloud_boundaries(lines, formations, exterior_medium=""):
             'AttributeBegin',
             '    Material "interface"',
             (
-                f'    MediumInterface "{_cloud_medium_name(index, formation)}" '
+                f'    MediumInterface "{medium_name}" '
                 f'"{exterior_medium}"'
             ),
             '    Shape "trianglemesh"',

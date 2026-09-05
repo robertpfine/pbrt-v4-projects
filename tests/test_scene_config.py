@@ -332,6 +332,72 @@ class SceneConfigTests(unittest.TestCase):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
+    def test_centered_spherical_shell_is_valid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set("scene_description.sky.clouds", [{
+                "name": "sky_shell",
+                "enabled": True,
+                "placement": {"position": [0.0, 1.0, 2.0]},
+                "dimensions": [12.0, 12.0, 12.0],
+                "boundary": {
+                    "mode": "spherical_shell",
+                    "inner_radius": 5.0,
+                    "thickness": 1.0,
+                },
+                "density_field": {
+                    "generator": "pbrt_cloud",
+                    "resolution": [2, 2, 2],
+                    "shape": {}, "noise": {},
+                    "depth_slope": {"enabled": False},
+                    "depth_profile": {}, "lobes": [],
+                    "procedural": {
+                        "density": 0.4,
+                        "wispiness": 0.8,
+                        "frequency": 4.0,
+                    },
+                },
+                "medium": {"type": "cloud"},
+            }])
+            config.save()
+            self.assertEqual(
+                config.get("scene_description.sky.clouds.0.boundary.mode"),
+                "spherical_shell",
+            )
+
+    def test_spherical_shell_requires_camera_in_cavity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set("scene_description.sky.clouds", [{
+                "name": "sky_shell",
+                "enabled": True,
+                "placement": {"position": [20.0, 1.0, 2.0]},
+                "dimensions": [12.0, 12.0, 12.0],
+                "boundary": {
+                    "mode": "spherical_shell",
+                    "inner_radius": 5.0,
+                    "thickness": 1.0,
+                },
+                "density_field": {
+                    "generator": "pbrt_cloud",
+                    "resolution": [2, 2, 2],
+                    "shape": {}, "noise": {},
+                    "depth_slope": {"enabled": False},
+                    "depth_profile": {}, "lobes": [],
+                    "procedural": {
+                        "density": 0.4,
+                        "wispiness": 0.8,
+                        "frequency": 4.0,
+                    },
+                },
+                "medium": {"type": "cloud"},
+            }])
+            with self.assertRaisesRegex(SceneConfigError, "hollow cavity"):
+                config.save()
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
     def test_invalid_render_settings_are_not_saved(self):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)

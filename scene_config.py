@@ -1281,14 +1281,16 @@ class SceneConfig:
                     if not isinstance(boundary, dict):
                         errors.append(f"{prefix}.boundary must be an object")
                     elif boundary.get("mode", "axis_aligned") not in {
-                        "axis_aligned", "corner_prism"
+                        "axis_aligned", "corner_prism", "spherical_shell"
                     }:
                         errors.append(f"{prefix}.boundary.mode is unsupported")
                     density = cloud.get("density_field")
                     if not isinstance(density, dict):
                         errors.append(f"{prefix}.density_field must be an object")
                     else:
-                        if density.get("generator") not in {"lobed", "mottled_veil"}:
+                        if density.get("generator") not in {
+                            "lobed", "mottled_veil", "pbrt_cloud"
+                        }:
                             errors.append(f"{prefix}.density_field.generator is unsupported")
                         resolution = density.get("resolution")
                         if (
@@ -1301,6 +1303,11 @@ class SceneConfig:
                             expected = list if field == "lobes" else dict
                             if not isinstance(density.get(field), expected):
                                 errors.append(f"{prefix}.density_field.{field} is invalid")
+                        if (
+                            density.get("generator") == "pbrt_cloud"
+                            and not isinstance(density.get("procedural"), dict)
+                        ):
+                            errors.append(f"{prefix}.density_field.procedural is invalid")
                         if (
                             isinstance(position, list) and len(position) == 3
                             and isinstance(dimensions, list) and len(dimensions) == 3
@@ -1317,7 +1324,9 @@ class SceneConfig:
                             except (TypeError, ValueError) as error:
                                 errors.append(f"{prefix}.boundary is invalid: {error}")
                     medium = cloud.get("medium")
-                    if not isinstance(medium, dict) or medium.get("type") not in {"uniformgrid", "rgbgrid"}:
+                    if not isinstance(medium, dict) or medium.get("type") not in {
+                        "uniformgrid", "rgbgrid", "cloud"
+                    }:
                         errors.append(f"{prefix}.medium is invalid")
                 if len(cloud_names) != len(set(cloud_names)):
                     errors.append("sky cloud names must be unique")
@@ -1507,6 +1516,14 @@ class SceneConfig:
                                 errors.append(
                                     f"sky.clouds.{index}.{cloud_boundary.mode} "
                                     "boundary contains camera eye"
+                                )
+                            elif (
+                                cloud_boundary.mode == "spherical_shell"
+                                and cloud_boundary.camera_path_bounds(eye) is None
+                            ):
+                                errors.append(
+                                    f"sky.clouds.{index}.spherical_shell camera eye "
+                                    "must lie inside the hollow cavity"
                                 )
                         except (IndexError, TypeError, ValueError):
                             # The cloud-specific validation above reports the

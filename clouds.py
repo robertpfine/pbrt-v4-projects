@@ -91,6 +91,10 @@ class CloudFormation:
             **module_config.get("depth_profile", {}),
             **config.get("depth_profile", {}),
         }
+        self.procedural = {
+            **module_config.get("procedural", {}),
+            **config.get("procedural", {}),
+        }
         module_appearance = module_config.get("appearance", {})
         local_appearance = config.get("appearance", {})
         appearance = {**module_appearance, **local_appearance}
@@ -99,6 +103,7 @@ class CloudFormation:
             **local_appearance.get("underside", {}),
         }
         self.optical = {
+            "type": appearance.get("type", "uniformgrid"),
             "density_scale": appearance.get("density", 1.0),
             "sigma_s": appearance.get("scattering", [0.006, 0.006, 0.006]),
             "sigma_a": appearance.get("absorption", [0.00015, 0.00015, 0.00015]),
@@ -119,10 +124,26 @@ class CloudFormation:
         self.bounds_max = self.boundary.bounds_max
         if len(self.resolution) != 3 or any(value < 2 for value in self.resolution):
             raise ValueError(f"{self.name}: cloud resolution values must be at least 2")
-        if self.form not in ("lobed", "mottled_veil"):
+        if self.form not in ("lobed", "mottled_veil", "pbrt_cloud"):
             raise ValueError(f"{self.name}: unsupported cloud form {self.form!r}")
         if self.form == "lobed" and not self.lobes:
             raise ValueError(f"{self.name}: cloud requires at least one density lobe")
+        if self.form == "pbrt_cloud":
+            if self.boundary.mode != "spherical_shell":
+                raise ValueError(
+                    f"{self.name}: pbrt_cloud requires a spherical_shell boundary"
+                )
+            if self.optical["type"] != "cloud":
+                raise ValueError(
+                    f"{self.name}: pbrt_cloud requires medium.type cloud"
+                )
+            for key in ("density", "wispiness", "frequency"):
+                value = self.procedural.get(key)
+                if (not isinstance(value, (int, float))
+                        or not math.isfinite(value) or value < 0.0):
+                    raise ValueError(
+                        f"{self.name}: procedural.{key} must be nonnegative"
+                    )
         for index, lobe in enumerate(self.lobes):
             center_offset = lobe.get("center_offset", ())
             radii = lobe.get("radii", ())
@@ -481,8 +502,10 @@ def configured_cloud_module(sky):
             "fractal_noise": density.get("noise", {}),
             "depth_slope": density.get("depth_slope", {}),
             "depth_profile": density.get("depth_profile", {}),
+            "procedural": density.get("procedural", {}),
             "lobes": density.get("lobes", []),
             "appearance": {
+                "type": medium.get("type", "uniformgrid"),
                 "density": medium.get("density_scale", 1.0),
                 "scattering": medium.get("scattering", [0.006] * 3),
                 "absorption": medium.get("absorption", [0.00015] * 3),

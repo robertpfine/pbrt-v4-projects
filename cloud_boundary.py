@@ -54,7 +54,7 @@ def normalized_edge_fades(value):
 
 
 class CloudBoundary:
-    """Validated axis-aligned or artist-authored vertical cloud prism."""
+    """Validated box, artist-authored prism, or concentric cloud shell."""
 
     def __init__(self, config, center, size, depth_slope, name):
         config = config or {}
@@ -62,6 +62,9 @@ class CloudBoundary:
         self.name = name
         self.bottom_corners = None
         self.thickness = None
+        self.center = tuple(float(value) for value in center)
+        self.inner_radius = None
+        self.outer_radius = None
         self._plane = None
         self._edges = None
 
@@ -81,6 +84,39 @@ class CloudBoundary:
             self.base_bounds_max = base_max
             self.bounds_min = tuple(bounds_min)
             self.bounds_max = tuple(bounds_max)
+            return
+
+        if self.mode == "spherical_shell":
+            if depth_slope.get("enabled", False):
+                raise ValueError(
+                    f"{name}: depth_slope must be disabled for a spherical_shell boundary"
+                )
+            inner_radius = config.get("inner_radius")
+            thickness = config.get("thickness")
+            if (not isinstance(inner_radius, (int, float))
+                    or not math.isfinite(inner_radius) or inner_radius <= 0.0):
+                raise ValueError(
+                    f"{name}: spherical_shell.inner_radius must be positive"
+                )
+            if (not isinstance(thickness, (int, float))
+                    or not math.isfinite(thickness) or thickness <= 0.0):
+                raise ValueError(
+                    f"{name}: spherical_shell.thickness must be positive"
+                )
+            self.inner_radius = float(inner_radius)
+            self.thickness = float(thickness)
+            self.outer_radius = self.inner_radius + self.thickness
+            expected_diameter = 2.0 * self.outer_radius
+            tolerance = max(1e-6, expected_diameter * 1e-8)
+            if any(abs(float(value) - expected_diameter) > tolerance for value in size):
+                raise ValueError(
+                    f"{name}: spherical_shell dimensions must equal the outer "
+                    f"diameter {expected_diameter:g} on all three axes"
+                )
+            self.bounds_min = tuple(value - self.outer_radius for value in self.center)
+            self.bounds_max = tuple(value + self.outer_radius for value in self.center)
+            self.base_bounds_min = self.bounds_min
+            self.base_bounds_max = self.bounds_max
             return
 
         if self.mode != "corner_prism":
@@ -190,6 +226,23 @@ class CloudBoundary:
 
         if self.mode == "axis_aligned":
             return None
+        if self.mode == "spherical_shell":
+            radius = math.sqrt(
+                (x - self.center[0]) ** 2
+                + (y - self.center[1]) ** 2
+                + (z - self.center[2]) ** 2
+            )
+            radial = (radius - self.inner_radius) / self.thickness
+            if radial < -1e-9 or radial > 1.0 + 1e-9:
+                return None
+            return {
+                "left": 1.0,
+                "right": 1.0,
+                "bottom": radial,
+                "top": 1.0 - radial,
+                "near": 1.0,
+                "far": 1.0,
+            }
         result = {}
         for face, (begin, end, sign, denominator) in self._edges.items():
             coordinate = sign * _cross2(begin, end, (x, y, z)) / denominator
@@ -210,6 +263,22 @@ class CloudBoundary:
                        for axis in range(3))
         return self.local_coordinates(*(float(v) for v in point)) is not None
 
+    def camera_path_bounds(self, point):
+        """Return shell path bounds for a camera in the hollow cavity."""
+
+        if self.mode != "spherical_shell":
+            return None
+        offset = math.sqrt(sum(
+            (float(point[axis]) - self.center[axis]) ** 2 for axis in range(3)
+        ))
+        if offset >= self.inner_radius:
+            return None
+        maximum = (
+            math.sqrt(self.outer_radius ** 2 - offset ** 2)
+            - math.sqrt(self.inner_radius ** 2 - offset ** 2)
+        )
+        return self.thickness, maximum
+
     def vertices(self):
         """Return eight points in the established PBRT box-mesh order."""
 
@@ -220,6 +289,8 @@ class CloudBoundary:
                 (x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
                 (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1),
             )
+        if self.mode == "spherical_shell":
+            raise ValueError("spherical_shell boundaries do not have prism vertices")
         near_left, near_right, far_right, far_left = self.bottom_corners
         lift = lambda point: (point[0], point[1] + self.thickness, point[2])
         return (
@@ -230,6 +301,12 @@ class CloudBoundary:
     def contract(self):
         if self.mode == "axis_aligned":
             return {"mode": "axis_aligned"}
+        if self.mode == "spherical_shell":
+            return {
+                "mode": "spherical_shell",
+                "inner_radius": self.inner_radius,
+                "thickness": self.thickness,
+            }
         return {
             "mode": "corner_prism",
             "bottom_corners": {

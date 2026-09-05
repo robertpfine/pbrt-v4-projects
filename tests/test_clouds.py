@@ -318,5 +318,58 @@ class CloudFormationTests(unittest.TestCase):
             1e-12,
         )
 
+    def test_spherical_shell_has_hollow_cavity_and_bounded_camera_paths(self):
+        cloud = CloudFormation({
+            "name": "distant_shell",
+            "form": "pbrt_cloud",
+            "center": [1.0, 2.0, 3.0],
+            "size": [12.0, 12.0, 12.0],
+            "resolution": [2, 2, 2],
+            "boundary": {
+                "mode": "spherical_shell",
+                "inner_radius": 5.0,
+                "thickness": 1.0,
+            },
+            "procedural": {
+                "density": 0.4,
+                "wispiness": 0.8,
+                "frequency": 4.0,
+            },
+            "appearance": {
+                "type": "cloud",
+                "scattering": [0.003, 0.003, 0.003],
+                "absorption": [0.0005, 0.0005, 0.0005],
+            },
+        })
+        self.assertEqual(cloud.bounds_min, (-5.0, -4.0, -3.0))
+        self.assertEqual(cloud.bounds_max, (7.0, 8.0, 9.0))
+        self.assertFalse(cloud.boundary.contains((1.0, 2.0, 3.0)))
+        self.assertTrue(cloud.boundary.contains((6.5, 2.0, 3.0)))
+        self.assertFalse(cloud.boundary.contains((7.5, 2.0, 3.0)))
+        self.assertEqual(
+            cloud.boundary.camera_path_bounds((1.0, 2.0, 3.0)),
+            (1.0, 1.0),
+        )
+        off_center = cloud.boundary.camera_path_bounds((3.0, 2.0, 3.0))
+        self.assertEqual(off_center[0], 1.0)
+        self.assertGreater(off_center[1], 1.0)
+
+    def test_spherical_shell_requires_matching_outer_dimensions(self):
+        with self.assertRaisesRegex(ValueError, "outer diameter 12"):
+            CloudFormation({
+                "name": "bad_shell",
+                "form": "pbrt_cloud",
+                "center": [0, 0, 0],
+                "size": [10, 10, 10],
+                "resolution": [2, 2, 2],
+                "boundary": {
+                    "mode": "spherical_shell",
+                    "inner_radius": 5,
+                    "thickness": 1,
+                },
+                "procedural": {"density": 1, "wispiness": 1, "frequency": 1},
+                "appearance": {"type": "cloud"},
+            })
+
 if __name__ == "__main__":
     unittest.main()

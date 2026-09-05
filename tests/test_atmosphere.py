@@ -174,6 +174,66 @@ class FogHeightFalloffTests(unittest.TestCase):
         ):
             write_cloud_media([], module, Path("."), Path("."), camera)
 
+    def test_spherical_shell_emits_procedural_medium_and_two_transitions(self):
+        formation_config = {
+            "name": "sky_shell",
+            "enabled": True,
+            "form": "pbrt_cloud",
+            "center": [0, 10, 0],
+            "size": [12, 12, 12],
+            "resolution": [2, 2, 2],
+            "boundary": {
+                "mode": "spherical_shell",
+                "inner_radius": 5,
+                "thickness": 1,
+            },
+            "procedural": {"density": 0.4, "wispiness": 0.8, "frequency": 4},
+            "appearance": {
+                "type": "cloud",
+                "scattering": [0.003, 0.003, 0.003],
+                "absorption": [0.0005, 0.0005, 0.0005],
+                "anisotropy": 0.2,
+            },
+        }
+        module = {"enabled": True, "formations": [formation_config]}
+        lines = []
+        formations = write_cloud_media(
+            lines, module, Path("."), Path("."),
+            {"look_at": {"eye": [0, 10, 0]}},
+        )
+        write_cloud_boundaries(lines, formations)
+        text = "\n".join(lines)
+        self.assertIn('"string type" [ "cloud" ]', text)
+        self.assertIn('MediumInterface "" "cloud_0_sky_shell"', text)
+        self.assertIn('MediumInterface "cloud_0_sky_shell" ""', text)
+        self.assertIn('"float radius" [ 5.0 ]', text)
+        self.assertIn('"float radius" [ 6.0 ]', text)
+
+    def test_spherical_shell_rejects_camera_outside_cavity(self):
+        module = {
+            "enabled": True,
+            "formations": [{
+                "name": "sky_shell",
+                "enabled": True,
+                "form": "pbrt_cloud",
+                "center": [0, 0, 0],
+                "size": [12, 12, 12],
+                "resolution": [2, 2, 2],
+                "boundary": {
+                    "mode": "spherical_shell",
+                    "inner_radius": 5,
+                    "thickness": 1,
+                },
+                "procedural": {"density": 1, "wispiness": 1, "frequency": 1},
+                "appearance": {"type": "cloud"},
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, "hollow spherical_shell cavity"):
+            write_cloud_media(
+                [], module, Path("."), Path("."),
+                {"look_at": {"eye": [7, 0, 0]}},
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

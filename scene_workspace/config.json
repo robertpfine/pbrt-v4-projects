@@ -34,7 +34,7 @@
     },
     "integrator": {
       "type": "volpath",
-      "max_depth": 20
+      "max_depth": 6
     },
     "backend": {
       "type": "gpu",
@@ -1663,7 +1663,7 @@
         },
         {
           "name": "overcast_cloud_deck",
-          "enabled": true,
+          "enabled": false,
           "placement": {
             "position": [0.0, 850.0, -10000.0]
           },
@@ -1722,6 +1722,46 @@
               "transition": 0.25,
               "scattering_scale": 0.45,
               "absorption_scale": 3.2
+            }
+          }
+        },
+        {
+          "name": "distant_overcast_shell",
+          "enabled": true,
+          "placement": {
+            "position": [0.0, 165.0, 365.0]
+          },
+          "dimensions": [25600.0, 25600.0, 25600.0],
+          "boundary": {
+            "mode": "spherical_shell",
+            "inner_radius": 12000.0,
+            "thickness": 800.0
+          },
+          "density_field": {
+            "generator": "pbrt_cloud",
+            "resolution": [2, 2, 2],
+            "shape": {},
+            "noise": {},
+            "depth_slope": {
+              "enabled": false,
+              "far_y_offset": 0.0
+            },
+            "depth_profile": {},
+            "lobes": [],
+            "procedural": {
+              "density": 0.65,
+              "wispiness": 0.0,
+              "frequency": 4.5
+            }
+          },
+          "medium": {
+            "type": "cloud",
+            "density_scale": 1.0,
+            "scattering": [0.00085, 0.00092, 0.001],
+            "absorption": [0.00015, 0.00016, 0.00018],
+            "anisotropy": 0.25,
+            "underside": {
+              "enabled": false
             }
           }
         }

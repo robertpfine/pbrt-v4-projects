@@ -49,6 +49,28 @@ class CloudBoundaryDiagnosticTests(unittest.TestCase):
         self.assertIn("visible_deck (corner_prism)", svg)
         self.assertIn("<line", svg)
 
+    def test_shell_diagnostic_reports_constant_centered_path(self):
+        formation = CloudFormation({
+            "name": "sky_shell",
+            "form": "pbrt_cloud",
+            "center": [0, 0, 0],
+            "size": [12, 12, 12],
+            "resolution": [2, 2, 2],
+            "boundary": {
+                "mode": "spherical_shell",
+                "inner_radius": 5,
+                "thickness": 1,
+            },
+            "procedural": {"density": 0.4, "wispiness": 1, "frequency": 4},
+            "appearance": {"type": "cloud"},
+        })
+        result = diagnose_formation(formation, self.camera, self.film)
+        self.assertTrue(result["camera_in_cavity"])
+        self.assertFalse(result["camera_inside"])
+        self.assertEqual(result["camera_path_length_min"], 1.0)
+        self.assertEqual(result["camera_path_length_max"], 1.0)
+        self.assertEqual(result["vertices"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

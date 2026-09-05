@@ -70,6 +70,23 @@ def project_point(point, camera, film):
 
 
 def diagnose_formation(formation, camera, film):
+    eye = camera["look_at"]["eye"]
+    if formation.boundary.mode == "spherical_shell":
+        path_bounds = formation.boundary.camera_path_bounds(eye)
+        return {
+            "name": formation.name,
+            "mode": formation.boundary.mode,
+            "camera_inside": formation.boundary.contains(eye),
+            "camera_in_cavity": path_bounds is not None,
+            "bounds_min": formation.bounds_min,
+            "bounds_max": formation.bounds_max,
+            "center": formation.boundary.center,
+            "inner_radius": formation.boundary.inner_radius,
+            "outer_radius": formation.boundary.outer_radius,
+            "camera_path_length_min": path_bounds[0] if path_bounds else None,
+            "camera_path_length_max": path_bounds[1] if path_bounds else None,
+            "vertices": [],
+        }
     labels = (
         "far_left.bottom", "far_right.bottom", "far_right.top", "far_left.top",
         "near_left.bottom", "near_right.bottom", "near_right.top", "near_left.top",
@@ -78,7 +95,7 @@ def diagnose_formation(formation, camera, film):
     return {
         "name": formation.name,
         "mode": formation.boundary.mode,
-        "camera_inside": formation.boundary.contains(camera["look_at"]["eye"]),
+        "camera_inside": formation.boundary.contains(eye),
         "bounds_min": formation.bounds_min,
         "bounds_max": formation.bounds_max,
         "vertices": [
@@ -112,7 +129,7 @@ def diagnostic_svg(diagnostics, film):
     for cloud_index, diagnostic in enumerate(diagnostics):
         color = colors[cloud_index % len(colors)]
         vertices = diagnostic["vertices"]
-        for begin, end in edges:
+        for begin, end in (edges if len(vertices) == 8 else ()):
             left, right = vertices[begin], vertices[end]
             if not left["in_front"] or not right["in_front"]:
                 continue
@@ -156,6 +173,20 @@ def main():
         for diagnostic in diagnostics:
             state = "INSIDE" if diagnostic["camera_inside"] else "outside"
             print(f'{diagnostic["name"]}: {diagnostic["mode"]}; camera {state}')
+            if diagnostic["mode"] == "spherical_shell":
+                cavity = "inside cavity" if diagnostic["camera_in_cavity"] else "outside cavity"
+                print(
+                    f'  center {tuple(diagnostic["center"])}; '
+                    f'inner radius {diagnostic["inner_radius"]:.2f}; '
+                    f'outer radius {diagnostic["outer_radius"]:.2f}; {cavity}'
+                )
+                if diagnostic["camera_path_length_min"] is not None:
+                    print(
+                        '  camera-ray shell path '
+                        f'{diagnostic["camera_path_length_min"]:.2f} to '
+                        f'{diagnostic["camera_path_length_max"]:.2f}'
+                    )
+                continue
             for vertex in diagnostic["vertices"]:
                 if not vertex["in_front"]:
                     projection = f'behind camera (depth {vertex["depth"]:.2f})'
