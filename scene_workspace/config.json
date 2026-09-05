@@ -1520,9 +1520,27 @@
       "background": {
         "enabled": true,
         "type": "infinite",
+        "source": "procedural_overcast",
         "color_mode": "rgb",
         "color": [0.62, 0.68, 0.75],
-        "scale": 0.16
+        "scale": 0.16,
+        "environment": {
+          "generator": "overcast_map",
+          "resolution": [2048, 2048],
+          "seed": 823,
+          "coverage": 0.50,
+          "softness": 0.01,
+          "broad_feature_fraction": 0.55,
+          "medium_feature_fraction": 0.22,
+          "detail_feature_fraction": 0.075,
+          "horizon_bias": 0.24,
+          "contrast": 6.00,
+          "clear_color": [0.01, 0.06, 0.18],
+          "cloud_dark_color": [0.001, 0.002, 0.004],
+          "cloud_light_color": [4.00, 4.00, 4.00],
+          "target_average_color": [0.62, 0.68, 0.75],
+          "rotation_degrees": 90.0
+        }
       },
       "clouds": [
         {
@@ -1727,7 +1745,7 @@
         },
         {
           "name": "distant_overcast_shell",
-          "enabled": true,
+          "enabled": false,
           "placement": {
             "position": [0.0, 165.0, 365.0]
           },

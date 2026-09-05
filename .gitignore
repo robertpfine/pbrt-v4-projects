@@ -7,6 +7,7 @@ Archive/
 SessionArchive/
 **/*.png
 **/*.exr
+scene_workspace/scene_files/textures/overcast_environment.pfm
 
 # Documentation images are intentional repository assets, not render output.
 !docs/assets/*.png

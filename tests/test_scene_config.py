@@ -216,6 +216,39 @@ class SceneConfigTests(unittest.TestCase):
             with self.assertRaises(SceneConfigConflictError):
                 config.save()
 
+    def test_procedural_overcast_background_is_valid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene_description"]["sky"]["background"].update({
+                "source": "procedural_overcast",
+                "environment": {
+                    "generator": "overcast_map",
+                    "resolution": [1024, 1024],
+                    "seed": 823,
+                    "coverage": 0.88,
+                    "softness": 0.16,
+                    "target_average_color": [0.62, 0.68, 0.75],
+                },
+            })
+            path.write_text(json.dumps(data), encoding="utf-8")
+            self.assertEqual(SceneConfig(path).validate(), [])
+
+    def test_procedural_overcast_requires_square_resolution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["scene_description"]["sky"]["background"].update({
+                "source": "procedural_overcast",
+                "environment": {
+                    "generator": "overcast_map",
+                    "resolution": [1024, 512],
+                },
+            })
+            path.write_text(json.dumps(data), encoding="utf-8")
+            errors = SceneConfig(path).validate()
+            self.assertTrue(any("square integer pair" in error for error in errors))
+
     def test_invalid_value_is_not_saved(self):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)

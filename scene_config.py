@@ -1229,6 +1229,109 @@ class SceneConfig:
                 errors.append("sky requires a background module")
             elif background.get("type") != "infinite":
                 errors.append("sky.background.type must be infinite")
+            else:
+                source = background.get("source", "uniform")
+                if source not in {"uniform", "procedural_overcast"}:
+                    errors.append(
+                        "sky.background.source must be uniform or procedural_overcast"
+                    )
+                if source == "procedural_overcast":
+                    environment = background.get("environment")
+                    if not isinstance(environment, dict):
+                        errors.append(
+                            "sky.background.environment must be an object"
+                        )
+                    else:
+                        if environment.get("generator") != "overcast_map":
+                            errors.append(
+                                "sky.background.environment.generator must be overcast_map"
+                            )
+                        resolution = environment.get("resolution", [2048, 2048])
+                        if (
+                            not isinstance(resolution, list)
+                            or len(resolution) != 2
+                            or any(
+                                not isinstance(value, int)
+                                or isinstance(value, bool)
+                                for value in resolution
+                            )
+                            or resolution[0] < 512
+                            or resolution[1] < 512
+                            or resolution[0] != resolution[1]
+                        ):
+                            errors.append(
+                                "sky.background.environment.resolution must be a "
+                                "square integer pair of at least 512x512"
+                            )
+                        if "seed" in environment and (
+                            not isinstance(environment["seed"], int)
+                            or isinstance(environment["seed"], bool)
+                        ):
+                            errors.append(
+                                "sky.background.environment.seed must be an integer"
+                            )
+                        for field in (
+                            "softness",
+                            "broad_feature_fraction",
+                            "medium_feature_fraction",
+                            "detail_feature_fraction",
+                        ):
+                            value = environment.get(field)
+                            if value is not None and (
+                                not isinstance(value, (int, float))
+                                or isinstance(value, bool)
+                                or not math.isfinite(value)
+                                or value <= 0
+                            ):
+                                errors.append(
+                                    f"sky.background.environment.{field} must be positive"
+                                )
+                        coverage = environment.get("coverage")
+                        if coverage is not None and (
+                            not isinstance(coverage, (int, float))
+                            or isinstance(coverage, bool)
+                            or not math.isfinite(coverage)
+                            or not 0 <= coverage <= 1
+                        ):
+                            errors.append(
+                                "sky.background.environment.coverage must be within [0, 1]"
+                            )
+                        for field in (
+                            "contrast",
+                            "horizon_bias",
+                            "rotation_degrees",
+                        ):
+                            value = environment.get(field)
+                            if value is not None and (
+                                not isinstance(value, (int, float))
+                                or isinstance(value, bool)
+                                or not math.isfinite(value)
+                            ):
+                                errors.append(
+                                    f"sky.background.environment.{field} must be finite"
+                                )
+                        for field in (
+                            "clear_color",
+                            "cloud_dark_color",
+                            "cloud_light_color",
+                            "target_average_color",
+                        ):
+                            value = environment.get(field)
+                            if value is not None and (
+                                not isinstance(value, list)
+                                or len(value) != 3
+                                or any(
+                                    not isinstance(component, (int, float))
+                                    or isinstance(component, bool)
+                                    or not math.isfinite(component)
+                                    or component < 0
+                                    for component in value
+                                )
+                            ):
+                                errors.append(
+                                    f"sky.background.environment.{field} must contain "
+                                    "3 non-negative finite values"
+                                )
             if not isinstance(sun, dict):
                 errors.append("sky requires a sun module")
             else:
@@ -1703,7 +1806,7 @@ class SceneConfig:
             f"Distant hills: {'enabled' if hill_layer_count else 'disabled'}, "
             f"{hill_layer_count} {'layer' if hill_layer_count == 1 else 'layers'}",
             f"Sky background: {'enabled' if sky['background'].get('enabled') else 'disabled'}",
-            f"Clouds: {'enabled' if any(cloud.get('enabled') for cloud in sky['clouds']) else 'disabled'}",
+            f"Clouds: {'enabled' if sky['background'].get('source') == 'procedural_overcast' or any(cloud.get('enabled') for cloud in sky['clouds']) else 'disabled'}",
             f"Fog: {'enabled' if self.get(('scene_description', 'atmosphere', 'fog', 0, 'enabled'), False) else 'disabled'}",
             f"Rain: {'enabled' if any(item.get('enabled', False) for item in rain) else 'disabled'}, "
             f"{len(rain)} {'object' if len(rain) == 1 else 'objects'}",

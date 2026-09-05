@@ -911,20 +911,40 @@ def write_lights(lines, lights):
             continue
 
         ltype = light["type"]
-        mode  = light["color_mode"]
-        color = light.get("color", light.get("temperature"))
-        if isinstance(color, list):
-            color = " ".join(str(component) for component in color)
         scale = light["scale"]
 
         if ltype == "infinite":
-            lines.append(
-                f'LightSource "infinite"'
-                f'  "{mode} L" [ {color} ]'
-                f'  "float scale" [ {scale} ]'
-            )
+            filename = light.get("environment_filename")
+            if filename:
+                lines.append("AttributeBegin")
+                rotation = float(light.get("environment_rotation_degrees", 0.0))
+                if rotation:
+                    lines.append(f"    Rotate {rotation} 0 1 0")
+                lines.append(
+                    f'    LightSource "infinite"'
+                    f'  "string filename" [ "{filename}" ]'
+                    f'  "float scale" [ {scale} ]'
+                )
+                lines.append("AttributeEnd")
+            else:
+                mode = light["color_mode"]
+                color = light.get("color", light.get("temperature"))
+                if isinstance(color, list):
+                    color = " ".join(str(component) for component in color)
+                lines.append(
+                    f'LightSource "infinite"'
+                    f'  "{mode} L" [ {color} ]'
+                    f'  "float scale" [ {scale} ]'
+                )
 
-        elif ltype == "point":
+            continue
+
+        mode = light["color_mode"]
+        color = light.get("color", light.get("temperature"))
+        if isinstance(color, list):
+            color = " ".join(str(component) for component in color)
+
+        if ltype == "point":
             p = light["position"]
             lines.append(
                 f'LightSource "point"'
@@ -932,8 +952,7 @@ def write_lights(lines, lights):
                 f'  "{mode} I" [ {color} ]'
                 f'  "float scale" [ {scale} ]'
             )
- 
-    
+
         elif ltype == "spot":
             p = light["position"]
             l = light["look_at"]
@@ -959,6 +978,32 @@ def write_lights(lines, lights):
             )
     
     lines.append("")
+
+
+def configured_background_light(cfg, sky_config, scene_root, scene_files_root):
+    """Return the sky light, generating its optional environment map first."""
+
+    background = sky_config.get("background")
+    if not background:
+        return None
+    background = deepcopy(background)
+    if background.get("source", "uniform") != "procedural_overcast":
+        return background
+
+    from sky_environment import generate_overcast_environment
+
+    environment = background["environment"]
+    environment_path = generate_overcast_environment(
+        environment,
+        Path(scene_files_root) / "textures",
+    )
+    background["environment_filename"] = scene_relative_path(
+        environment_path, scene_root
+    )
+    background["environment_rotation_degrees"] = environment.get(
+        "rotation_degrees", 0.0
+    )
+    return background
 
 
 def write_sun_aperture(lines, aperture, lights):
@@ -3467,7 +3512,9 @@ def write_scene(cfg, scene_root, medium_rel_path):
         "undergrowth": undergrowth_config,
     }
     lights = []
-    background = sky_config.get("background")
+    background = configured_background_light(
+        cfg, sky_config, scene_root, scene_files_root
+    )
     if background:
         lights.append(background)
     sun = sky_config.get("sun", {})

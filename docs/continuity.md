@@ -1,6 +1,44 @@
 # PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
+
+## 2026-09-05 interrupted-session overcast environment checkpoint
+
+The artist requested immediate preservation after accidentally closing VS Code.
+The work following `d5f920b` implements the environment-background replacement
+described below. The active branch remains `pbrt-v4-art-studio`.
+
+The sole live configuration, `scene_workspace/config.json`, lines 1519–1543,
+now selects `sky.background.source: "procedural_overcast"` and environment
+generator `overcast_map`. `sky_environment.py` creates a deterministic square
+equal-area RGB PFM and a PNG preview. The scene builder attaches the map to a
+PBRT `infinite` light with optional Y rotation; validation and focused tests
+cover the new configuration. The spherical cloud shell is retained disabled.
+The sun remains a separate PBRT `distant` light. See
+`docs/sky-environment-configuration.md` for controls and limitations.
+
+Live JSON matches archived render `024240` byte-for-byte at SHA-256
+`4ee3636c06960c8026e69cc2c983228d7753f98f1a5cf735de9373de500a0c3c`.
+The previous conversation calls this useful information but too extreme in the
+upper-left corner (the artist typed `024249`; the actual archive is `024240`).
+This is an experimental functionality checkpoint, not a replacement accepted
+visual master. The last discussion clarified background versus sun light types.
+Preserve the current values; do not automatically tune or render on resumption.
+
+Checkpoint verification: all 149 Qt-environment tests complete successfully
+with 19 dependency-aware skips; all four sky-environment tests and 24 scene
+configuration tests pass under production Python. Live validation returns no
+errors. The completed `024240` PNG was inspected locally; no new render was
+launched for this checkpoint.
+
+The interrupted session's compressed raw log, readable message transcript, and
+SHA-256 record are preserved under gitignored `SessionArchive/`, with stem
+`codex-session-2026-09-04_to_2026-09-05`. The generated PFM and exact JSON copy
+are additionally retained in `SessionArchive/checkpoint-20260905-overcast/`.
+Render source bundles include the generator but exclude generated texture
+files, so reproduction currently requires regenerating textures before loading
+the archived PBRT. Direct archival of generated texture dependencies remains a
+follow-up. Generated maps and conversation records stay out of Git.
 
 ## Purpose
 
