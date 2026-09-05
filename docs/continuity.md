@@ -2,6 +2,16 @@
 
 Last updated: 2026-09-05
 
+## 2026-09-05 independent review preference
+
+The artist has installed Claude Code in the VS Code environment as a second
+set of eyes and regards independent review as prudent risk management.
+Welcome its findings and evaluate them against the same code, configuration,
+and archived render evidence. This does not transfer implementation authority
+to external advice or replace the artist's decisions. Codex suggested one
+active editor at a time while the other assistant reviews a shared checkpoint;
+that coordination suggestion has not yet been explicitly adopted by the artist.
+
 ## 2026-09-05 Claude Code overcast discussion archived for later work
 
 The artist supplied Claude Code's response to a question about complete
