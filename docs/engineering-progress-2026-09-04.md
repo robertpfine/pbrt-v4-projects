@@ -302,6 +302,9 @@ silently activated.
   axis-aligned PBRT storage grid around it.
 - Evaluated vertical density variation and underside optical coefficients
   relative to the local authored bottom plane.
+- Anchored plane-following noise at the near-edge midpoint, matching the
+  legacy slope's zero-offset face so an equivalent corner conversion preserves
+  the existing 3D noise field.
 - Extended mottled-veil edge fades from the compatible XYZ triple to optional
   independent `left`, `right`, `bottom`, `top`, `near`, and `far` fractions.
   Explicit zero means no fade at that face.
@@ -342,8 +345,8 @@ silently activated.
   the fixture and compatibility sidecar list were corrected to make the new
   dependency explicit.
 - The corrected full project-virtual-environment suite passed all applicable
-  tests: 133 run, 12 dependency-aware skips, zero failures.
-- System Python passed all 118 non-GUI tests, including the NumPy/Pillow-backed
+  tests: 134 run, 12 dependency-aware skips, zero failures.
+- System Python passed all 119 non-GUI tests, including the NumPy/Pillow-backed
   atmosphere and exact authored boundary-mesh checks. Its only full-discovery
   omission is the expected unavailable PySide6 GUI module, which is covered by
   the project virtual environment.

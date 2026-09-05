@@ -166,7 +166,10 @@ class CloudBoundary:
         self.thickness = float(thickness)
         self._plane = (a, b, c)
         self._edges = edges
-        self.reference_bottom_y = centroid[1]
+        # The legacy depth slope is anchored at the near face (zero offset
+        # there). Anchoring explicit prisms at the near-edge midpoint makes a
+        # rectangular slope-to-prism conversion preserve the 3D noise field.
+        self.reference_bottom_y = 0.5 * (p0[1] + p1[1])
         top = [(point[0], point[1] + self.thickness, point[2]) for point in parsed]
         all_points = parsed + top
         self.bounds_min = tuple(min(point[axis] for point in all_points)

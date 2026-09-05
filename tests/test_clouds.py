@@ -274,5 +274,49 @@ class CloudFormationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "depth_slope must be disabled"):
             CloudFormation(source)
 
+    def test_equivalent_corner_prism_preserves_legacy_slope_density(self):
+        module = {
+            "appearance": {"density": 0.9},
+            "fractal_noise": {
+                "seed": 823,
+                "frequency": [0.045, 0.12, 0.055],
+                "octaves": 2,
+                "coverage": 0.34,
+                "softness": 0.32,
+                "edge_fade_fraction": [0.08, 0.15, 0.1],
+            },
+        }
+        legacy = {
+            "name": "legacy_slope",
+            "form": "mottled_veil",
+            "center": [0.0, 10.0, -10.0],
+            "size": [20.0, 4.0, 20.0],
+            "resolution": [7, 6, 8],
+            "depth_slope": {"enabled": True, "far_y_offset": -3.0},
+        }
+        explicit = {
+            **legacy,
+            "name": "explicit_prism",
+            "depth_slope": {"enabled": False, "far_y_offset": -3.0},
+            "boundary": {
+                "mode": "corner_prism",
+                "bottom_corners": {
+                    "near_left": [-10.0, 8.0, 0.0],
+                    "near_right": [10.0, 8.0, 0.0],
+                    "far_right": [10.0, 5.0, -20.0],
+                    "far_left": [-10.0, 5.0, -20.0],
+                },
+                "thickness": 4.0,
+            },
+        }
+        legacy_density = CloudFormation(legacy, module).density_grid()
+        explicit_density = CloudFormation(explicit, module).density_grid()
+        self.assertLessEqual(
+            max(abs(left - right) for left, right in zip(
+                legacy_density, explicit_density
+            )),
+            1e-12,
+        )
+
 if __name__ == "__main__":
     unittest.main()

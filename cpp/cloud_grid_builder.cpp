@@ -481,7 +481,9 @@ class CloudGrid {
             centroid.y += point.y / 4.0;
             centroid.z += point.z / 4.0;
         }
-        reference_bottom_y_ = centroid.y;
+        // Match the legacy slope's zero-offset near face so an equivalent
+        // rectangular corner prism preserves the 3D noise field.
+        reference_bottom_y_ = 0.5 * (p0.y + p1.y);
         const int edge_indices[4][2] = {{0, 1}, {1, 2}, {2, 3}, {3, 0}};
         double turn_sign = 0.0;
         for (int index = 0; index < 4; ++index) {

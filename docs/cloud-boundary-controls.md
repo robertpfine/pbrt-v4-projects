@@ -37,6 +37,10 @@ whose two triangles and density support would disagree along a diagonal.
 The system derives each top corner by adding `[0, thickness, 0]`, producing a
 closed eight-vertex, twelve-triangle vertical prism.
 
+Plane-following 3D noise is anchored at the midpoint of the near bottom edge.
+This matches the zero-offset end of the legacy depth slope, allowing an
+equivalent rectangular slope to be converted without shifting its noise field.
+
 In this mode the explicit corners and thickness control the boundary and the
 density-grid bounds. Existing `placement.position` and `dimensions` remain in
 the first-generation schema for compatibility and easy return to
