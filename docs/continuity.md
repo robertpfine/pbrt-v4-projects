@@ -2,6 +2,22 @@
 
 Last updated: 2026-09-05
 
+## 2026-09-05 Claude Code overcast discussion archived for later work
+
+The artist supplied Claude Code's response to a question about complete
+volumetric overcast and requested a note and archive for later work. See
+`docs/overcast-claude-reference-2026-09-05.md` for the summary and review context.
+The full original message, including formulas and code, is preserved verbatim
+in gitignored `SessionArchive/claude-code-overcast-2026-09-05.md`, with an
+adjacent `.sha256` record; the remote destination is the matching filename under
+`gdrive:wipImages/pbrt-v4/SessionArchive/`.
+
+The proposed avenues are downward cloud-base curvature, below-cloud haze,
+matching environment horizon color, and nested fine/coarse cloud grids. Treat
+these as external proposals awaiting review and testing. The current
+procedural-overcast checkpoint and accepted visual masters remain in force;
+this archival request does not authorize automatic scene changes or renders.
+
 ## 2026-09-05 interrupted-session overcast environment checkpoint
 
 The artist requested immediate preservation after accidentally closing VS Code.
