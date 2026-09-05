@@ -1,0 +1,95 @@
+{
+  "purpose": "Canonical reproduction of the grazing volumetric-cloud workload. This is documentation, not the authoritative live scene config.",
+  "camera_settings": {
+    "type": "perspective",
+    "look_at": {
+      "eye": [0.0, 165.0, 365.0],
+      "look": [0.0, 155.0, -5.0],
+      "up": [0, 1, 0]
+    },
+    "fov": 50.0
+  },
+  "render_settings": {
+    "film": {
+      "x_resolution": 2000,
+      "y_resolution": 1500
+    },
+    "sampler": {
+      "type": "halton",
+      "pixel_samples": 1
+    },
+    "integrator": {
+      "type": "volpath",
+      "max_depth": 20
+    },
+    "backend": {
+      "type": "gpu",
+      "show_statistics": true
+    }
+  },
+  "overcast_cloud_deck": {
+    "enabled": true,
+    "placement": {
+      "position": [0.0, 850.0, -10000.0]
+    },
+    "dimensions": [50000.0, 800.0, 26000.0],
+    "boundary": {
+      "mode": "corner_prism",
+      "bottom_corners": {
+        "near_left": [-25000.0, 450.0, 3000.0],
+        "near_right": [25000.0, 450.0, 3000.0],
+        "far_right": [25000.0, 150.0, -23000.0],
+        "far_left": [-25000.0, 150.0, -23000.0]
+      },
+      "thickness": 800.0
+    },
+    "density_field": {
+      "generator": "mottled_veil",
+      "resolution": [160, 40, 120],
+      "shape": {
+        "bottom_fade": 120.0,
+        "top_fade": 180.0
+      },
+      "noise": {
+        "seed": 823,
+        "frequency": [0.00045, 0.0012, 0.00055],
+        "octaves": 3,
+        "roughness": 0.55,
+        "frequency_jump": 2.0,
+        "coverage": 0.34,
+        "softness": 0.22,
+        "broad_strength": 1.0,
+        "detail_strength": 0.35,
+        "detail_frequency_scale": 2.7,
+        "edge_fade_fraction": [0.08, 0.15, 0.1]
+      },
+      "depth_slope": {
+        "enabled": false,
+        "far_y_offset": -300.0
+      }
+    },
+    "medium": {
+      "type": "rgbgrid",
+      "density_scale": 0.9,
+      "scattering": [0.0028, 0.003, 0.0032],
+      "absorption": [0.00045, 0.0005, 0.00055],
+      "anisotropy": 0.25,
+      "underside": {
+        "enabled": true,
+        "height_fraction": 0.5,
+        "transition": 0.25,
+        "scattering_scale": 0.45,
+        "absorption_scale": 3.2
+      }
+    }
+  },
+  "why_this_is_risky": {
+    "camera_relationship": "The camera is below the prism but within its XZ footprint, so upper-frame rays enter through its underside.",
+    "measured_camera_rays_entering_percent": 47.33,
+    "measured_path_length_units": {
+      "median": 3689.73,
+      "p95": 16105.80,
+      "maximum": 20597.11
+    }
+  }
+}

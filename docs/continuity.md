@@ -87,6 +87,50 @@ density bottom there is higher. The one-edit prism conversion removes that
 proxy mismatch; validation and the projection diagnostic both report the
 camera outside. No PBRT render has yet been launched from this converted state.
 
+### Centered-prism render evidence and spherical-shell direction
+
+The converted prism was subsequently tested through the artist-visible
+`./run_render_terminal.sh` workflow. The first asymmetric run, `210419`, was
+aborted after PBRT remained at an unknown and increasing completion estimate.
+Its frozen scene differs from archived `075647` in exactly one PBRT line: the
+eight cloud-boundary vertices. The complete RGB density arrays and every other
+scene declaration are identical. This proves that C++ grid generation did not
+change between those two inputs, but it did not by itself prove that long
+grazing paths always prevent completion.
+
+The artist then required a canonical centered test. Camera eye and look X were
+set to zero, cloud placement X was set to zero, and the 50,000-unit prism was
+centered from X -25,000 to 25,000. Far-bottom Y remained 150. Run `214414`
+completed at one sample, and run `214712` completed at eight samples; both used
+2000x1500 and `volpath` depth 20. The eight-sample render is the safe current
+cloud-boundary checkpoint. Its exact archived/live config SHA-256 is
+`45bc26e8d35ac7e8bef85a0e0dd6fa9ff1ffd19db549b4010dcc36d20afb08cd`.
+
+The next single-variable experiment lowered both far-bottom corners from Y 150
+to Y -600 so the geometric bottom projected from image row about 708 to row
+759 and overlapped the ground edge. Run `215251` reproduced the operational
+death loop: the visible PBRT log's total-time estimate increased rather than
+converged, and the artist ordered termination. The exact host PBRT process was
+PID 977081 and was terminated; no PNG or finalized archive bundle exists. Its
+frozen input remains under `scene_workspace/.render_runs/20260904_215251`.
+The live config was immediately restored and verified byte-for-byte against
+successful archived `214712`.
+
+This evidence narrows the risk: a correctly entered finite cloud volume and
+long paths are not alone sufficient to fail, but lowering the far boundary
+substantially changes the active volume/traversal and crosses a fatal-cost
+threshold. Do not restore or render the `215251` settings as a production
+state.
+
+The artist approved a deliberate proof of concept for a hybrid sky: a thin,
+hollow spherical cloud shell for distant horizon/sky coverage plus retained
+ordinary local volumetric formations. The shell must have an inner and outer
+surface, keep the camera in its vacuum cavity, bound the distance through the
+medium by shell thickness, remain compatible with direct JSON editing, and be
+validated with a low-sample visible-terminal render before any production
+adoption. A compact non-authoritative record of the prism risk setup is
+`docs/examples/cloud-grazing-trigger.json.example`.
+
 ## 2026-08-29 PBRT-v4 Art Studio checkpoint
 
 The artist selected **PBRT-v4 Art Studio** as the application name. The term

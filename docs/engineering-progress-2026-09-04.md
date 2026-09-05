@@ -396,3 +396,44 @@ The safeguards and conversion were completed as follows:
 - Final verification ran 136 tests in the project environment with 13
   dependency-aware skips and no failures. System Python passed all 121 non-GUI
   tests. `git diff --check` passed. No PBRT render was launched.
+
+## Centered-prism A/B and hybrid shell proof-of-concept decision
+
+The first end-to-end prism run (`210419`) was artist-aborted after the PBRT
+completion estimate failed to converge. Direct comparison against successful
+archived `075647` found that the 117 MB generated scenes differ only in the
+cloud boundary's eight point coordinates; the complete medium grids and all
+other PBRT declarations are byte-identical. PBRT source inspection confirmed
+that an interface surface switches a vacuum ray into the named medium only on
+an entering intersection. The legacy proxy contained the vacuum-initialized
+camera, whereas the prism correctly placed it below and outside the volume.
+
+A camera-frustum intersection sample measured 47.66 percent of rays entering
+the initial prism, with inside distances of approximately 3,755 units median,
+17,794 units at the 95th percentile, and 34,907 units maximum. This established
+a plausible cost mechanism but was deliberately tested rather than accepted as
+a complete failure diagnosis.
+
+The canonical centered configuration changed camera eye/look X to zero, cloud
+placement X to zero, and the boundary X span to -25,000 through 25,000. All
+other cloud controls remained fixed. Visible-terminal run `214414` completed
+at one sample and `214712` completed at eight samples, both at 2000x1500 and
+depth 20. The latter archived config has SHA-256
+`45bc26e8d35ac7e8bef85a0e0dd6fa9ff1ffd19db549b4010dcc36d20afb08cd`
+and is again byte-identical to the authoritative live config.
+
+The controlled horizon-coverage experiment changed only the two far-bottom Y
+coordinates from 150 to -600. Projection moved that edge from about row 708 to
+row 759, covering the apparent ground edge after accounting for the 120-unit
+bottom fade. Visible-terminal run `215251` then reproduced the operational
+death loop: PBRT's total-time estimate increased and no image completed. On the
+artist's order, host PID 977081 was terminated. The frozen run was retained and
+the live JSON restored exactly to `214712`.
+
+The next authorized engineering direction is a conservative hybrid proof of
+concept. Distant horizon clouds will use a hollow thin spherical shell whose
+inner and outer radii bound the camera-ray medium distance; existing local
+cloud formations will remain available as ordinary finite volumes. The proof
+of concept must add schema, geometry, density, transition, camera, and path-risk
+validation before rendering, preserve legacy axis-aligned and corner-prism
+output, and begin with a low-sample run in the artist-visible terminal.
