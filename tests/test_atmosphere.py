@@ -156,6 +156,24 @@ class FogHeightFalloffTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "camera eye lies inside"):
             write_cloud_media([], module, Path("."), Path("."), camera)
 
+    def test_camera_inside_axis_aligned_cloud_stops_before_grid_generation(self):
+        module = {
+            "enabled": True,
+            "formations": [{
+                "name": "legacy_camera_trap",
+                "enabled": True,
+                "form": "mottled_veil",
+                "center": [0, 0, 0],
+                "size": [4, 4, 4],
+                "resolution": [2, 2, 2],
+            }],
+        }
+        camera = {"look_at": {"eye": [0, 0, 0]}}
+        with self.assertRaisesRegex(
+            ValueError, "camera eye lies inside the cloud axis_aligned boundary"
+        ):
+            write_cloud_media([], module, Path("."), Path("."), camera)
+
 
 if __name__ == "__main__":
     unittest.main()

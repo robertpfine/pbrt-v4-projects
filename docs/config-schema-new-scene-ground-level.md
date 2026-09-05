@@ -564,7 +564,7 @@ an explicit face object:
 
 Each value is a fraction from `0` through `1`. In explicit face form, zero
 means no density fade at that face. The camera eye is rejected if it lies
-inside an enabled corner prism.
+inside any enabled cloud boundary.
 
 For every current `scene.sky.clouds.formations[]` item, `center`, `size`,
 `resolution`, `form`, `lobes`, and local overrides move to the corresponding

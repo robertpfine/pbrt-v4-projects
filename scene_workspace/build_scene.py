@@ -424,11 +424,11 @@ def write_cloud_media(
         eye = camera_settings.get("look_at", {}).get("eye")
         if eye is not None:
             for formation in formations:
-                if (formation.boundary.mode == "corner_prism"
-                        and formation.boundary.contains(eye)):
+                if formation.boundary.contains(eye):
                     raise ValueError(
                         f"{formation.name}: camera eye lies inside the cloud "
-                        "corner_prism; move the camera or boundary before rendering"
+                        f"{formation.boundary.mode} boundary; move the camera or "
+                        "boundary before rendering"
                     )
     enabled_configs = [
         item

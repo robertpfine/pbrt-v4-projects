@@ -355,3 +355,44 @@ silently activated.
 - The authoritative live JSON passed `SceneConfig` validation with zero
   errors. `git diff --check` and Python bytecode compilation passed. No PBRT
   production render was launched.
+
+### Safe live-config conversion after the exploratory studies
+
+Before changing the live JSON, its complete manual exploratory state was
+committed and pushed as `6bacde3` (`Checkpoint exploratory cloud deck
+settings`). That checkpoint preserves the changed camera, 56 samples, larger
+volume and grid, softer/no-detail noise, and -6000 slope without creating a
+second live scene configuration.
+
+Inspection of the pre-experiment config stored in `23021f9` found a specific
+camera-boundary hazard. Its cloud center/dimensions produce base Y 450 through
+1250, but the axis-aligned proxy expands globally to Y 150 when the -300 far
+slope is enabled. The camera eye `[290, 165, 365]` is consequently inside the
+proxy box even though it is below the actual local sloped density. The baseline
+was therefore never restored or run as an intermediate live state.
+
+The safeguards and conversion were completed as follows:
+
+- Extended both `SceneConfig` and the scene builder to reject a camera inside
+  any enabled cloud boundary, including legacy axis-aligned volumes, before
+  grid generation.
+- Added direct tests for both legacy and corner-prism camera containment.
+- In one `apply_patch` transaction, restored all checked-in camera, sampling,
+  cloud placement/dimensions, grid resolution, noise, and optical values;
+  inserted the equivalent prism; and disabled `depth_slope` while retaining
+  its inactive -300 value.
+- The resulting config differs from the config in `23021f9` in exactly two
+  semantic respects: the corner-prism block is present and
+  `depth_slope.enabled` changes from true to false.
+- The prism spans X -40000 to 10000. Its near edge is Y 450 at Z 3000, its far
+  edge is Y 150 at Z -23000, and its vertical thickness is 800.
+- `SceneConfig` reports zero live-config errors. The projection diagnostic
+  identifies `corner_prism` and reports the camera outside. Its disposable SVG
+  is `/tmp/overcast-boundary-baseline-prism.svg`.
+- The actual live overcast configuration completed through the compiled grid
+  builder in a disposable directory using eight builder threads. It returned
+  zero in 0.572 seconds and wrote a 39,936,339-byte PBRT medium declaration,
+  which was then removed with the temporary directory. PBRT was not invoked.
+- Final verification ran 136 tests in the project environment with 13
+  dependency-aware skips and no failures. System Python passed all 121 non-GUI
+  tests. `git diff --check` passed. No PBRT render was launched.

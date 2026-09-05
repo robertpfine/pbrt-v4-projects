@@ -1493,7 +1493,7 @@ class SceneConfig:
                         if not isinstance(cloud, dict) or not cloud.get("enabled", False):
                             continue
                         boundary = cloud.get("boundary", {})
-                        if not isinstance(boundary, dict) or boundary.get("mode") != "corner_prism":
+                        if not isinstance(boundary, dict):
                             continue
                         try:
                             cloud_boundary = CloudBoundary(
@@ -1505,7 +1505,8 @@ class SceneConfig:
                             )
                             if cloud_boundary.contains(eye):
                                 errors.append(
-                                    f"sky.clouds.{index}.boundary contains camera eye"
+                                    f"sky.clouds.{index}.{cloud_boundary.mode} "
+                                    "boundary contains camera eye"
                                 )
                         except (IndexError, TypeError, ValueError):
                             # The cloud-specific validation above reports the

@@ -60,7 +60,8 @@ exclusive.
 Mottled cloud decks may now replace the legacy symmetric XYZ
 `edge_fade_fraction` triple with independent left, right, bottom, top, near,
 and far fractions. Enabled corner prisms are rejected before grid generation
-if malformed or if they contain the camera eye.
+if malformed. Every enabled cloud—including a legacy axis-aligned cloud—is
+rejected if its boundary contains the camera eye.
 
 Run `./cloud_boundary_diagnostic.py --cloud overcast_cloud_deck` to project the
 current boundary vertices into the configured camera frame without building or
@@ -69,11 +70,22 @@ Exact schema, semantics, limitations, and workflow are in
 `docs/cloud-boundary-controls.md`; the implementation record is in
 `docs/engineering-progress-2026-09-04.md`.
 
-The artist's current manual camera/cloud experiments in
-`scene_workspace/config.json` were deliberately not rewritten or reordered by
-this implementation. The live cloud therefore remains in legacy axis-aligned
-mode until the artist chooses actual corner coordinates. Do not automatically
-activate `corner_prism` or replace those in-progress values.
+The artist's manual camera/cloud experiments were preserved exactly in pushed
+WIP checkpoint `6bacde3` before the live file was changed. The live
+`scene_workspace/config.json` now restores the pre-experiment checked-in camera,
+sampling, cloud placement/dimensions, grid resolution, and noise values. It
+activates only the mathematically equivalent corner prism: near bottom Y 450
+at Z 3000, far bottom Y 150 at Z -23000, X extent -40000 to 10000, and vertical
+thickness 800. The retained `far_y_offset` is -300 but `depth_slope.enabled` is
+false. This target differs from the `23021f9` config only by that boundary block
+and the disabled slope.
+
+Do not restore and render the `23021f9` config as an intermediate state. Its
+globally expanded axis-aligned slope proxy spans Y 150 to 1250 and geometrically
+contains the camera eye at `[290, 165, 365]`, even though the actual sloped
+density bottom there is higher. The one-edit prism conversion removes that
+proxy mismatch; validation and the projection diagnostic both report the
+camera outside. No PBRT render has yet been launched from this converted state.
 
 ## 2026-08-29 PBRT-v4 Art Studio checkpoint
 

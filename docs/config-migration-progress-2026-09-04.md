@@ -1841,5 +1841,8 @@ the limitation of the migrated `depth_slope` control: it offsets density with
 depth but leaves an axis-aligned medium boundary. The subsequent explicit
 corner-prism implementation, validation, Python/C++ parity work, and projection
 diagnostic are recorded in `docs/engineering-progress-2026-09-04.md` and
-specified in `docs/cloud-boundary-controls.md`. The extension is opt-in and did
-not rewrite or reorder the artist's live cloud settings.
+specified in `docs/cloud-boundary-controls.md`. The initial implementation did
+not rewrite the artist's live settings. Those exploratory values were later
+preserved in pushed WIP checkpoint `6bacde3`, after which the pre-experiment
+values and their mathematically equivalent safe corner prism were applied in
+one atomic edit. No intermediate axis-aligned baseline was rendered.

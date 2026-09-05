@@ -308,6 +308,30 @@ class SceneConfigTests(unittest.TestCase):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
+    def test_axis_aligned_cloud_containing_camera_is_not_saved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, source = self.make_config(directory)
+            config = SceneConfig(path)
+            config.set("scene_description.sky.clouds", [{
+                "name": "legacy_camera_trap",
+                "enabled": True,
+                "placement": {"position": [0.0, 1.0, 2.0]},
+                "dimensions": [20.0, 5.0, 20.0],
+                "density_field": {
+                    "generator": "mottled_veil",
+                    "resolution": [4, 4, 4],
+                    "shape": {}, "noise": {},
+                    "depth_slope": {"enabled": False},
+                    "depth_profile": {}, "lobes": [],
+                },
+                "medium": {"type": "uniformgrid"},
+            }])
+            with self.assertRaisesRegex(
+                SceneConfigError, "axis_aligned boundary contains camera eye"
+            ):
+                config.save()
+            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
     def test_invalid_render_settings_are_not_saved(self):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)

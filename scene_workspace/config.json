@@ -16,8 +16,8 @@
     "enabled": true,
     "type": "perspective",
     "look_at": {
-      "eye": [0.0, 100.0, 1000.0],
-      "look": [0.0, 5.0, 0.0],
+      "eye":  [290.0, 165.0, 365.0],
+      "look": [5.0, 155.0, -5.0],
       "up":   [0, 1, 0]
     },
     "fov": 50.0
@@ -30,7 +30,7 @@
     },
     "sampler": {
       "type": "halton",
-      "pixel_samples": 56
+      "pixel_samples": 8
     },
     "integrator": {
       "type": "volpath",
@@ -1665,12 +1665,22 @@
           "name": "overcast_cloud_deck",
           "enabled": true,
           "placement": {
-            "position": [0.0, 10000.0, -35000.0]
+            "position": [-15000.0, 850.0, -10000.0]
           },
-          "dimensions": [50000.0, 2500.0, 50000.0],
+          "dimensions": [50000.0, 800.0, 26000.0],
+          "boundary": {
+            "mode": "corner_prism",
+            "bottom_corners": {
+              "near_left": [-40000.0, 450.0, 3000.0],
+              "near_right": [10000.0, 450.0, 3000.0],
+              "far_right": [10000.0, 150.0, -23000.0],
+              "far_left": [-40000.0, 150.0, -23000.0]
+            },
+            "thickness": 800.0
+          },
           "density_field": {
             "generator": "mottled_veil",
-            "resolution": [200, 50, 150],
+            "resolution": [160, 40, 120],
             "shape": {
               "bottom_fade": 120.0,
               "top_fade": 180.0
@@ -1682,9 +1692,9 @@
               "roughness": 0.55,
               "frequency_jump": 2.0,
               "coverage": 0.34,
-              "softness": 0.32,
+              "softness": 0.22,
               "broad_strength": 1.0,
-              "detail_strength": 0.0,
+              "detail_strength": 0.35,
               "detail_frequency_scale": 2.7,
               "edge_fade_fraction": [0.08, 0.15, 0.1],
               "domain_warp": {
@@ -1694,15 +1704,15 @@
               }
             },
             "depth_slope": {
-              "enabled": true,
-              "far_y_offset": -6000.0
+              "enabled": false,
+              "far_y_offset": -300.0
             },
             "depth_profile": {},
             "lobes": []
           },
           "medium": {
             "type": "rgbgrid",
-            "density_scale": 0.90,
+            "density_scale": 0.9,
             "scattering": [0.0028, 0.003, 0.0032],
             "absorption": [0.00045, 0.0005, 0.00055],
             "anisotropy": 0.25,

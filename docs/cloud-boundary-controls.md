@@ -86,9 +86,10 @@ Scene validation and scene construction reject a corner prism when:
 - the XZ footprint is crossed, concave, or has zero area;
 - the four bottom points are not coplanar;
 - `depth_slope` is also enabled; or
-- the enabled prism contains the configured camera eye.
+- any enabled cloud boundary contains the configured camera eye.
 
-The camera check runs before the expensive cloud grid is generated. This
+The camera check applies to legacy axis-aligned boxes as well as corner prisms
+and runs before the expensive cloud grid is generated. This
 prevents the accidental camera-inside-volume state associated with extremely
 slow or apparently unbounded volumetric renders.
 
