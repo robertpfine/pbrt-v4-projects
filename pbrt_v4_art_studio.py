@@ -80,6 +80,8 @@ class SceneComponent:
     page: str
     enabled_path: JsonPath | None = None
     heading: bool = False
+    note: str = ""          # e.g. "on flat_landform" for land cover
+    in_dialog: bool = True  # False: Outline only (landform properties)
 
 
 _SURFACE_OBJECT_PAGES = {
@@ -90,12 +92,23 @@ _SURFACE_OBJECT_PAGES = {
 }
 
 
+LAND_COVER_MAPPING_NOTE = (
+    "mapping — config.json still nests these under landforms[].surface_objects"
+)
+
+
 def scene_components(config: SceneConfig) -> list[SceneComponent]:
     """Derive the component hierarchy from the authoritative configuration.
 
     The order mirrors config.json: the setup roots first, then every named
     entry under scene_description. Rows are generated from the arrays, so an
     entry added to the JSON appears here without any interface change.
+
+    Land cover is a MAPPING: the Studio presents surface objects as their
+    own collection, separate from the landforms they sit on, while
+    config.json keeps them nested at landforms[i].surface_objects[j]. Every
+    row still binds to that real path. Remove the mapping when the schema
+    migrates to a top-level land_cover collection.
     """
 
     components: list[SceneComponent] = [
@@ -119,9 +132,13 @@ def scene_components(config: SceneConfig) -> list[SceneComponent]:
             return path + ("enabled",)
         return None
 
-    for index, landform in enumerate(config.get(LANDFORMS_PATH, [])):
-        if not isinstance(landform, dict):
-            continue
+    landforms = [
+        (index, landform)
+        for index, landform in enumerate(config.get(LANDFORMS_PATH, []))
+        if isinstance(landform, dict)
+    ]
+    landform_pages: dict[int, str] = {}
+    for index, landform in landforms:
         path = LANDFORMS_PATH + (index,)
         key = f"landform:{index}"
         topography = landform.get("topography", {})
@@ -129,8 +146,9 @@ def scene_components(config: SceneConfig) -> list[SceneComponent]:
             "distant_hills"
             if isinstance(topography, dict)
             and topography.get("generator") == "distant_ridge"
-            else "landform"
+            else f"landform:{index}"
         )
+        landform_pages[index] = page
         components.append(SceneComponent(
             name_of(landform, f"landform {index}"),
             key,
@@ -138,6 +156,9 @@ def scene_components(config: SceneConfig) -> list[SceneComponent]:
             page,
             enabled_path_of(landform, path),
         ))
+        # The ground texture is a property of the landform, not a scene
+        # component: it stays reachable in the Outline (Ground page) but is
+        # not offered in Scene Components and Setup.
         texture = landform.get("surface", {}).get("texture")
         texture_path = path + ("surface", "texture")
         if enabled_path_of(texture, texture_path):
@@ -147,17 +168,28 @@ def scene_components(config: SceneConfig) -> list[SceneComponent]:
                 key,
                 "ground",
                 texture_path + ("enabled",),
+                in_dialog=False,
             ))
+
+    components.append(SceneComponent(
+        "Land cover", "land_cover", "scene_root", "", heading=True,
+        note=LAND_COVER_MAPPING_NOTE,
+    ))
+    for index, landform in landforms:
+        owner = name_of(landform, f"landform {index}")
         for object_index, item in enumerate(landform.get("surface_objects", [])):
             if not isinstance(item, dict):
                 continue
-            object_path = path + ("surface_objects", object_index)
+            object_path = LANDFORMS_PATH + (index, "surface_objects", object_index)
             components.append(SceneComponent(
                 name_of(item, f"surface object {object_index}"),
-                f"{key}:so:{object_index}",
-                key,
-                _SURFACE_OBJECT_PAGES.get(item.get("generator"), page),
+                f"cover:{index}:{object_index}",
+                "land_cover",
+                _SURFACE_OBJECT_PAGES.get(
+                    item.get("generator"), landform_pages[index]
+                ),
                 enabled_path_of(item, object_path),
+                note=f"on {owner}",
             ))
 
     components.append(SceneComponent("Objects", "objects", "scene_root", "objects"))
@@ -252,7 +284,7 @@ def visible_components(
             # every cloud is off) is omitted; leaf rows without an enabled
             # flag (Context, Camera, Render) are always shown.
             if component.heading or component.key in {
-                "landforms", "objects", "clouds", "atmosphere"
+                "landforms", "land_cover", "objects", "clouds", "atmosphere"
             }:
                 return False
         shown.add(component.key)
@@ -697,55 +729,56 @@ class Inspector(QtWidgets.QWidget):
         form.addRow("Current mode", mode)
 
     def _build_landform_page(self) -> None:
-        form = self._page(
+        # The Landforms row opens a short overview; each landform row in the
+        # Outline opens its own page ("landform:<index>") showing only that
+        # landform's parameters.
+        overview = self._page(
             "landform",
-            "Landform",
-            "Each retained landform owns its geometry, topography, and surface. "
-            "Exactly one terrain heightfield is enabled in the current scene.",
+            "Landforms",
+            "Each landform owns its placement, geometry, topography, and "
+            "surface. Exactly one terrain heightfield is enabled in a scene. "
+            "Select a landform in the Outline to edit it.",
         )
-        for index, name in enumerate(self.config.landform_names()):
-            root = LANDFORMS_PATH + (index,)
-            heading = QtWidgets.QLabel(name)
-            heading.setStyleSheet("font-weight: 600; color: #f0b84c;")
-            form.addRow(heading)
-            self._check(form, "Enabled", root + ("enabled",))
-            self._vector(form, "Position", root + ("placement", "position"))
-            self._vector(
+        names = self.config.landform_names()
+        for index, name in enumerate(names):
+            self._check(overview, name, LANDFORMS_PATH + (index, "enabled"))
+        for index, name in enumerate(names):
+            self._build_single_landform_page(index, name)
+
+    def _build_single_landform_page(self, index: int, name: str) -> None:
+        root = LANDFORMS_PATH + (index,)
+        topography = self.config.get(root + ("topography",), {})
+        generator = (
+            topography.get("generator") if topography.get("enabled") else None
+        )
+        form = self._page(
+            f"landform:{index}",
+            name,
+            f"Topography: {generator or 'none (flat plane)'}.",
+        )
+        self._check(form, "Enabled", root + ("enabled",))
+        self._vector(form, "Position", root + ("placement", "position"))
+        self._vector(form, "Rotation", root + ("placement", "rotation_degrees"))
+        patch = root + ("geometry", "patches", 0)
+        self._pair(form, "Dimensions", patch + ("dimensions",), 1.0, 100_000.0, 2)
+        if generator == "terrain_heightfield":
+            parameters = root + ("topography", "parameters")
+            self._number(
                 form,
-                "Rotation",
-                root + ("placement", "rotation_degrees"),
+                "Grade",
+                parameters + ("slope", "grade"),
+                minimum=-10.0,
+                maximum=10.0,
+                decimals=4,
             )
-            patch = root + ("geometry", "patches", 0)
-            self._pair(
+            self._number(
                 form,
-                "Dimensions",
-                patch + ("dimensions",),
-                1.0,
-                100_000.0,
-                2,
+                "Noise amplitude",
+                parameters + ("noise", "amplitude"),
+                minimum=0.0,
+                maximum=10_000.0,
+                decimals=3,
             )
-            topography = self.config.get(root + ("topography",), {})
-            if (
-                topography.get("enabled", False)
-                and topography.get("generator") == "terrain_heightfield"
-            ):
-                parameters = root + ("topography", "parameters")
-                self._number(
-                    form,
-                    "Grade",
-                    parameters + ("slope", "grade"),
-                    minimum=-10.0,
-                    maximum=10.0,
-                    decimals=4,
-                )
-                self._number(
-                    form,
-                    "Noise amplitude",
-                    parameters + ("noise", "amplitude"),
-                    minimum=0.0,
-                    maximum=10_000.0,
-                    decimals=3,
-                )
 
     def _build_grass_page(self) -> None:
         form = self._page(
@@ -1735,19 +1768,50 @@ class SceneSetupDialog(QtWidgets.QDialog):
                     if other is not box and other.isChecked():
                         other.setChecked(False)
 
+        # One visual rule per level: a top-level container is a yellow
+        # header; a container nested inside one is a muted sub-header; every
+        # component is a checkbox one level under its container. A component
+        # that sits directly under scene_description (Water) gets its own
+        # header so it reads like every other category.
+        def header(text: str, *, top: bool, indent: int, note: str = "") -> None:
+            label = QtWidgets.QLabel(text.upper() if top else text)
+            if top:
+                style = "font-weight: 600; color: #f0b84c; margin-top: 10px;"
+            else:
+                style = "font-weight: 600; color: #aeb6bd; margin-top: 4px;"
+            label.setStyleSheet(f"{style} margin-left: {indent}px;")
+            rows.addWidget(label)
+            if note:
+                hint = QtWidgets.QLabel(note)
+                hint.setObjectName("inspectorNote")
+                hint.setStyleSheet(f"margin-left: {indent}px; font-size: 11px;")
+                hint.setWordWrap(True)
+                rows.addWidget(hint)
+
         for component in components:
             if component.key in {"setup", "camera", "render", "scene_root", "scene"}:
                 continue
-            indent = 18 * max(0, depth[component.key] - 1)
-            if component.enabled_path is None:
-                label = QtWidgets.QLabel(component.label)
-                label.setStyleSheet(
-                    f"font-weight: 600; color: #f0b84c; margin-left: {indent}px;"
-                    " margin-top: 6px;"
-                )
-                rows.addWidget(label)
+            if not component.in_dialog:
                 continue
-            box = QtWidgets.QCheckBox(component.label)
+            level = depth[component.key]  # 1 = directly under scene_description
+            top_level = component.parent == "scene_root"
+            if component.enabled_path is None:
+                header(
+                    component.label,
+                    top=top_level,
+                    indent=0 if top_level else 18 * (level - 1),
+                    note=component.note,
+                )
+                continue
+            if top_level:
+                header(component.label, top=True, indent=0)
+                indent = 18
+            else:
+                indent = 18 * (level - 1)
+            text = component.label
+            if component.note:
+                text = f"{component.label}   · {component.note}"
+            box = QtWidgets.QCheckBox(text)
             box.setObjectName(f"component:{component.key}")
             box.setStyleSheet(f"margin-left: {indent}px;")
             box.setChecked(bool(self.config.get(component.enabled_path, False)))
@@ -1828,7 +1892,12 @@ class StudioWindow(QtWidgets.QMainWindow):
         items: dict[str, QtWidgets.QTreeWidgetItem] = {}
         for component in visible_components(self.config, scene_components(self.config)):
             parent = items.get(component.parent)
-            item = QtWidgets.QTreeWidgetItem(parent or tree, [component.label])
+            text = component.label
+            if component.note and not component.heading:
+                text = f"{component.label}  · {component.note}"
+            item = QtWidgets.QTreeWidgetItem(parent or tree, [text])
+            if component.note:
+                item.setToolTip(0, component.note)
             item.setData(0, QtCore.Qt.ItemDataRole.UserRole, component.key)
             item.setData(0, QtCore.Qt.ItemDataRole.UserRole + 1, component.page)
             if component.heading:

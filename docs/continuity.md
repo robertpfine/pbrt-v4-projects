@@ -2,6 +2,71 @@
 
 Last updated: 2026-09-07
 
+## 2026-09-07 land-cover presentation checkpoint; live JSON excluded
+
+The artist requested a checkpoint of `pbrt_v4_art_studio.py`,
+`tests/test_art_studio.py`, `docs/claude-review-continuity.md`, and the new
+`docs/artist-questions.md`, plus this updated handoff. Codex reviewed the diff
+and ran the Qt suite: 159 tests completed successfully, with 19 dependency
+skips (140 passed). No render was launched or new visual master accepted.
+
+The GUI now presents existing `landforms[].surface_objects[]` in a separate
+Land cover collection, retaining their actual nested JSON paths and showing
+their owning landform. This is a presentation mapping, not a schema migration.
+Ordinary landform entries open individual Parameter Values pages; the distant
+ridge still uses its existing category page. Scene Setup uses consistent
+category headings and omits ground texture from its component checklist.
+
+This is an intermediate implementation preserved before the next GUI pass.
+The artist's critique identifies incomplete entry pages: litter, rocks, and
+undergrowth still route to their landform page; texture and other existing
+category pages still expose only subsets or use shared bindings. The code's
+passing tests do not establish completion of the revised artistic requirements.
+Preserve this work without treating it as an accepted final interface.
+
+The artist explicitly excluded `scene_workspace/config.json`. Its five new
+enable-flag edits remain uncommitted and unchanged: `right_dip_rise` off,
+`flat_landform` on, undergrowth on, fractal tree off, and `vista_plane` off.
+The live file still has scene name `guiTest`, with SHA-256
+`f1952d7ee13384e36950f7eb7fb29108b10ccc3ddda142fc64594a7d0dc147eb`.
+Git retains the config from `6a68cc6`, SHA-256
+`70a57e12b889174f15c3efb3d54ad4db09dfbec7cf5715d15bb8385a8b501215`.
+The expected post-checkpoint working copy therefore has this one modified
+file. Do not restore it or include it in a later commit without artist direction.
+
+### Current GUI direction and record ownership
+
+Read `docs/artist-questions.md` before further GUI work. It contains the
+artist's critique, glossary, and updated direction, superseding earlier
+curated-control guidance in this handoff and the initial Qt specification:
+
+- Start with every field of an entry in JSON order, grouped by its braces;
+  any later curation belongs to the artist. Present existing fields without
+  silently truncating or combining entries.
+- Container rows expand/collapse only and have no overview page. Each entry
+  gets its own complete page.
+- Replace the Context presentation with scene name and date under Setup;
+  omit the other context controls and mode in this GUI round. Keep Render
+  fields grouped as in JSON and separate from file names and paths.
+- Defer shaft light/composite controls throughout this GUI round. Enumerated
+  fields use validated plain text, with no dropdowns this round.
+- Use the artist's terms Art Studio, Outline, Parameter Values, entry,
+  container, and working copy; reserve tree for a plant.
+
+Claude's journal records a plan agreed in principle: first build a generic
+entry form and route undergrowth only for field-by-field artist review, then
+extend it to other entries and Setup, and retire older page functions only
+after the artist's review. This checkpoint does not begin that implementation
+or the proposed land-cover JSON migration.
+
+One author per record: Codex writes `AGENTS.md` and `docs/continuity.md`;
+Claude writes `docs/claude-review-continuity.md`. Neither assistant writes into
+the other's records, including checkpoint annotations. Codex records checkpoint
+facts here for Claude to reference. `docs/artist-questions.md` belongs to the
+artist; Claude maintains it on request and Codex reads it. Both incoming
+Claude-authored documents are included exactly as supplied. The artist permits
+the earlier Codex annotation in Claude's journal to remain as a past exception.
+
 ## 2026-09-07 Claude GUI work and combined checkpoint
 
 The artist instructed Codex to checkpoint all of Claude's authorized GUI/test
@@ -70,6 +135,9 @@ pending coordination suggestion in the September 5 record below.
 - Evaluate review findings against the same code, configuration, and archived
   render evidence. `docs/continuity.md` remains the canonical handoff;
   `docs/claude-review-continuity.md` is Claude's subordinate review record.
+- Preserve record authorship: Codex alone writes `AGENTS.md` and this handoff;
+  Claude alone writes its review journal. Record checkpoint facts here and
+  reference them across records rather than adding notes to another author's file.
 
 For today's handoff, the artist explicitly authorized inclusion of Claude's
 GUI/test changes and review journal, the artist's own scene edits, and Codex's

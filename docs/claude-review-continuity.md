@@ -359,3 +359,93 @@ Working copy: Claude's changes above plus the artist's `config.json` save
 (scene name `guiTest`, `right_dip_rise` on, `flat_landform` off), all
 uncommitted. The artist is asking Codex to review and checkpoint everything.
 Art Studio may still be running from Claude's last launch.
+
+## 2026-09-07 second build session: mapping, critique round, and the plan
+
+Follows checkpoint `6a68cc6`. Everything below is uncommitted at the time of
+writing; the artist is asking Codex to checkpoint it, **excluding
+`scene_workspace/config.json`** (the artist's guiTest edits stay
+uncommitted by their choice).
+
+### Built this session
+
+1. **Land-cover mapping** in Art Studio. `scene_components()` now presents
+   `landforms[i].surface_objects[j]` as a separate LAND COVER collection in
+   both the Scene Components dialog and the Outline, each entry annotated
+   "on <landform>". `config.json` is unchanged — every row still binds to
+   the nested path. This is a **mapping**, labeled as such in the dialog
+   (`LAND_COVER_MAPPING_NOTE`); it is the artist's chosen way to live with
+   a proposed structure before migrating the file. Dialog restyled: yellow
+   headers at top level only, muted sub-headers, Water under its own
+   header, ground texture removed from the dialog.
+2. **Per-landform pages** (`landform:<index>`): clicking a landform shows
+   only that landform. The Landforms row opened an overview — now
+   superseded (see critique item 9).
+3. **Test fixture** `tests/fixtures/canonical_config.json` (earlier in the
+   day, checkpointed in `6a68cc6`); tests no longer depend on the live
+   config.
+4. **`docs/artist-questions.md`** — new, the artist's Q&A log and
+   glossary, with a running **criticisms** section. Read it; it is where
+   the artist's rules now live.
+
+### The critique round (recorded in full in `docs/artist-questions.md`)
+
+The artist reviewed the result and rejected the approach of building the
+Outline on top of Codex's curated pages. Governing rules that now
+supersede earlier direction:
+
+- **Every field, in the JSON's order** — an entry's page shows everything
+  between its outermost braces, grouped as the braces group it. This
+  supersedes `continuity.md`'s "do not infer that every JSON value needs a
+  permanent control." Curation, if any, comes later, from a complete view.
+- The GUI work is **moving things around, not rewriting, truncating, or
+  joining**.
+- **Containers are not clickable** (Landforms, Land cover, Objects,
+  Clouds, Atmosphere): expand/collapse only. No overview pages.
+- **"Context" is gone as a concept.** Only scene name and date are wanted,
+  under Setup. Latitude/longitude/time zone/world north/mode are not shown.
+- **Shaft light / shaft composite deferred** — out of every page this round.
+- **No dropdowns** this round; enumerated values are plain text, validated
+  on save.
+- Vocabulary: **Art Studio** always in full, never "Studio". **Entry** =
+  a named block at its outermost braces; one Outline row, one page.
+
+Claude's own assessment of the failure, stated to the artist: it followed a
+recorded rule rather than asking, and wired navigation to pages it already
+knew were stubs. Recorded here so the next session does not repeat it.
+
+### The plan the artist has agreed to in principle (not yet started)
+
+- **Step A** — one generic **entry form builder**: given an entry's path,
+  render every field by JSON type (string → text, number → number box,
+  bool → checkbox, short number list → row, brace-group → titled section,
+  list of brace-groups → numbered sections), each control writing back to
+  its own path via `config.set`. Route **undergrowth only** to it; tests
+  for each type and write-back. Artist verifies against the JSON field by
+  field. ~1½ h.
+- **Step B** — route every other entry row to the builder; remove Context
+  and the texture row; Setup = Scene (name, date) · Camera · Render
+  (grouped as JSON, minus shaft, minus file names/paths); hide shaft in the
+  dialog. ~1 h.
+- **Step C** — retire Codex's per-entry page functions, on the artist's
+  say-so after clicking through.
+
+All reversible: Art Studio code and tests only; `config.json` and the
+renderer untouched; `git checkout` restores any step.
+
+### Deferred / tabled (details in `docs/artist-questions.md`)
+
+- Landform / land-cover **schema migration** (separate top-level
+  `land_cover[]` with a `landform` reference) — agreed in principle, to
+  follow once the mapping has been lived with. Estimate 4–6 h.
+- **Generic landform template + "New Landform…"** — tabled; would be the
+  Art Studio's first "add".
+- **Astronomical sun direction** from date/time/place — wanted sooner
+  rather than later; no solar code exists yet.
+
+### State at handoff
+
+Working copy: `pbrt_v4_art_studio.py`, `tests/test_art_studio.py`, new
+`docs/artist-questions.md`, this file — plus the artist's `config.json`
+edits (guiTest), to be left out of the checkpoint. 159 tests pass. Art
+Studio may be running from the artist's own launch.

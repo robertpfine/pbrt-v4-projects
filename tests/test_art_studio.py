@@ -56,6 +56,10 @@ class ArtStudioTests(unittest.TestCase):
                 "landscape",
                 "ground",
                 "landform",
+                "landform:0",
+                "landform:1",
+                "landform:2",
+                "landform:3",
                 "grass",
                 "poppies",
                 "trees",
@@ -178,14 +182,20 @@ class ArtStudioTests(unittest.TestCase):
         self.assertEqual(keys[:3], ["setup", "camera", "render"])
         self.assertIn("scene_root", keys)
         self.assertIn("scene", keys)
-        # Enabled landforms and the one enabled surface object appear ...
+        # Enabled landforms and the one enabled land-cover entry appear ...
         self.assertIn("landform:1", keys)  # flat_landform
         self.assertIn("landform:2", keys)  # vista_plane
-        self.assertIn("landform:1:so:6", keys)  # fractal_tree
+        self.assertIn("land_cover", keys)
+        self.assertIn("cover:1:6", keys)  # fractal_tree, on flat_landform
+        # ... land cover is its own collection, not nested under landforms ...
+        self.assertLess(keys.index("landform:2"), keys.index("land_cover"))
+        self.assertLess(keys.index("land_cover"), keys.index("cover:1:6"))
+        # ... the ground texture stays reachable in the Outline ...
+        self.assertIn("landform:1:texture", keys)
         # ... disabled ones do not, and nothing is dimmed in their place.
         self.assertNotIn("landform:0", keys)  # right_dip_rise
         self.assertNotIn("landform:3", keys)  # broad_rise
-        self.assertNotIn("landform:1:so:0", keys)  # grass
+        self.assertNotIn("cover:1:0", keys)  # grass
         # Grouping rows with nothing enabled under them are omitted.
         self.assertNotIn("clouds", keys)
         self.assertNotIn("objects", keys)
@@ -200,11 +210,12 @@ class ArtStudioTests(unittest.TestCase):
             for component in scene_components(self.window.config)
             if not component.heading
         }
-        self.assertEqual(pages["landform:1"], "landform")
+        self.assertEqual(pages["landform:1"], "landform:1")
         self.assertEqual(pages["landform:3"], "distant_hills")
-        self.assertEqual(pages["landform:1:so:0"], "grass")
-        self.assertEqual(pages["landform:1:so:1"], "poppies")
-        self.assertEqual(pages["landform:1:so:6"], "trees")
+        self.assertEqual(pages["cover:1:2"], "landform:1")  # litter → its landform
+        self.assertEqual(pages["cover:1:0"], "grass")
+        self.assertEqual(pages["cover:1:1"], "poppies")
+        self.assertEqual(pages["cover:1:6"], "trees")
         self.assertEqual(pages["landform:1:texture"], "ground")
         self.assertEqual(pages["cloud:0"], "clouds")
         self.assertEqual(pages["atmosphere:fog:0"], "atmosphere")
@@ -213,7 +224,7 @@ class ArtStudioTests(unittest.TestCase):
 
     def test_scene_setup_checkbox_enables_component_and_refreshes_outline(self):
         dialog = SceneSetupDialog(self.window.config, self.window, launch=False)
-        grass = dialog.findChild(QtWidgets.QCheckBox, "component:landform:1:so:0")
+        grass = dialog.findChild(QtWidgets.QCheckBox, "component:cover:1:0")
         clouds = dialog.findChild(QtWidgets.QCheckBox, "component:cloud:2")
         self.assertIsNotNone(grass)
         self.assertIsNotNone(clouds)
@@ -227,10 +238,33 @@ class ArtStudioTests(unittest.TestCase):
         self.assertTrue(self.window.config.dirty)
         self.window._refresh_navigation()
         keys = self.window.outline_keys()
-        self.assertIn("landform:1:so:0", keys)
+        self.assertIn("cover:1:0", keys)
         self.assertIn("clouds", keys)
         self.assertIn("cloud:2", keys)
         self.assertNotIn("cloud:0", keys)
+        dialog.close()
+
+    def test_scene_setup_presents_land_cover_as_a_mapping(self):
+        dialog = SceneSetupDialog(self.window.config, self.window, launch=False)
+        labels = [
+            label.text() for label in dialog.findChildren(QtWidgets.QLabel)
+        ]
+        self.assertIn("LAND COVER", labels)
+        self.assertIn("WATER", labels)
+        self.assertTrue(any("mapping" in text for text in labels))
+        # The ground texture is a landform property, not a component.
+        self.assertIsNone(
+            dialog.findChild(QtWidgets.QCheckBox, "component:landform:1:texture")
+        )
+        grass = dialog.findChild(QtWidgets.QCheckBox, "component:cover:1:0")
+        self.assertIn("on flat_landform", grass.text())
+        self.assertIsNotNone(dialog.findChild(QtWidgets.QCheckBox, "component:water"))
+        # Rows still bind to the real nested path.
+        grass.setChecked(True)
+        self.application.processEvents()
+        self.assertTrue(self.window.config.get(
+            ("scene_description", "landforms", 1, "surface_objects", 0, "enabled")
+        ))
         dialog.close()
 
     def test_scene_setup_keeps_exactly_one_terrain_heightfield_landform(self):
