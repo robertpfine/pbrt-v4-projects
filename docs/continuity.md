@@ -2,6 +2,54 @@
 
 Last updated: 2026-09-07
 
+## 2026-09-07 entry-form checkpoint; current guiTest included
+
+The artist requested a checkpoint of `pbrt_v4_art_studio.py`,
+`tests/test_art_studio.py`, `docs/artist-questions.md`,
+`docs/claude-review-continuity.md`, and the current
+`scene_workspace/config.json`, plus this updated handoff. This supersedes the
+previous checkpoint's exclusion of the working scene. Codex reviewed the diff
+and ran the Qt suite: 164 tests completed successfully, with 19 dependency
+skips (145 passed). The supplied five files are preserved without Codex edits;
+Claude's journal and the artist's questions remain under their own authorship.
+
+Steps A and B now route all 27 configured entry pages through the generic
+entry-form builder, alongside Setup > Scene with name and date. Fields follow
+JSON order and nested groups, with plain-text enumerations and controls bound
+to their actual `SceneConfig` paths. Landforms omit `surface_objects` because
+those have separate Land cover pages; Sun and Render omit the deferred shaft
+blocks. Context and the separate texture row are gone. Container rows have no
+page and no longer trigger a fallback page change when Qt makes them current.
+The workspace has a draggable splitter, fixed-width value controls, and
+capitalized top-level section titles. Number and combo controls ignore mouse
+wheel events. Scene Setup states the exclusive terrain-heightfield rule.
+
+The old curated page functions remain in the source but are not called.
+Their removal (Step C) and the missing `reflectance_variants` range validation
+remain deferred work, as recorded in Claude's journal. The incident account
+in `docs/artist-questions.md` describes proposed follow-ups as well as fixes:
+this checkpoint disables wheel changes unconditionally; it does not add
+proportional numeric stepping or change `scene_config.py`. Generic numeric
+controls use finite ranges and at most nine decimal places, while null and
+empty collections are displayed without structural editing controls. Do not
+infer unrestricted JSON editing or a completed validator from the generic form.
+
+The checked-in live scene is the artist's current `guiTest`, SHA-256
+`8abda0fb2712e78e1a906e64d2e82a0cb6f78876d4d5616e415374779e1f3395`.
+It uses camera eye `[0,6,260]`, look `[0,2,-0.0]`, and seven samples. These
+current JSON values supersede the earlier camera position described in
+Claude's journal, which is preserved as supplied. `flat_landform` and its
+undergrowth are enabled; `right_dip_rise`, fractal tree, and `vista_plane` are
+disabled. Undergrowth has five variants, scale `[6.0,8.8]`, count 1,400, seed
+75, and the artist's current colors. The procedural overcast environment uses
+coverage 0.88, softness 0.16, contrast 0.52, and rotation zero, with the revised
+feature sizes and colors retained exactly. The test fixture is unchanged.
+
+This is a working-scene and GUI checkpoint, not a new accepted visual master.
+No renderer or generator implementation was changed, no render was launched,
+and Step C was not started. Future work still follows the artist's instructions
+and the one-author-per-record protocol below.
+
 ## 2026-09-07 land-cover presentation checkpoint; live JSON excluded
 
 The artist requested a checkpoint of `pbrt_v4_art_studio.py`,

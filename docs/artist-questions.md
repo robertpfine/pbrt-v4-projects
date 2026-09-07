@@ -73,6 +73,51 @@ any item until the artist finishes the round and says so.
     control"). Show everything first; curation, if any, comes later and is
     the artist's decision, made from a complete view.
 
+**Resolved in Steps A and B (2026-09-07):** items 1–4, 6–15 — the entry
+form builder renders every entry in JSON order; Context is gone; Setup
+shows Scene (name, date), Camera, Render; containers are not clickable
+(a Qt "current item" subtlety made Sky fall through to the first page — fixed);
+shaft hidden everywhere; ground-texture row removed. Codex's page
+functions remain in the code, unreachable, for Step C.
+
+**Later observations, same session (resolved):**
+- Page titles and top-level sections in capitals; nested sections indented.
+- Fields too wide — fixed widths; a draggable divider between Parameter
+  Values and the image viewer.
+- Six trailing zeros — three decimals, or the value's own precision.
+- Mouse wheel over a number box changed values (reflectance reached 10.13)
+  — wheel disabled on every number box and dropdown.
+- The heightfield rule should be stated in Scene Setup, not only enforced
+  — note added under LANDFORMS; the two rows tagged "· heightfield".
+- "0.62 is a hack? It should be in the JSON" — yes; logged under Deferred
+  generator work.
+
+## Deferred generator work
+
+- **Undergrowth (fern) geometry is hard-coded.** `_fern_mesh()` in
+  `scene_workspace/build_scene.py` (line ~2242) fixes frond count (5),
+  spread (0.85), peak height (0.62), leaflet width/length in code; the JSON
+  exposes only `construction.scale`. Should be lifted into `construction`
+  the way grass blade proportions are (`construction.blade`). Rocks and
+  litter likely the same. Also: the mesh is a placeholder that does not
+  read as a fern up close — a better fern is a generator task.
+- **Astronomical sun direction** from Context date/time/place (no solar
+  code exists yet).
+- **Ocean wave engine** (`water` is an empty placeholder).
+- **Live oak** via `fractal_tree.py` with depth-scheduled `upward_bias`.
+
+## Incidents
+
+**2026-09-07 — PBRT refused the scene: "reflectance used as an albedo has
+> 1 component."** Undergrowth `reflectance_variants` had become
+`[0.025, 10.13, 0.03]` / `[0.04, −7.82, 0.04]` (from 0.13 / 0.18).
+Cause: the entry page's number boxes stepped by 1.0 and responded to the
+mouse wheel on hover, so scrolling the panel changed values. Reflectance
+must be 0–1. Second gap: `scene_config.py` validates `reflectance` but not
+`reflectance_variants`, so Save accepted it. Fix: restore 0.13 / 0.18;
+number boxes to ignore the wheel unless focused and step in proportion to
+the value; validator to range-check `reflectance_variants`.
+
 ## Glossary
 
 - **Art Studio** — the Qt desktop application (`pbrt_v4_art_studio.py`)
@@ -202,6 +247,35 @@ question: appending to `landforms[]` must not reformat the whole block —
 check `scene_config.py`'s span parser for a surgical insert first.
 Sequence after the land-cover mapping; it writes to the file, so it's a
 different risk class.
+
+**Q: "rocks · on flat_landform" — can rocks only appear on flat_landform?
+What if I want poppies on broad_rise?**
+The suffix states where that entry sits *now*: inside that landform's
+`surface_objects` in `config.json`. Because ownership is by nesting, the
+entry renders only when that landform is enabled. Poppies on `broad_rise`
+today: the poppies page has POPULATION › `extension`, already targeted at
+`broad_rise` (off) — it scatters a second population of the same poppies
+there. Grass has the same. An *independent* poppy entry on another
+landform requires copying the block in the JSON until the land-cover
+migration adds a `landform` field to each entry.
+
+**Q: What if more than one landform is enabled? What renders?**
+Each enabled landform is built and rendered as its own ground at its own
+position; they coexist (the canonical scene has `flat_landform` and
+`vista_plane` on together, and `broad_rise` joined them in the hill
+renders). The one rule: only one **terrain-heightfield** landform may be
+on — `right_dip_rise` or `flat_landform`, not both — because the cover and
+terrain-following placement assume a single heightfield. Scene Setup
+enforces this as a radio pair and now states it under LANDFORMS, and tags
+the two rows "· heightfield". Overlapping landforms simply intersect.
+
+**Q: How do I control height off the ground?**
+Camera height: `camera_settings.look_at.eye`, the Y value. A plant's
+height above the terrain: `population.y_offset` (small; keeps it from
+sinking into the mesh). A plant's size: `construction.scale`, which is
+uniform — taller and wider together. The undergrowth mesh's own
+proportions (0.62 peak height, 0.85 spread) are hard-coded in
+`build_scene.py` `_fern_mesh()`; see Deferred generator work.
 
 **Q: Does making the Studio friendlier require changing config.json?**
 No. Every Outline and dialog change is presentation only. `config.json`

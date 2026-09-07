@@ -16,8 +16,8 @@
     "enabled": true,
     "type": "perspective",
     "look_at": {
-      "eye":  [0.0, 165.0, 365.0],
-      "look": [0.0, 155.0, -5.0],
+      "eye":  [0.0, 6.0, 260.0],
+      "look": [0.0, 2.0, -0.0],
       "up":   [0, 1, 0]
     },
     "fov": 50.0
@@ -30,7 +30,7 @@
     },
     "sampler": {
       "type": "halton",
-      "pixel_samples": 8
+      "pixel_samples": 7
     },
     "integrator": {
       "type": "volpath",
@@ -65,7 +65,7 @@
     "landforms": [
       {
         "name": "right_dip_rise",
-        "enabled": true,
+        "enabled": false,
         "placement": {
           "position": [150.0, 0.0, -100.0],
           "rotation_degrees": [0.0, 0.0, 0.0]
@@ -142,7 +142,7 @@
       },
       {
         "name": "flat_landform",
-        "enabled": false,
+        "enabled": true,
         "placement": {
           "position": [-400.0, 0.0, -700.0],
           "rotation_degrees": [0.0, 0.0, 0.0]
@@ -439,22 +439,22 @@
           },
           {
             "name": "undergrowth",
-            "enabled": false,
+            "enabled": true,
             "generator": "undergrowth",
             "construction": {
-              "variants": 2,
-              "scale": [2.0, 4.8],
+              "variants": 5,
+              "scale": [6.0, 8.8],
               "reflectance_variants": [
-                [0.025, 0.13, 0.030],
-                [0.040, 0.18, 0.040]
+                [0.05, 0.24, 0.06],
+                [0.65, 0.3, 0.045]
               ]
             },
             "population": {
-              "seed": 79,
-              "count": 140,
+              "seed": 75,
+              "count": 1400,
               "region": { "center": [0.0, 0.0], "size": [440.0, 440.0] },
-              "max_slope_degrees": 30.0,
-              "y_offset": 0.04,
+              "max_slope_degrees": 3.0,
+              "y_offset": 0.0,
               "exclusion": { "center": [0.0, 0.0], "radius": 24.0 },
               "patchiness": { "strength": 0.88, "frequency": 0.020 }
             }
@@ -638,7 +638,7 @@
           },
           {
             "name": "fractal_tree",
-            "enabled": true,
+            "enabled": false,
             "generator": "lsystem_tree",
             "construction": {
               "preset": "fractal_tree",
@@ -1003,7 +1003,7 @@
       },
       {
         "name": "vista_plane",
-        "enabled": true,
+        "enabled": false,
         "placement": {
           "position": [-9000, -250, -12000],
           "rotation_degrees": [0.0, 0.0, 0.0]
@@ -1528,18 +1528,18 @@
           "generator": "overcast_map",
           "resolution": [2048, 2048],
           "seed": 823,
-          "coverage": 0.50,
-          "softness": 0.01,
-          "broad_feature_fraction": 0.55,
-          "medium_feature_fraction": 0.22,
-          "detail_feature_fraction": 0.075,
+          "coverage": 0.88,
+          "softness": 0.16,
+          "broad_feature_fraction": 0.18,
+          "medium_feature_fraction": 0.065,
+          "detail_feature_fraction": 0.022,
           "horizon_bias": 0.24,
-          "contrast": 6.00,
-          "clear_color": [0.01, 0.06, 0.18],
-          "cloud_dark_color": [0.001, 0.002, 0.004],
-          "cloud_light_color": [4.00, 4.00, 4.00],
+          "contrast": 0.52,
+          "clear_color": [0.5, 0.57, 0.66],
+          "cloud_dark_color": [0.34, 0.37, 0.41],
+          "cloud_light_color": [0.76, 0.78, 0.8],
           "target_average_color": [0.62, 0.68, 0.75],
-          "rotation_degrees": 90.0
+          "rotation_degrees": 0.0
         }
       },
       "clouds": [

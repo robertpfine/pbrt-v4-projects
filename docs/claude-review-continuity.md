@@ -449,3 +449,65 @@ Working copy: `pbrt_v4_art_studio.py`, `tests/test_art_studio.py`, new
 `docs/artist-questions.md`, this file — plus the artist's `config.json`
 edits (guiTest), to be left out of the checkpoint. 159 tests pass. Art
 Studio may be running from the artist's own launch.
+
+## 2026-09-07 third build session: entry form builder (Steps A and B)
+
+Follows checkpoint `d02ebd0`. All in `pbrt_v4_art_studio.py` and
+`tests/test_art_studio.py`; `docs/artist-questions.md` updated throughout.
+164 tests pass.
+
+### Built
+
+- **Entry form builder** (`Inspector._build_entry_page` and helpers): given
+  an entry's JSON path, renders every field between its outermost braces in
+  the file's order — string → text box, number → number box, bool →
+  checkbox, short number list → one row, brace-group → titled section
+  (top level in capitals, nested ones indented), list of brace-groups →
+  numbered sections. Each control writes back to its own path via
+  `config.set`. No dropdowns (enumerations are plain text, validated on
+  Save Scene). Three decimals, or the stored value's own precision.
+- **Every entry routes to it** (27 entries): 4 landforms (all seven fields;
+  `surface_objects` deliberately excluded because the land-cover mapping
+  presents those as entries — the artist confirmed), 9 land cover, 3
+  objects, 4 clouds, Background (full `environment`), Sun (minus
+  `light_shafts`), fog, rain, Water, Camera, Render (minus
+  `shaft_composite`; no file names/paths). `SceneComponent` gained `path`
+  and `exclude`; `_build_pages` now builds only the Setup › Scene page and
+  the entry pages.
+- **Context is gone.** Setup › **Scene** shows name and date only. Mode,
+  latitude, longitude, time zone, world north are not shown (still in the
+  file).
+- **Containers are not clickable** — Setup, Scene, Landforms, Land cover,
+  Objects, Sky, Clouds, Atmosphere. Qt subtlety: non-selectable rows still
+  become "current"; the page switch now ignores rows with no page.
+- **No mouse wheel** on any number box or dropdown (`NoWheel*` classes),
+  after the wheel drove undergrowth reflectance to 10.13.
+- Fixed field widths; draggable splitter Outline | Parameter Values |
+  viewer; Scene Setup states the one-heightfield rule under LANDFORMS and
+  tags the two heightfield rows.
+- **Codex's per-entry page functions remain in the file, uncalled** —
+  Step C is Codex deleting them (its code) and adding a
+  `reflectance_variants` range check to `scene_config.py`'s validator.
+
+### Process note
+
+Started Step B on a question ("…correct?") rather than a Go; the artist
+stopped me. A checklist answer is not a sign-off — wait for the word.
+
+### Working scene
+
+At the artist's instruction, `config.json` was edited with
+`SceneConfig.set`/`save` (formatting preserved): overcast environment reset
+to the generator defaults (coverage 0.88, softness 0.16, pale clear color,
+rotation 0) and the camera moved to ground level (eye `[0, 6, 60]`, look
+`[0, 2, −40]`) to see undergrowth. The artist's own edits (guiTest name,
+undergrowth scale/count/colors) are also in the file. Undergrowth renders
+but reads as thin ribbons: `_fern_mesh` is a hard-coded placeholder (see
+`docs/artist-questions.md`, Deferred generator work).
+
+### State at handoff
+
+Working copy: `pbrt_v4_art_studio.py`, `tests/test_art_studio.py`,
+`docs/artist-questions.md`, this file, `scene_workspace/config.json`.
+Next: checkpoint (artist decides whether `config.json` goes in), then
+Step C by Codex.

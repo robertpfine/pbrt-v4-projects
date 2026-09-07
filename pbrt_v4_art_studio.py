@@ -36,6 +36,26 @@ from scene_config import (
 ROOT = Path(__file__).resolve().parent
 DEFAULT_CONFIG = ROOT / "scene_workspace" / "config.json"
 
+
+# The mouse wheel is disabled on every value control. Scrolling the panel
+# with the pointer over a box otherwise changes the value silently — that is
+# how undergrowth's reflectance reached 10.13 on 2026-09-07. Values change
+# only by typing or by the arrow buttons.
+
+class NoWheelSpinBox(QtWidgets.QSpinBox):
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:  # noqa: N802
+        event.ignore()
+
+
+class NoWheelDoubleSpinBox(QtWidgets.QDoubleSpinBox):
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:  # noqa: N802
+        event.ignore()
+
+
+class NoWheelComboBox(QtWidgets.QComboBox):
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:  # noqa: N802
+        event.ignore()
+
 JsonPath = tuple[str | int, ...]
 
 STUDIO_STYLE = """
@@ -60,6 +80,10 @@ STUDIO_STYLE = """
     QLabel#inspectorHeading { font-size: 19px; font-weight: 600;
                               color: #f0b84c; padding: 8px 0; }
     QLabel#inspectorNote { color: #aeb6bd; padding-bottom: 10px; }
+    QGroupBox { border: 1px solid #3a424b; border-radius: 3px;
+                margin-top: 16px; padding: 8px 6px 4px 6px; }
+    QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px;
+                       color: #f0b84c; font-weight: 600; }
     QDockWidget::title { background: #2a3037; padding: 5px; }
     QPlainTextEdit#renderLog { font-family: monospace; font-size: 12px; }
 """
@@ -81,7 +105,9 @@ class SceneComponent:
     enabled_path: JsonPath | None = None
     heading: bool = False
     note: str = ""          # e.g. "on flat_landform" for land cover
-    in_dialog: bool = True  # False: Outline only (landform properties)
+    in_dialog: bool = True  # False: Outline only
+    path: JsonPath | None = None      # entry rendered by the entry form builder
+    exclude: tuple[str, ...] = ()     # top-level keys the page leaves out
 
 
 _SURFACE_OBJECT_PAGES = {
@@ -90,6 +116,12 @@ _SURFACE_OBJECT_PAGES = {
     "lsystem_tree": "trees",
     "space_colonization_tree": "trees",
 }
+
+
+def entry_page_key(path: JsonPath) -> str:
+    """Page key for an entry rendered by the generic entry form builder."""
+
+    return "entry:" + ".".join(str(part) for part in path)
 
 
 LAND_COVER_MAPPING_NOTE = (
@@ -111,13 +143,22 @@ def scene_components(config: SceneConfig) -> list[SceneComponent]:
     migrates to a top-level land_cover collection.
     """
 
+    def entry(label, key, parent, path, *, enabled_path=None, note="", exclude=()):
+        return SceneComponent(
+            label, key, parent, entry_page_key(path), enabled_path,
+            note=note, path=path, exclude=exclude,
+        )
+
+    camera_path: JsonPath = ("camera_settings",)
+    render_path: JsonPath = ("render_settings",)
     components: list[SceneComponent] = [
         SceneComponent("Setup", "setup", None, "", heading=True),
-        SceneComponent("Camera", "camera", "setup", "camera"),
-        SceneComponent("Render", "render", "setup", "render"),
+        SceneComponent("Scene", "setup_scene", "setup", "setup_scene"),
+        entry("Camera", "camera", "setup", camera_path),
+        # Shaft compositing is deferred: not shown anywhere this round.
+        entry("Render", "render", "setup", render_path, exclude=("shaft_composite",)),
         SceneComponent("Scene", "scene_root", None, "", heading=True),
-        SceneComponent("Context", "scene", "scene_root", "scene"),
-        SceneComponent("Landforms", "landforms", "scene_root", "landform"),
+        SceneComponent("Landforms", "landforms", "scene_root", "", heading=True),
     ]
 
     def name_of(item: Any, fallback: str) -> str:
@@ -137,39 +178,18 @@ def scene_components(config: SceneConfig) -> list[SceneComponent]:
         for index, landform in enumerate(config.get(LANDFORMS_PATH, []))
         if isinstance(landform, dict)
     ]
-    landform_pages: dict[int, str] = {}
     for index, landform in landforms:
         path = LANDFORMS_PATH + (index,)
-        key = f"landform:{index}"
-        topography = landform.get("topography", {})
-        page = (
-            "distant_hills"
-            if isinstance(topography, dict)
-            and topography.get("generator") == "distant_ridge"
-            else f"landform:{index}"
-        )
-        landform_pages[index] = page
-        components.append(SceneComponent(
+        # A landform's page shows its seven fields except surface_objects,
+        # which the land-cover mapping presents as entries of their own.
+        components.append(entry(
             name_of(landform, f"landform {index}"),
-            key,
+            f"landform:{index}",
             "landforms",
-            page,
-            enabled_path_of(landform, path),
+            path,
+            enabled_path=enabled_path_of(landform, path),
+            exclude=("surface_objects",),
         ))
-        # The ground texture is a property of the landform, not a scene
-        # component: it stays reachable in the Outline (Ground page) but is
-        # not offered in Scene Components and Setup.
-        texture = landform.get("surface", {}).get("texture")
-        texture_path = path + ("surface", "texture")
-        if enabled_path_of(texture, texture_path):
-            components.append(SceneComponent(
-                "Ground surface texture",
-                f"{key}:texture",
-                key,
-                "ground",
-                texture_path + ("enabled",),
-                in_dialog=False,
-            ))
 
     components.append(SceneComponent(
         "Land cover", "land_cover", "scene_root", "", heading=True,
@@ -181,80 +201,70 @@ def scene_components(config: SceneConfig) -> list[SceneComponent]:
             if not isinstance(item, dict):
                 continue
             object_path = LANDFORMS_PATH + (index, "surface_objects", object_index)
-            components.append(SceneComponent(
+            components.append(entry(
                 name_of(item, f"surface object {object_index}"),
                 f"cover:{index}:{object_index}",
                 "land_cover",
-                _SURFACE_OBJECT_PAGES.get(
-                    item.get("generator"), landform_pages[index]
-                ),
-                enabled_path_of(item, object_path),
+                object_path,
+                enabled_path=enabled_path_of(item, object_path),
                 note=f"on {owner}",
             ))
 
-    components.append(SceneComponent("Objects", "objects", "scene_root", "objects"))
+    components.append(SceneComponent("Objects", "objects", "scene_root", "", heading=True))
     for index, item in enumerate(config.get(OBJECTS_PATH, [])):
         path = OBJECTS_PATH + (index,)
-        components.append(SceneComponent(
+        components.append(entry(
             name_of(item, f"object {index}"),
             f"object:{index}",
             "objects",
-            "objects",
-            enabled_path_of(item, path),
+            path,
+            enabled_path=enabled_path_of(item, path),
         ))
 
     components.append(SceneComponent("Sky", "sky_root", "scene_root", "", heading=True))
-    background = config.get(SKY_PATH + ("background",), None)
-    components.append(SceneComponent(
-        "Background",
-        "sky",
-        "sky_root",
-        "sky",
-        enabled_path_of(background, SKY_PATH + ("background",)),
+    background_path = SKY_PATH + ("background",)
+    components.append(entry(
+        "Background", "sky", "sky_root", background_path,
+        enabled_path=enabled_path_of(config.get(background_path, None), background_path),
     ))
-    components.append(SceneComponent("Clouds", "clouds", "sky_root", "clouds"))
+    components.append(SceneComponent("Clouds", "clouds", "sky_root", "", heading=True))
     for index, cloud in enumerate(config.get(SKY_PATH + ("clouds",), [])):
         path = SKY_PATH + ("clouds", index)
-        components.append(SceneComponent(
+        components.append(entry(
             name_of(cloud, f"cloud {index}"),
             f"cloud:{index}",
             "clouds",
-            "clouds",
-            enabled_path_of(cloud, path),
+            path,
+            enabled_path=enabled_path_of(cloud, path),
         ))
-    sun = config.get(SKY_PATH + ("sun",), None)
-    components.append(SceneComponent(
-        "Sun",
-        "lighting",
-        "sky_root",
-        "lighting",
-        enabled_path_of(sun, SKY_PATH + ("sun",)),
+    sun_path = SKY_PATH + ("sun",)
+    components.append(entry(
+        "Sun", "lighting", "sky_root", sun_path,
+        enabled_path=enabled_path_of(config.get(sun_path, None), sun_path),
+        exclude=("light_shafts",),  # shaft compositing deferred
     ))
 
     atmosphere_path = ("scene_description", "atmosphere")
     components.append(SceneComponent(
-        "Atmosphere", "atmosphere", "scene_root", "atmosphere"
+        "Atmosphere", "atmosphere", "scene_root", "", heading=True
     ))
     for category in ("fog", "haze", "mist", "rain"):
         for index, item in enumerate(
             config.get(atmosphere_path + (category,), [])
         ):
             path = atmosphere_path + (category, index)
-            components.append(SceneComponent(
+            components.append(entry(
                 name_of(item, f"{category} {index}"),
                 f"atmosphere:{category}:{index}",
                 "atmosphere",
-                "atmosphere",
-                enabled_path_of(item, path),
+                path,
+                enabled_path=enabled_path_of(item, path),
             ))
 
-    water = config.get(("scene_description", "water"), None)
-    components.append(SceneComponent(
-        "Water",
-        "water",
-        "scene_root",
-        "water",
-        enabled_path_of(water, ("scene_description", "water")),
+    water_path: JsonPath = ("scene_description", "water")
+    components.append(entry(
+        "Water", "water", "scene_root", water_path,
+        enabled_path=enabled_path_of(config.get(water_path, None), water_path),
     ))
     return components
 
@@ -358,7 +368,7 @@ class Inspector(QtWidgets.QWidget):
         self._build_pages()
 
     def show_page(self, key: str) -> None:
-        page = self.pages.get(key, self.pages["scene"])
+        page = self.pages.get(key) or next(iter(self.pages.values()))
         self.stack.setCurrentWidget(page)
 
     def refresh(self) -> None:
@@ -440,7 +450,7 @@ class Inspector(QtWidgets.QWidget):
         choices: tuple[tuple[str, str], ...],
         object_name: str = "",
     ) -> QtWidgets.QComboBox:
-        widget = QtWidgets.QComboBox()
+        widget = NoWheelComboBox()
         if object_name:
             widget.setObjectName(object_name)
         for display, value in choices:
@@ -469,7 +479,7 @@ class Inspector(QtWidgets.QWidget):
         minimum: int = 0,
         maximum: int = 100_000_000,
     ) -> QtWidgets.QSpinBox:
-        widget = QtWidgets.QSpinBox()
+        widget = NoWheelSpinBox()
         widget.setRange(minimum, maximum)
         widget.setGroupSeparatorShown(True)
         widget.setValue(int(self.config.get(path)))
@@ -489,9 +499,11 @@ class Inspector(QtWidgets.QWidget):
         maximum: float = 1_000_000.0,
         decimals: int = 5,
     ) -> QtWidgets.QDoubleSpinBox:
-        widget = QtWidgets.QDoubleSpinBox()
+        widget = NoWheelDoubleSpinBox()
         widget.setRange(minimum, maximum)
-        widget.setDecimals(decimals)
+        # Three decimals everywhere, or as many as the stored value already
+        # has (never fewer, so an edit cannot round the file's value).
+        widget.setDecimals(self._decimals_for(float(self.config.get(path))))
         widget.setValue(float(self.config.get(path)))
         widget.valueChanged.connect(lambda value, p=path: self._set(p, value))
         form.addRow(label, widget)
@@ -515,9 +527,9 @@ class Inspector(QtWidgets.QWidget):
         values = self.config.get(path)
         widgets: list[QtWidgets.QDoubleSpinBox] = []
         for index in range(2):
-            spin = QtWidgets.QDoubleSpinBox()
+            spin = NoWheelDoubleSpinBox()
             spin.setRange(minimum, maximum)
-            spin.setDecimals(decimals)
+            spin.setDecimals(self._decimals_for(float(values[index])))
             spin.setValue(float(values[index]))
             spin.valueChanged.connect(
                 lambda value, i=index, p=path: self._set_pair_value(p, i, value)
@@ -545,7 +557,7 @@ class Inspector(QtWidgets.QWidget):
         widgets: list[QtWidgets.QDoubleSpinBox] = []
         values = self.config.get(path)
         for index, axis in enumerate("XYZ"):
-            spin = QtWidgets.QDoubleSpinBox()
+            spin = NoWheelDoubleSpinBox()
             spin.setRange(-1_000_000.0, 1_000_000.0)
             spin.setDecimals(3)
             spin.setPrefix(f"{axis} ")
@@ -577,6 +589,188 @@ class Inspector(QtWidgets.QWidget):
         vector = list(self.config.get(path))
         vector[index] = value
         self._set(path, vector)
+
+    # -- entry form builder -------------------------------------------------
+    #
+    # One function for every entry. Given an entry's JSON path it renders
+    # every field between the entry's outermost braces, in the file's order,
+    # choosing the control from the value's type:
+    #   string -> text box        number -> number box     true/false -> checkbox
+    #   short list of numbers -> one row of boxes
+    #   brace-group -> titled section, recursed
+    #   list of brace-groups (or of number lists) -> numbered sections
+    # Nothing is chosen or omitted. Each control writes back to its own path
+    # through config.set, exactly like the curated pages' controls. No
+    # dropdowns in this round: enumerated strings are plain text, validated
+    # on Save Scene.
+
+    # Field widths: wide enough for the values in config.json, narrow enough
+    # that a row of four never needs horizontal scrolling.
+    _TEXT_WIDTH = 260
+    _NUMBER_WIDTH = 118
+    _SECTION_INDENT = 16
+
+    def _build_entry_page(
+        self,
+        key: str,
+        title: str,
+        path: JsonPath,
+        exclude: tuple[str, ...] = (),
+    ) -> None:
+        dotted = ".".join(str(part) for part in path)
+        form = self._page(key, title.upper(), f"config.json · {dotted}")
+        form.setFieldGrowthPolicy(
+            QtWidgets.QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint
+        )
+        self._entry_fields(form, path, self.config.get(path), depth=0, exclude=exclude)
+
+    def _entry_fields(
+        self,
+        form: QtWidgets.QFormLayout,
+        path: JsonPath,
+        value: Any,
+        depth: int,
+        exclude: tuple[str, ...] = (),
+    ) -> None:
+        if isinstance(value, dict):
+            for name, item in value.items():
+                if depth == 0 and name in exclude:
+                    continue
+                self._entry_field(form, path + (name,), str(name), item, depth)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                self._entry_field(form, path + (index,), f"[{index}]", item, depth)
+
+    def _entry_field(
+        self,
+        form: QtWidgets.QFormLayout,
+        path: JsonPath,
+        label: str,
+        value: Any,
+        depth: int,
+    ) -> None:
+        object_name = "field:" + ".".join(str(part) for part in path)
+        if isinstance(value, bool):
+            widget = self._check(form, label, path)
+        elif isinstance(value, int):
+            widget = self._integer(form, label, path, -1_000_000_000, 1_000_000_000)
+            widget.setFixedWidth(self._NUMBER_WIDTH)
+        elif isinstance(value, float):
+            widget = self._number(
+                form, label, path, -1_000_000_000.0, 1_000_000_000.0,
+                self._decimals_for(value),
+            )
+            widget.setFixedWidth(self._NUMBER_WIDTH)
+        elif isinstance(value, str):
+            widget = self._text(form, label, path)
+            widget.setFixedWidth(self._TEXT_WIDTH)
+        elif value is None:
+            widget = QtWidgets.QLabel("null")
+            widget.setObjectName(object_name)
+            form.addRow(label, widget)
+            return
+        elif isinstance(value, list) and self._is_number_list(value):
+            widget = self._number_row(form, label, path, value)
+        elif isinstance(value, (list, dict)):
+            self._entry_section(form, path, label, value, depth)
+            return
+        else:
+            widget = QtWidgets.QLabel(repr(value))
+            form.addRow(label, widget)
+        widget.setObjectName(object_name)
+
+    @staticmethod
+    def _decimals_for(value: float) -> int:
+        """Three decimals, or as many as the file's value already has.
+
+        A box with fewer decimals than the stored value would round it on the
+        first edit; showing the value's own precision prevents that.
+        """
+
+        text = repr(float(value))
+        if "e" in text or "E" in text:
+            return 9
+        digits = len(text.split(".")[1]) if "." in text else 0
+        return min(9, max(3, digits))
+
+    @staticmethod
+    def _is_number_list(value: list[Any]) -> bool:
+        return 0 < len(value) <= 4 and all(
+            isinstance(item, (int, float)) and not isinstance(item, bool)
+            for item in value
+        )
+
+    def _number_row(
+        self,
+        form: QtWidgets.QFormLayout,
+        label: str,
+        path: JsonPath,
+        values: list[Any],
+    ) -> QtWidgets.QWidget:
+        """One row of number boxes for a short list, e.g. scale [2.0, 4.8]."""
+
+        row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        integers = all(isinstance(item, int) for item in values)
+        widgets: list[QtWidgets.QAbstractSpinBox] = []
+        for index, item in enumerate(values):
+            if integers:
+                spin: QtWidgets.QAbstractSpinBox = NoWheelSpinBox()
+                spin.setRange(-1_000_000_000, 1_000_000_000)
+                spin.setValue(int(item))
+            else:
+                spin = NoWheelDoubleSpinBox()
+                spin.setRange(-1_000_000_000.0, 1_000_000_000.0)
+                spin.setDecimals(self._decimals_for(item))
+                spin.setValue(float(item))
+            spin.setFixedWidth(self._NUMBER_WIDTH)
+            spin.setObjectName(
+                "field:" + ".".join(str(part) for part in path + (index,))
+            )
+            spin.valueChanged.connect(
+                lambda value, i=index, p=path: self._set_vector_value(p, i, value)
+            )
+            widgets.append(spin)
+            layout.addWidget(spin)
+        form.addRow(label, row)
+
+        def refresh_row() -> None:
+            current = self.config.get(path)
+            for index, widget in enumerate(widgets):
+                self._blocked(widget, current[index])
+
+        self.refreshers.append(refresh_row)
+        return row
+
+    def _entry_section(
+        self,
+        form: QtWidgets.QFormLayout,
+        path: JsonPath,
+        label: str,
+        value: Any,
+        depth: int,
+    ) -> None:
+        """A titled section for a brace-group or a list of them, recursed.
+
+        Top-level sections (construction, population) are titled in capitals;
+        nested ones keep their JSON name and step in by one indent per level.
+        """
+
+        group = QtWidgets.QGroupBox(label.upper() if depth == 0 else label)
+        group.setObjectName("section:" + ".".join(str(part) for part in path))
+        inner = QtWidgets.QFormLayout(group)
+        inner.setFieldGrowthPolicy(
+            QtWidgets.QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint
+        )
+        inner.setLabelAlignment(QtCore.Qt.AlignmentFlag.AlignLeft)
+        left, top, right, bottom = inner.getContentsMargins()
+        inner.setContentsMargins(left + self._SECTION_INDENT, top, right, bottom)
+        if isinstance(value, list) and not value:
+            inner.addRow(QtWidgets.QLabel("[] (empty)"))
+        else:
+            self._entry_fields(inner, path, value, depth + 1)
+        form.addRow(group)
 
     @staticmethod
     def _blocked(widget: QtWidgets.QWidget, value: Any) -> None:
@@ -621,40 +815,32 @@ class Inspector(QtWidgets.QWidget):
         refresh_state()
 
     def _build_pages(self) -> None:
-        self._build_scene_page()
-        self._placeholder(
-            "composition",
-            "Composition",
-            "Composition controls will coordinate spatial relationships without "
-            "introducing a separate real-time viewport.",
+        # Every page is built by the entry form builder from config.json,
+        # except the small Setup > Scene page. The earlier per-entry page
+        # functions (_build_grass_page, _build_poppy_page, ...) remain in
+        # this file but are no longer called; they retire in Step C once the
+        # artist has confirmed nothing is lost.
+        self._build_setup_scene_page()
+        self._build_entry_pages()
+
+    def _build_setup_scene_page(self) -> None:
+        form = self._page("setup_scene", "SCENE", "config.json · scene_description")
+        form.setFieldGrowthPolicy(
+            QtWidgets.QFormLayout.FieldGrowthPolicy.FieldsStayAtSizeHint
         )
-        self._placeholder(
-            "landscape",
-            "Landscape",
-            "scene_description.landforms is the boundary for ground and "
-            "receding-horizon systems. Surface objects remain independently editable.",
-        )
-        self._build_ground_page()
-        self._build_landform_page()
-        self._build_grass_page()
-        self._build_poppy_page()
-        self._build_tree_page()
-        self._build_objects_page()
-        self._module_boundary(
-            "water",
-            "Water",
-            ("scene_description", "water"),
-            "The first-class scene boundary is established and disabled. "
-            "Water bodies, waves, optics, and shoreline controls are the third "
-            "ordered element of Step 4.",
-        )
-        self._build_distant_hills_page()
-        self._build_sky_page()
-        self._build_clouds_page()
-        self._build_atmosphere_page()
-        self._build_lighting_page()
-        self._build_camera_page()
-        self._build_render_page()
+        name = self._text(form, "name", ("scene_description", "name"))
+        name.setObjectName("field:scene_description.name")
+        name.setFixedWidth(self._TEXT_WIDTH)
+        date = self._text(form, "date", ("scene_description", "scene_context", "date"))
+        date.setObjectName("field:scene_description.scene_context.date")
+        date.setFixedWidth(self._TEXT_WIDTH)
+
+    def _build_entry_pages(self) -> None:
+        for component in scene_components(self.config):
+            if component.path is not None:
+                self._build_entry_page(
+                    component.page, component.label, component.path, component.exclude
+                )
 
     def _build_scene_page(self) -> None:
         form = self._page(
@@ -869,7 +1055,7 @@ class Inspector(QtWidgets.QWidget):
             "camera_frustum",
             "placement_reference",
         )
-        reference = QtWidgets.QComboBox()
+        reference = NoWheelComboBox()
         reference.setObjectName("poppy_placement_reference")
         reference.addItem("Flower placement", "flower")
         reference.addItem("Root placement", "root")
@@ -921,11 +1107,11 @@ class Inspector(QtWidgets.QWidget):
                     root,
                     root + ("construction", "scale"),
                 ))
-        selector = QtWidgets.QComboBox()
+        selector = NoWheelComboBox()
         for label, _path, _scale_path in entries:
             selector.addItem(label)
         enabled = QtWidgets.QCheckBox()
-        scale = QtWidgets.QDoubleSpinBox()
+        scale = NoWheelDoubleSpinBox()
         scale.setRange(0.01, 1000.0)
         scale.setDecimals(3)
         form.addRow("Tree entry", selector)
@@ -970,7 +1156,7 @@ class Inspector(QtWidgets.QWidget):
             "in the authoritative JSON.",
         )
         objects = self.config.get(OBJECTS_PATH)
-        selector = QtWidgets.QComboBox()
+        selector = NoWheelComboBox()
         for item in objects:
             selector.addItem(item.get("name", "unnamed object"))
         enabled = QtWidgets.QCheckBox()
@@ -995,7 +1181,7 @@ class Inspector(QtWidgets.QWidget):
             layout.setContentsMargins(0, 0, 0, 0)
             vector_widgets[field] = []
             for component, axis in enumerate("XYZ"):
-                spin = QtWidgets.QDoubleSpinBox()
+                spin = NoWheelDoubleSpinBox()
                 spin.setRange(-1_000_000.0, 1_000_000.0)
                 spin.setDecimals(3)
                 spin.setPrefix(f"{axis} ")
@@ -1051,34 +1237,34 @@ class Inspector(QtWidgets.QWidget):
             == "distant_ridge"
         ]
         layers = [landforms[index] for index in ridge_indices]
-        layer_selector = QtWidgets.QComboBox()
+        layer_selector = NoWheelComboBox()
         layer_selector.setObjectName("distant_hill_layer")
         for layer in layers:
             layer_selector.addItem(str(layer.get("name", "unnamed layer")))
         form.addRow("Depth layer", layer_selector)
 
         layer_enabled = QtWidgets.QCheckBox()
-        center = [QtWidgets.QDoubleSpinBox(), QtWidgets.QDoubleSpinBox()]
-        size = [QtWidgets.QDoubleSpinBox(), QtWidgets.QDoubleSpinBox()]
-        rotation = QtWidgets.QDoubleSpinBox()
-        base_elevation = QtWidgets.QDoubleSpinBox()
-        ridge_height = QtWidgets.QDoubleSpinBox()
-        ridge_position = QtWidgets.QDoubleSpinBox()
-        front_power = QtWidgets.QDoubleSpinBox()
-        back_power = QtWidgets.QDoubleSpinBox()
-        noise_amplitude = QtWidgets.QDoubleSpinBox()
-        noise_frequency = QtWidgets.QDoubleSpinBox()
+        center = [NoWheelDoubleSpinBox(), NoWheelDoubleSpinBox()]
+        size = [NoWheelDoubleSpinBox(), NoWheelDoubleSpinBox()]
+        rotation = NoWheelDoubleSpinBox()
+        base_elevation = NoWheelDoubleSpinBox()
+        ridge_height = NoWheelDoubleSpinBox()
+        ridge_position = NoWheelDoubleSpinBox()
+        front_power = NoWheelDoubleSpinBox()
+        back_power = NoWheelDoubleSpinBox()
+        noise_amplitude = NoWheelDoubleSpinBox()
+        noise_frequency = NoWheelDoubleSpinBox()
         reflectance = [
-            QtWidgets.QDoubleSpinBox(),
-            QtWidgets.QDoubleSpinBox(),
-            QtWidgets.QDoubleSpinBox(),
+            NoWheelDoubleSpinBox(),
+            NoWheelDoubleSpinBox(),
+            NoWheelDoubleSpinBox(),
         ]
-        peak_selector = QtWidgets.QComboBox()
+        peak_selector = NoWheelComboBox()
         peak_selector.setObjectName("distant_hill_peak")
-        peak_position = QtWidgets.QDoubleSpinBox()
-        peak_height = QtWidgets.QDoubleSpinBox()
-        peak_width = QtWidgets.QDoubleSpinBox()
-        peak_asymmetry = QtWidgets.QDoubleSpinBox()
+        peak_position = NoWheelDoubleSpinBox()
+        peak_height = NoWheelDoubleSpinBox()
+        peak_width = NoWheelDoubleSpinBox()
+        peak_asymmetry = NoWheelDoubleSpinBox()
 
         def configure(
             widget: QtWidgets.QDoubleSpinBox,
@@ -1313,7 +1499,7 @@ class Inspector(QtWidgets.QWidget):
             "Each cloud owns its placement, density construction, and medium.",
         )
         clouds = self.config.get(SKY_PATH + ("clouds",))
-        selector = QtWidgets.QComboBox()
+        selector = NoWheelComboBox()
         for cloud in clouds:
             selector.addItem(cloud.get("name", "unnamed cloud"))
         enabled = QtWidgets.QCheckBox()
@@ -1387,7 +1573,7 @@ class Inspector(QtWidgets.QWidget):
         base = ("camera_settings",)
         enabled = self._check(form, "Enabled", base + ("enabled",))
         enabled.setObjectName("camera_enabled")
-        camera_type = QtWidgets.QComboBox()
+        camera_type = NoWheelComboBox()
         camera_type.setObjectName("camera_type")
         camera_type.addItem("Perspective", "perspective")
 
@@ -1649,7 +1835,7 @@ class SceneSetupDialog(QtWidgets.QDialog):
         self._integer(
             form, "Maximum path depth", render + ("integrator", "max_depth"), 1, 1_000_000
         )
-        backend = QtWidgets.QComboBox()
+        backend = NoWheelComboBox()
         backend.setObjectName("setup_backend")
         backend.addItem("GPU", "gpu")
         backend.addItem("CPU", "cpu")
@@ -1660,13 +1846,7 @@ class SceneSetupDialog(QtWidgets.QDialog):
             lambda index: self._set(render + ("backend", "type"), backend.itemData(index))
         )
         form.addRow("Backend", backend)
-        shaft = QtWidgets.QCheckBox()
-        shaft.setObjectName("setup_shaft_composite")
-        shaft.setChecked(bool(self.config.get(render + ("shaft_composite", "enabled"))))
-        shaft.toggled.connect(
-            lambda value: self._set(render + ("shaft_composite", "enabled"), value)
-        )
-        form.addRow("Shaft composite", shaft)
+        # Shaft compositing is deferred and not offered here.
         return panel
 
     def _vector(self, form: QtWidgets.QFormLayout, label: str, path: JsonPath) -> None:
@@ -1675,7 +1855,7 @@ class SceneSetupDialog(QtWidgets.QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         values = list(self.config.get(path))
         for index, axis in enumerate("XYZ"):
-            spin = QtWidgets.QDoubleSpinBox()
+            spin = NoWheelDoubleSpinBox()
             spin.setRange(-1_000_000.0, 1_000_000.0)
             spin.setDecimals(3)
             spin.setPrefix(f"{axis} ")
@@ -1699,7 +1879,7 @@ class SceneSetupDialog(QtWidgets.QDialog):
         maximum: float,
         decimals: int,
     ) -> None:
-        spin = QtWidgets.QDoubleSpinBox()
+        spin = NoWheelDoubleSpinBox()
         spin.setRange(minimum, maximum)
         spin.setDecimals(decimals)
         spin.setValue(float(self.config.get(path)))
@@ -1714,7 +1894,7 @@ class SceneSetupDialog(QtWidgets.QDialog):
         minimum: int,
         maximum: int,
     ) -> None:
-        spin = QtWidgets.QSpinBox()
+        spin = NoWheelSpinBox()
         spin.setRange(minimum, maximum)
         spin.setGroupSeparatorShown(True)
         spin.setValue(int(self.config.get(path)))
@@ -1768,6 +1948,18 @@ class SceneSetupDialog(QtWidgets.QDialog):
                     if other is not box and other.isChecked():
                         other.setChecked(False)
 
+        heightfield_names = [
+            component.label for component in components
+            if is_heightfield_landform(component)
+        ]
+        landforms_note = ""
+        if heightfield_names:
+            landforms_note = (
+                "Only one terrain-heightfield landform can be enabled at a time: "
+                + ", ".join(heightfield_names)
+                + " (checking one unchecks the other). The rest combine freely."
+            )
+
         # One visual rule per level: a top-level container is a yellow
         # header; a container nested inside one is a muted sub-header; every
         # component is a checkbox one level under its container. A component
@@ -1789,7 +1981,9 @@ class SceneSetupDialog(QtWidgets.QDialog):
                 rows.addWidget(hint)
 
         for component in components:
-            if component.key in {"setup", "camera", "render", "scene_root", "scene"}:
+            if component.key in {
+                "setup", "setup_scene", "camera", "render", "scene_root",
+            }:
                 continue
             if not component.in_dialog:
                 continue
@@ -1800,7 +1994,7 @@ class SceneSetupDialog(QtWidgets.QDialog):
                     component.label,
                     top=top_level,
                     indent=0 if top_level else 18 * (level - 1),
-                    note=component.note,
+                    note=landforms_note if component.key == "landforms" else component.note,
                 )
                 continue
             if top_level:
@@ -1811,6 +2005,8 @@ class SceneSetupDialog(QtWidgets.QDialog):
             text = component.label
             if component.note:
                 text = f"{component.label}   · {component.note}"
+            if is_heightfield_landform(component):
+                text = f"{text}   · heightfield"
             box = QtWidgets.QCheckBox(text)
             box.setObjectName(f"component:{component.key}")
             box.setStyleSheet(f"margin-left: {indent}px;")
@@ -1868,15 +2064,23 @@ class StudioWindow(QtWidgets.QMainWindow):
         tree.setHeaderLabel("OUTLINE")
         tree.setMinimumWidth(215)
         tree.setMaximumWidth(290)
-        self._populate_navigation(tree, "scene")
-        tree.currentItemChanged.connect(
-            lambda current, _previous: self.inspector.show_page(
-                current.data(0, QtCore.Qt.ItemDataRole.UserRole + 1)
-                if current
-                else "scene"
-            )
-        )
+        self._populate_navigation(tree, "setup_scene")
+        tree.currentItemChanged.connect(self._outline_row_changed)
         return tree
+
+    def _outline_row_changed(
+        self,
+        current: QtWidgets.QTreeWidgetItem | None,
+        _previous: QtWidgets.QTreeWidgetItem | None,
+    ) -> None:
+        # Container rows (Setup, Scene, Landforms, Sky, ...) have no page.
+        # Clicking one still makes it "current" in Qt, so it must not switch
+        # the page: it only expands or collapses.
+        if current is None:
+            return
+        page = current.data(0, QtCore.Qt.ItemDataRole.UserRole + 1)
+        if page:
+            self.inspector.show_page(page)
 
     def _populate_navigation(self, tree: QtWidgets.QTreeWidget, current_key: str) -> None:
         """Fill the Outline from config.json with enabled components only.
@@ -1905,13 +2109,17 @@ class StudioWindow(QtWidgets.QMainWindow):
             items[component.key] = item
         tree.expandAll()
         tree.blockSignals(False)
-        tree.setCurrentItem(items.get(current_key) or items["scene"])
+        tree.setCurrentItem(items.get(current_key) or items["setup_scene"])
 
     def _refresh_navigation(self) -> None:
         """Rebuild the Outline after components change, keeping the selection."""
 
         current = self.navigation.currentItem()
-        key = current.data(0, QtCore.Qt.ItemDataRole.UserRole) if current else "scene"
+        key = (
+            current.data(0, QtCore.Qt.ItemDataRole.UserRole)
+            if current
+            else "setup_scene"
+        )
         self._populate_navigation(self.navigation, key)
 
     def outline_keys(self) -> list[str]:
@@ -1938,21 +2146,27 @@ class StudioWindow(QtWidgets.QMainWindow):
         self._configuration_changed("scene components")
 
     def _build_layout(self) -> None:
-        central = QtWidgets.QWidget()
-        layout = QtWidgets.QGridLayout(central)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
         # Outline and Parameter Values sit together on the left so a selected
         # row and its editable values read as one unit; the viewer takes the
-        # remaining width on the right.
-        layout.addWidget(self.navigation, 0, 0)
-        layout.addWidget(self.inspector, 0, 1)
-        layout.addWidget(self.image, 0, 2)
-        layout.setColumnStretch(0, 0)
-        layout.setColumnStretch(1, 0)
-        layout.setColumnStretch(2, 1)
+        # remaining width on the right. A splitter lets the artist drag the
+        # divider between Parameter Values and the image.
+        splitter = QtWidgets.QSplitter(QtCore.Qt.Orientation.Horizontal)
+        splitter.setObjectName("workspaceSplitter")
+        splitter.setChildrenCollapsible(False)
+        splitter.setHandleWidth(6)
+        splitter.addWidget(self.navigation)
+        splitter.addWidget(self.inspector)
+        splitter.addWidget(self.image)
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 0)
+        splitter.setStretchFactor(2, 1)
         self.inspector.setMinimumWidth(330)
-        self.inspector.setMaximumWidth(440)
+        self.image.setMinimumWidth(240)
+        splitter.setSizes([250, 560, 670])
+        central = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(central)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.addWidget(splitter)
         self.setCentralWidget(central)
 
         log_dock = QtWidgets.QDockWidget("Persistent Render Log", self)
