@@ -1,6 +1,81 @@
 # PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-09-05
+Last updated: 2026-09-07
+
+## 2026-09-07 Claude GUI work and combined checkpoint
+
+The artist instructed Codex to checkpoint all of Claude's authorized GUI/test
+work, Claude's review journal, the artist's live scene edits, and the shared
+assistant protocol. This is the current checkpoint assignment; Codex performs
+the commit, push, and handoff delivery.
+
+`pbrt_v4_art_studio.py` now opens a Scene Components and Setup dialog before
+the workspace, with scene name, camera, render settings, and component enable
+controls. The workspace layout is Outline | Parameter Values | image viewer.
+The Outline is derived from the JSON arrays and shows enabled components;
+Scene Setup reopens the dialog, and Refresh Image loads the newest eligible
+local archive PNG. Setup changes use the existing `SceneConfig` object and
+remain unsaved until Save Scene or Render. Terrain-heightfield choices are
+mutually exclusive when enabled; ordinary validation still checks the final
+scene. Existing inspector pages remain shared across instances, so selecting
+a particular Outline entry does not yet isolate that instance's controls.
+
+The sole live `scene_workspace/config.json` preserves the artist's `guiTest`
+scene name, enabled `right_dip_rise`, and disabled `flat_landform`. These are
+the only three value changes from the previous checkpoint. Its SHA-256 is
+`70a57e12b889174f15c3efb3d54ad4db09dfbec7cf5715d15bb8385a8b501215`.
+It is an exploratory GUI state, not a newly accepted rendered master. The
+September 5 `024240` equality describes that historical checkpoint, not this
+live file. The accepted sunrise master remains `093054`; no render was
+launched for this checkpoint.
+
+`tests/fixtures/canonical_config.json` is byte-identical to the previously
+committed live scene. It is a frozen test input, not another live scene or an
+alternative application configuration. Tests with fixed value expectations
+now use this fixture; live-scene validation and migrated-root checks remain.
+Update the fixture deliberately alongside future schema changes.
+
+Codex reviewed the changes and ran the repository-local Qt suite: 158 tests
+ran successfully, with 19 dependency-aware skips (139 passed). Both the live
+scene and fixture validate without errors. A direct offscreen smoke check
+initialized the workspace, setup dialog, and inspector with the live `guiTest`
+configuration without saving changes. An earlier auxiliary smoke harness with
+a mocked image-loader method exited with a segmentation fault; the direct
+unmocked check passed. No claim of fresh interactive visual acceptance is made.
+
+Claude's review/design history and deferred proposals are retained in
+`docs/claude-review-continuity.md`. Per-instance inspector pages, additional sky
+controls, and sliders remain future work. No generator or renderer build was
+changed. The current GUI overview is in
+`docs/qt-proof-of-concept-specification.md`.
+
+## 2026-09-07 shared-checkout assistant protocol
+
+Claude Code works in this same checkout as an independent reviewer and, when
+the artist instructs it, an editor. Only one assistant works at a time,
+including review work. This is now an artist-adopted protocol, superseding the
+pending coordination suggestion in the September 5 record below.
+
+- Before editing or committing, run `git status`. If the working copy contains
+  changes you did not make, stop and ask the artist before proceeding; treat
+  those changes as evidence that the other assistant has been active.
+- When the artist has already identified existing changes and explicitly
+  instructed how to handle them, follow that instruction. Do not ask again
+  about those same changes or assume it authorizes unrelated changes.
+- After either assistant commits, the other must re-read `git status` and
+  `git log` before doing anything, then resume from the actual checkpoint.
+- Claude does not commit or push unless the artist explicitly grants it.
+  Codex remains the checkpoint committer by default; the artist may assign a
+  particular checkpoint to Claude.
+- Evaluate review findings against the same code, configuration, and archived
+  render evidence. `docs/continuity.md` remains the canonical handoff;
+  `docs/claude-review-continuity.md` is Claude's subordinate review record.
+
+For today's handoff, the artist explicitly authorized inclusion of Claude's
+GUI/test changes and review journal, the artist's own scene edits, and Codex's
+protocol updates. The final instruction assigns this combined checkpoint to
+Codex, as recorded above. Future assistant sessions must inspect `git status`
+and `git log` before resuming.
 
 ## 2026-09-05 independent review preference
 
@@ -9,8 +84,9 @@ set of eyes and regards independent review as prudent risk management.
 Welcome its findings and evaluate them against the same code, configuration,
 and archived render evidence. This does not transfer implementation authority
 to external advice or replace the artist's decisions. Codex suggested one
-active editor at a time while the other assistant reviews a shared checkpoint;
-that coordination suggestion has not yet been explicitly adopted by the artist.
+active editor at a time while the other assistant reviews a shared checkpoint.
+The artist subsequently adopted the stricter one-assistant-at-a-time protocol
+recorded above on September 7.
 
 ## 2026-09-05 Claude Code overcast discussion archived for later work
 

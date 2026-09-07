@@ -495,9 +495,28 @@ class SceneConfigTests(unittest.TestCase):
                 config.save()
             self.assertEqual(path.read_text(encoding="utf-8"), source)
 
-    def test_current_scene_is_valid_and_describable(self):
+    def test_live_scene_validates_and_keeps_migrated_roots(self):
+        # The live scene_workspace/config.json is the artist's working file and
+        # may be in any artistic state; assert only structure here, never
+        # specific values. Value assertions use tests/fixtures/canonical_config.json.
         root = Path(__file__).resolve().parents[1]
         config = SceneConfig(root / "scene_workspace" / "config.json")
+        self.assertEqual(config.validate(), [])
+        self.assertEqual(
+            list(config.data),
+            [
+                "file_names",
+                "file_paths",
+                "camera_settings",
+                "render_settings",
+                "scene_description",
+            ],
+        )
+        self.assertTrue(config.describe())
+
+    def test_canonical_scene_is_valid_and_describable(self):
+        root = Path(__file__).resolve().parents[1]
+        config = SceneConfig(root / "tests" / "fixtures" / "canonical_config.json")
         self.assertEqual(config.validate(), [])
         description = config.describe()
         self.assertIn("Scene: Poppy Field Overcast 8AM Study (new)", description)
@@ -534,10 +553,12 @@ class SceneConfigTests(unittest.TestCase):
                 ),
             )
 
-    def test_current_scene_uses_only_migrated_root_boundaries(self):
+    def test_canonical_scene_uses_only_migrated_root_boundaries(self):
         root = Path(__file__).resolve().parents[1]
         config = json.loads(
-            (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
+            (root / "tests" / "fixtures" / "canonical_config.json").read_text(
+                encoding="utf-8"
+            )
         )
         self.assertEqual(
             list(config),
@@ -610,7 +631,9 @@ class SceneConfigTests(unittest.TestCase):
     def test_space_colonization_generator_reads_landform_surface_objects(self):
         root = Path(__file__).resolve().parents[1]
         config = json.loads(
-            (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
+            (root / "tests" / "fixtures" / "canonical_config.json").read_text(
+                encoding="utf-8"
+            )
         )
 
         trees = configured_space_colonization_trees(config)

@@ -9,9 +9,15 @@ from unittest import mock
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6 import QtWidgets
+from PySide6 import QtGui, QtWidgets
 
-from pbrt_v4_art_studio import StudioWindow
+from pbrt_v4_art_studio import (
+    SceneSetupDialog,
+    StudioWindow,
+    scene_components,
+    visible_components,
+)
+from scene_config import SceneConfig
 
 
 class ArtStudioTests(unittest.TestCase):
@@ -23,7 +29,13 @@ class ArtStudioTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.config_path = Path(self.temporary_directory.name) / "config.json"
-        shutil.copy2(self.root / "scene_workspace" / "config.json", self.config_path)
+        # Tests run against a frozen canonical scene, never the artist's live
+        # scene_workspace/config.json, so saving or rendering from the Studio
+        # cannot turn tests red.
+        shutil.copy2(
+            self.root / "tests" / "fixtures" / "canonical_config.json",
+            self.config_path,
+        )
         self.window = StudioWindow(self.config_path)
         self.window.show()
         self.application.processEvents()
@@ -159,6 +171,135 @@ class ArtStudioTests(unittest.TestCase):
     def test_no_add_control_is_present(self):
         buttons = self.window.findChildren(QtWidgets.QAbstractButton)
         self.assertNotIn("Add", {button.text() for button in buttons})
+
+    def test_outline_mirrors_config_roots_and_shows_enabled_components_only(self):
+        self.assertEqual(self.window.navigation.headerItem().text(0), "OUTLINE")
+        keys = self.window.outline_keys()
+        self.assertEqual(keys[:3], ["setup", "camera", "render"])
+        self.assertIn("scene_root", keys)
+        self.assertIn("scene", keys)
+        # Enabled landforms and the one enabled surface object appear ...
+        self.assertIn("landform:1", keys)  # flat_landform
+        self.assertIn("landform:2", keys)  # vista_plane
+        self.assertIn("landform:1:so:6", keys)  # fractal_tree
+        # ... disabled ones do not, and nothing is dimmed in their place.
+        self.assertNotIn("landform:0", keys)  # right_dip_rise
+        self.assertNotIn("landform:3", keys)  # broad_rise
+        self.assertNotIn("landform:1:so:0", keys)  # grass
+        # Grouping rows with nothing enabled under them are omitted.
+        self.assertNotIn("clouds", keys)
+        self.assertNotIn("objects", keys)
+        self.assertNotIn("atmosphere", keys)
+        self.assertNotIn("water", keys)
+        self.assertIn("sky", keys)
+        self.assertIn("lighting", keys)
+
+    def test_outline_rows_open_existing_pages(self):
+        pages = {
+            component.key: component.page
+            for component in scene_components(self.window.config)
+            if not component.heading
+        }
+        self.assertEqual(pages["landform:1"], "landform")
+        self.assertEqual(pages["landform:3"], "distant_hills")
+        self.assertEqual(pages["landform:1:so:0"], "grass")
+        self.assertEqual(pages["landform:1:so:1"], "poppies")
+        self.assertEqual(pages["landform:1:so:6"], "trees")
+        self.assertEqual(pages["landform:1:texture"], "ground")
+        self.assertEqual(pages["cloud:0"], "clouds")
+        self.assertEqual(pages["atmosphere:fog:0"], "atmosphere")
+        for page in set(pages.values()):
+            self.assertIn(page, self.window.inspector.pages)
+
+    def test_scene_setup_checkbox_enables_component_and_refreshes_outline(self):
+        dialog = SceneSetupDialog(self.window.config, self.window, launch=False)
+        grass = dialog.findChild(QtWidgets.QCheckBox, "component:landform:1:so:0")
+        clouds = dialog.findChild(QtWidgets.QCheckBox, "component:cloud:2")
+        self.assertIsNotNone(grass)
+        self.assertIsNotNone(clouds)
+        self.assertFalse(grass.isChecked())
+        grass.setChecked(True)
+        clouds.setChecked(True)
+        self.application.processEvents()
+        self.assertTrue(self.window.config.get(
+            ("scene_description", "landforms", 1, "surface_objects", 0, "enabled")
+        ))
+        self.assertTrue(self.window.config.dirty)
+        self.window._refresh_navigation()
+        keys = self.window.outline_keys()
+        self.assertIn("landform:1:so:0", keys)
+        self.assertIn("clouds", keys)
+        self.assertIn("cloud:2", keys)
+        self.assertNotIn("cloud:0", keys)
+        dialog.close()
+
+    def test_scene_setup_keeps_exactly_one_terrain_heightfield_landform(self):
+        dialog = SceneSetupDialog(self.window.config, self.window, launch=False)
+        dip_rise = dialog.findChild(QtWidgets.QCheckBox, "component:landform:0")
+        flat = dialog.findChild(QtWidgets.QCheckBox, "component:landform:1")
+        vista = dialog.findChild(QtWidgets.QCheckBox, "component:landform:2")
+        self.assertTrue(flat.isChecked())
+        self.assertFalse(dip_rise.isChecked())
+        dip_rise.setChecked(True)
+        self.application.processEvents()
+        self.assertTrue(dip_rise.isChecked())
+        self.assertFalse(flat.isChecked())
+        self.assertTrue(vista.isChecked())  # not a heightfield: independent
+        self.assertTrue(self.window.config.get(
+            ("scene_description", "landforms", 0, "enabled")
+        ))
+        self.assertFalse(self.window.config.get(
+            ("scene_description", "landforms", 1, "enabled")
+        ))
+        self.assertEqual(self.window.config.terrain_landform_index(), 0)
+        dialog.close()
+
+    def test_scene_setup_exposes_camera_and_render_controls(self):
+        dialog = SceneSetupDialog(self.window.config, self.window, launch=True)
+        name = dialog.findChild(QtWidgets.QLineEdit, "setup_scene_name")
+        backend = dialog.findChild(QtWidgets.QComboBox, "setup_backend")
+        self.assertEqual(name.text(), "Poppy Field Overcast 8AM Study")
+        self.assertEqual(backend.currentData(), "gpu")
+        self.assertIsNotNone(dialog.findChild(QtWidgets.QPushButton, "setup_open"))
+        self.assertIsNotNone(dialog.findChild(QtWidgets.QPushButton, "setup_quit"))
+        # Paths and file names are governed by convention, not the dialog.
+        self.assertIsNone(dialog.findChild(QtWidgets.QLineEdit, "remote_archive_path"))
+        dialog.close()
+
+    def test_window_accepts_a_preloaded_scene_config(self):
+        config = SceneConfig(self.config_path)
+        config.set(("scene_description", "landforms", 3, "enabled"), True)  # broad_rise
+        window = StudioWindow(config)
+        try:
+            self.assertIs(window.config, config)
+            self.assertIn("landform:3", window.outline_keys())
+        finally:
+            # Discard the unsaved toggle so closeEvent does not open the
+            # modal "Save the scene before closing?" prompt offscreen.
+            config.reload()
+            window.close()
+
+    def test_refresh_image_loads_newest_archive_render_on_demand(self):
+        archive = Path(self.temporary_directory.name) / "RefreshArchive"
+        archive.mkdir()
+        older = archive / "scene_20260907_010000.png"
+        newer = archive / "scene_20260907_020000.png"
+        older.write_bytes(b"older")
+        newer.write_bytes(b"newer")
+        os.utime(older, (1, 1))
+        self.window.config.set(("file_paths", "local_archive"), str(archive))
+        action = next(
+            a for a in self.window.findChildren(QtGui.QAction)
+            if a.objectName() == "refresh_image_action"
+        )
+        with mock.patch.object(self.window.image, "load", return_value=True) as load:
+            action.trigger()
+        load.assert_called_once_with(newer)
+        self.assertIn("Displayed scene_20260907_020000.png", self.window.status_label.text())
+
+    def test_scene_setup_toolbar_action_is_present(self):
+        actions = {action.text() for action in self.window.findChildren(QtGui.QAction)}
+        self.assertIn("Scene Setup…", actions)
 
     def test_render_page_exposes_migrated_file_names_and_paths(self):
         expected = {

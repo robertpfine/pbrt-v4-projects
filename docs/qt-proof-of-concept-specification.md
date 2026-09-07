@@ -4,6 +4,26 @@ Status: Initial shell implemented and exercised in the desktop workflow. This
 document defines the first bounded implementation; it does not define the
 complete future medium.
 
+## September 7, 2026 implementation update
+
+The artist-directed GUI work by Claude adds a Scene Components and Setup
+dialog before opening the workspace. It exposes scene name, camera and render
+settings, and existing component enable flags. Scene Setup in the toolbar
+reopens it. All controls share the authoritative `SceneConfig`; choices remain
+unsaved until Save Scene or Render.
+
+The workspace now places Outline, Parameter Values, and the image viewer from
+left to right. Outline entries follow the JSON hierarchy and include enabled
+components only. Component choices and Reload JSON rebuild the Outline.
+Refresh Image loads the newest eligible local archive PNG, including renders
+made through the terminal workflow. Inspector pages remain shared by component
+category; per-instance editing pages are still deferred.
+
+These implemented changes supersede the older layout and navigation proposal
+below. They select existing scene components; no generalized object catalogue
+or configuration schema change was introduced. See `continuity.md` for the
+current scene checkpoint and verification record.
+
 Visual reference:
 [`assets/qt-proof-of-concept.png`](assets/qt-proof-of-concept.png)
 

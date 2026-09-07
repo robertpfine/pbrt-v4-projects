@@ -10,6 +10,7 @@ not a real-time 3D viewport.
 from __future__ import annotations
 
 import argparse
+from dataclasses import dataclass
 from pathlib import Path
 import signal
 import sys
@@ -34,6 +35,232 @@ from scene_config import (
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_CONFIG = ROOT / "scene_workspace" / "config.json"
+
+JsonPath = tuple[str | int, ...]
+
+STUDIO_STYLE = """
+    QMainWindow, QDialog, QWidget { background: #20252b; color: #e8ebed; }
+    QTreeWidget, QPlainTextEdit, QLineEdit, QSpinBox, QDoubleSpinBox,
+    QComboBox { background: #171b20; border: 1px solid #3a424b;
+                selection-background-color: #87662b; }
+    QTreeWidget::item { padding: 5px; }
+    QTreeWidget::item:selected { background: #87662b; }
+    QHeaderView::section, QLabel#panelHeader {
+        background: #2a3037; color: #aeb6bd; font-size: 12px; font-weight: 600;
+        letter-spacing: 1px; padding: 6px 8px; border: none;
+        border-bottom: 1px solid #3a424b; }
+    QToolBar { background: #2a3037; border-bottom: 1px solid #3a424b;
+               spacing: 5px; padding: 5px; }
+    QToolButton { background: #39414a; padding: 6px 10px; border-radius: 3px; }
+    QToolButton:hover { background: #4a5561; }
+    QPushButton { background: #39414a; padding: 7px 16px; border-radius: 3px; }
+    QPushButton:hover { background: #4a5561; }
+    QLabel#renderImage { background: #111418; border: 1px solid #3a424b;
+                         color: #8f99a3; font-size: 16px; }
+    QLabel#inspectorHeading { font-size: 19px; font-weight: 600;
+                              color: #f0b84c; padding: 8px 0; }
+    QLabel#inspectorNote { color: #aeb6bd; padding-bottom: 10px; }
+    QDockWidget::title { background: #2a3037; padding: 5px; }
+    QPlainTextEdit#renderLog { font-family: monospace; font-size: 12px; }
+"""
+
+
+@dataclass(frozen=True)
+class SceneComponent:
+    """One row of the Outline and of the Scene Components checklist.
+
+    ``enabled_path`` is the JSON path of the component's ``enabled`` flag, or
+    None for structural rows (Setup, Context, Camera, ...). ``heading`` rows
+    group other rows and have no page of their own.
+    """
+
+    label: str
+    key: str
+    parent: str | None
+    page: str
+    enabled_path: JsonPath | None = None
+    heading: bool = False
+
+
+_SURFACE_OBJECT_PAGES = {
+    "grass": "grass",
+    "poppy": "poppies",
+    "lsystem_tree": "trees",
+    "space_colonization_tree": "trees",
+}
+
+
+def scene_components(config: SceneConfig) -> list[SceneComponent]:
+    """Derive the component hierarchy from the authoritative configuration.
+
+    The order mirrors config.json: the setup roots first, then every named
+    entry under scene_description. Rows are generated from the arrays, so an
+    entry added to the JSON appears here without any interface change.
+    """
+
+    components: list[SceneComponent] = [
+        SceneComponent("Setup", "setup", None, "", heading=True),
+        SceneComponent("Camera", "camera", "setup", "camera"),
+        SceneComponent("Render", "render", "setup", "render"),
+        SceneComponent("Scene", "scene_root", None, "", heading=True),
+        SceneComponent("Context", "scene", "scene_root", "scene"),
+        SceneComponent("Landforms", "landforms", "scene_root", "landform"),
+    ]
+
+    def name_of(item: Any, fallback: str) -> str:
+        if isinstance(item, dict):
+            name = item.get("name") or item.get("generator")
+            if isinstance(name, str) and name:
+                return name
+        return fallback
+
+    def enabled_path_of(item: Any, path: JsonPath) -> JsonPath | None:
+        if isinstance(item, dict) and isinstance(item.get("enabled"), bool):
+            return path + ("enabled",)
+        return None
+
+    for index, landform in enumerate(config.get(LANDFORMS_PATH, [])):
+        if not isinstance(landform, dict):
+            continue
+        path = LANDFORMS_PATH + (index,)
+        key = f"landform:{index}"
+        topography = landform.get("topography", {})
+        page = (
+            "distant_hills"
+            if isinstance(topography, dict)
+            and topography.get("generator") == "distant_ridge"
+            else "landform"
+        )
+        components.append(SceneComponent(
+            name_of(landform, f"landform {index}"),
+            key,
+            "landforms",
+            page,
+            enabled_path_of(landform, path),
+        ))
+        texture = landform.get("surface", {}).get("texture")
+        texture_path = path + ("surface", "texture")
+        if enabled_path_of(texture, texture_path):
+            components.append(SceneComponent(
+                "Ground surface texture",
+                f"{key}:texture",
+                key,
+                "ground",
+                texture_path + ("enabled",),
+            ))
+        for object_index, item in enumerate(landform.get("surface_objects", [])):
+            if not isinstance(item, dict):
+                continue
+            object_path = path + ("surface_objects", object_index)
+            components.append(SceneComponent(
+                name_of(item, f"surface object {object_index}"),
+                f"{key}:so:{object_index}",
+                key,
+                _SURFACE_OBJECT_PAGES.get(item.get("generator"), page),
+                enabled_path_of(item, object_path),
+            ))
+
+    components.append(SceneComponent("Objects", "objects", "scene_root", "objects"))
+    for index, item in enumerate(config.get(OBJECTS_PATH, [])):
+        path = OBJECTS_PATH + (index,)
+        components.append(SceneComponent(
+            name_of(item, f"object {index}"),
+            f"object:{index}",
+            "objects",
+            "objects",
+            enabled_path_of(item, path),
+        ))
+
+    components.append(SceneComponent("Sky", "sky_root", "scene_root", "", heading=True))
+    background = config.get(SKY_PATH + ("background",), None)
+    components.append(SceneComponent(
+        "Background",
+        "sky",
+        "sky_root",
+        "sky",
+        enabled_path_of(background, SKY_PATH + ("background",)),
+    ))
+    components.append(SceneComponent("Clouds", "clouds", "sky_root", "clouds"))
+    for index, cloud in enumerate(config.get(SKY_PATH + ("clouds",), [])):
+        path = SKY_PATH + ("clouds", index)
+        components.append(SceneComponent(
+            name_of(cloud, f"cloud {index}"),
+            f"cloud:{index}",
+            "clouds",
+            "clouds",
+            enabled_path_of(cloud, path),
+        ))
+    sun = config.get(SKY_PATH + ("sun",), None)
+    components.append(SceneComponent(
+        "Sun",
+        "lighting",
+        "sky_root",
+        "lighting",
+        enabled_path_of(sun, SKY_PATH + ("sun",)),
+    ))
+
+    atmosphere_path = ("scene_description", "atmosphere")
+    components.append(SceneComponent(
+        "Atmosphere", "atmosphere", "scene_root", "atmosphere"
+    ))
+    for category in ("fog", "haze", "mist", "rain"):
+        for index, item in enumerate(
+            config.get(atmosphere_path + (category,), [])
+        ):
+            path = atmosphere_path + (category, index)
+            components.append(SceneComponent(
+                name_of(item, f"{category} {index}"),
+                f"atmosphere:{category}:{index}",
+                "atmosphere",
+                "atmosphere",
+                enabled_path_of(item, path),
+            ))
+
+    water = config.get(("scene_description", "water"), None)
+    components.append(SceneComponent(
+        "Water",
+        "water",
+        "scene_root",
+        "water",
+        enabled_path_of(water, ("scene_description", "water")),
+    ))
+    return components
+
+
+def visible_components(
+    config: SceneConfig, components: list[SceneComponent]
+) -> list[SceneComponent]:
+    """Return the components the Outline shows: enabled ones, and any row
+    that groups at least one of them. Disabled components are omitted, not
+    dimmed; re-enable them from Scene Components and Setup."""
+
+    children: dict[str | None, list[SceneComponent]] = {}
+    for component in components:
+        children.setdefault(component.parent, []).append(component)
+
+    shown: set[str] = set()
+
+    def show(component: SceneComponent) -> bool:
+        if component.enabled_path is not None and not bool(
+            config.get(component.enabled_path, False)
+        ):
+            return False
+        kids = children.get(component.key, [])
+        kid_shown = [show(kid) for kid in kids]
+        if kids and not any(kid_shown) and component.enabled_path is None:
+            # A pure grouping row with nothing under it (e.g. Clouds when
+            # every cloud is off) is omitted; leaf rows without an enabled
+            # flag (Context, Camera, Render) are always shown.
+            if component.heading or component.key in {
+                "landforms", "objects", "clouds", "atmosphere"
+            }:
+                return False
+        shown.add(component.key)
+        return True
+
+    for component in children.get(None, []):
+        show(component)
+    return [component for component in components if component.key in shown]
 
 
 class RenderImage(QtWidgets.QLabel):
@@ -91,6 +318,10 @@ class Inspector(QtWidgets.QWidget):
         self.stack = QtWidgets.QStackedWidget()
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        header = QtWidgets.QLabel("PARAMETER VALUES")
+        header.setObjectName("panelHeader")
+        layout.addWidget(header)
         layout.addWidget(self.stack)
         self._build_pages()
 
@@ -396,7 +627,7 @@ class Inspector(QtWidgets.QWidget):
     def _build_scene_page(self) -> None:
         form = self._page(
             "scene",
-            "Working Scene",
+            "Context",
             "A saved and rendered parameter state is one complete PBRT scene. "
             "Scene context is explicit and will control sun direction only when "
             "astronomical direction is enabled in a later migration stage.",
@@ -1268,12 +1499,278 @@ class Inspector(QtWidgets.QWidget):
         )
 
 
+class SceneSetupDialog(QtWidgets.QDialog):
+    """Scene Components and Setup.
+
+    Shown before the workspace opens, like an image editor's new-document
+    dialog: choose the major components of the scene and its basic setup.
+    Every checkbox binds to an existing ``enabled`` flag in config.json, so
+    the choices are saved with the scene by Save Scene. Reopen it from the
+    toolbar to add or remove components later.
+    """
+
+    def __init__(
+        self,
+        config: SceneConfig,
+        parent: QtWidgets.QWidget | None = None,
+        *,
+        launch: bool = True,
+    ) -> None:
+        super().__init__(parent)
+        self.config = config
+        self.setWindowTitle("Scene Components and Setup")
+        self.setModal(True)
+        self.resize(1040, 720)
+        if parent is None:
+            self.setStyleSheet(STUDIO_STYLE)
+
+        outer = QtWidgets.QVBoxLayout(self)
+        outer.setContentsMargins(16, 14, 16, 14)
+        outer.setSpacing(10)
+        title = QtWidgets.QLabel("Scene Components and Setup")
+        title.setObjectName("inspectorHeading")
+        outer.addWidget(title)
+        instruction = QtWidgets.QLabel(
+            "Choose the major components of this scene and its basic setup. "
+            "The Outline will show only the components you choose. Nothing "
+            "is written to config.json until Save Scene."
+        )
+        instruction.setWordWrap(True)
+        instruction.setObjectName("inspectorNote")
+        outer.addWidget(instruction)
+
+        columns = QtWidgets.QHBoxLayout()
+        columns.setSpacing(18)
+        outer.addLayout(columns, 1)
+        columns.addWidget(self._build_setup(), 0)
+        columns.addWidget(self._build_components(), 1)
+
+        buttons = QtWidgets.QDialogButtonBox()
+        if launch:
+            open_button = buttons.addButton(
+                "Open Workspace", QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole
+            )
+            quit_button = buttons.addButton(
+                "Quit", QtWidgets.QDialogButtonBox.ButtonRole.RejectRole
+            )
+            quit_button.setObjectName("setup_quit")
+        else:
+            open_button = buttons.addButton(
+                "Done", QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole
+            )
+        open_button.setObjectName("setup_open")
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        outer.addWidget(buttons)
+
+    # -- value plumbing ----------------------------------------------------
+
+    def _set(self, path: JsonPath, value: Any) -> None:
+        try:
+            self.config.set(path, value)
+        except SceneConfigError as error:
+            QtWidgets.QMessageBox.warning(self, "Configuration value", str(error))
+
+    def _build_setup(self) -> QtWidgets.QWidget:
+        panel = QtWidgets.QWidget()
+        panel.setMinimumWidth(360)
+        panel.setMaximumWidth(420)
+        layout = QtWidgets.QVBoxLayout(panel)
+        layout.setContentsMargins(0, 0, 0, 0)
+        heading = QtWidgets.QLabel("SETUP")
+        heading.setObjectName("panelHeader")
+        layout.addWidget(heading)
+        form = QtWidgets.QFormLayout()
+        form.setFieldGrowthPolicy(
+            QtWidgets.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow
+        )
+        layout.addLayout(form)
+        layout.addStretch(1)
+
+        name = QtWidgets.QLineEdit(str(self.config.get(("scene_description", "name"))))
+        name.setObjectName("setup_scene_name")
+        name.editingFinished.connect(
+            lambda: self._set(("scene_description", "name"), name.text().strip())
+        )
+        form.addRow("Scene name", name)
+        note = QtWidgets.QLabel(
+            "File names and paths follow the scene name and the established "
+            "archive convention; they are not set here."
+        )
+        note.setWordWrap(True)
+        note.setObjectName("inspectorNote")
+        form.addRow("", note)
+
+        camera = ("camera_settings",)
+        self._vector(form, "Camera eye", camera + ("look_at", "eye"))
+        self._vector(form, "Camera look at", camera + ("look_at", "look"))
+        self._vector(form, "Camera up", camera + ("look_at", "up"))
+        self._number(form, "Field of view", camera + ("fov",), 1.0, 179.0, 2)
+
+        render = ("render_settings",)
+        self._integer(form, "Width", render + ("film", "x_resolution"), 1, 32_768)
+        self._integer(form, "Height", render + ("film", "y_resolution"), 1, 32_768)
+        self._integer(
+            form, "Pixel samples", render + ("sampler", "pixel_samples"), 1, 1_000_000
+        )
+        self._integer(
+            form, "Maximum path depth", render + ("integrator", "max_depth"), 1, 1_000_000
+        )
+        backend = QtWidgets.QComboBox()
+        backend.setObjectName("setup_backend")
+        backend.addItem("GPU", "gpu")
+        backend.addItem("CPU", "cpu")
+        backend.setCurrentIndex(
+            max(0, backend.findData(self.config.get(render + ("backend", "type"))))
+        )
+        backend.currentIndexChanged.connect(
+            lambda index: self._set(render + ("backend", "type"), backend.itemData(index))
+        )
+        form.addRow("Backend", backend)
+        shaft = QtWidgets.QCheckBox()
+        shaft.setObjectName("setup_shaft_composite")
+        shaft.setChecked(bool(self.config.get(render + ("shaft_composite", "enabled"))))
+        shaft.toggled.connect(
+            lambda value: self._set(render + ("shaft_composite", "enabled"), value)
+        )
+        form.addRow("Shaft composite", shaft)
+        return panel
+
+    def _vector(self, form: QtWidgets.QFormLayout, label: str, path: JsonPath) -> None:
+        row = QtWidgets.QWidget()
+        layout = QtWidgets.QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        values = list(self.config.get(path))
+        for index, axis in enumerate("XYZ"):
+            spin = QtWidgets.QDoubleSpinBox()
+            spin.setRange(-1_000_000.0, 1_000_000.0)
+            spin.setDecimals(3)
+            spin.setPrefix(f"{axis} ")
+            spin.setValue(float(values[index]))
+
+            def set_component(value: float, i: int = index) -> None:
+                current = list(self.config.get(path))
+                current[i] = value
+                self._set(path, current)
+
+            spin.valueChanged.connect(set_component)
+            layout.addWidget(spin)
+        form.addRow(label, row)
+
+    def _number(
+        self,
+        form: QtWidgets.QFormLayout,
+        label: str,
+        path: JsonPath,
+        minimum: float,
+        maximum: float,
+        decimals: int,
+    ) -> None:
+        spin = QtWidgets.QDoubleSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setDecimals(decimals)
+        spin.setValue(float(self.config.get(path)))
+        spin.valueChanged.connect(lambda value: self._set(path, value))
+        form.addRow(label, spin)
+
+    def _integer(
+        self,
+        form: QtWidgets.QFormLayout,
+        label: str,
+        path: JsonPath,
+        minimum: int,
+        maximum: int,
+    ) -> None:
+        spin = QtWidgets.QSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setGroupSeparatorShown(True)
+        spin.setValue(int(self.config.get(path)))
+        spin.valueChanged.connect(lambda value: self._set(path, value))
+        form.addRow(label, spin)
+
+    def _build_components(self) -> QtWidgets.QWidget:
+        panel = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(panel)
+        layout.setContentsMargins(0, 0, 0, 0)
+        heading = QtWidgets.QLabel("SCENE COMPONENTS")
+        heading.setObjectName("panelHeader")
+        layout.addWidget(heading)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QtWidgets.QFrame.Shape.NoFrame)
+        inner = QtWidgets.QWidget()
+        rows = QtWidgets.QVBoxLayout(inner)
+        rows.setContentsMargins(0, 0, 0, 0)
+        rows.setSpacing(3)
+        scroll.setWidget(inner)
+        layout.addWidget(scroll, 1)
+
+        components = scene_components(self.config)
+        depth: dict[str, int] = {}
+        for component in components:
+            if component.parent is None:
+                depth[component.key] = 0
+            else:
+                depth[component.key] = depth.get(component.parent, 0) + 1
+
+        # The scene allows exactly one enabled terrain-heightfield landform
+        # (scene_config.terrain_landform_index). Their checkboxes therefore
+        # act as a radio group: checking one unchecks the others.
+        heightfield_boxes: list[QtWidgets.QCheckBox] = []
+
+        def is_heightfield_landform(component: SceneComponent) -> bool:
+            if component.parent != "landforms" or not component.key.startswith("landform:"):
+                return False
+            index = int(component.key.split(":")[1])
+            topography = self.config.get(LANDFORMS_PATH + (index, "topography"), {})
+            return (
+                isinstance(topography, dict)
+                and topography.get("enabled", False)
+                and topography.get("generator") == "terrain_heightfield"
+            )
+
+        def exclusive(checked: bool, box: QtWidgets.QCheckBox) -> None:
+            if checked:
+                for other in heightfield_boxes:
+                    if other is not box and other.isChecked():
+                        other.setChecked(False)
+
+        for component in components:
+            if component.key in {"setup", "camera", "render", "scene_root", "scene"}:
+                continue
+            indent = 18 * max(0, depth[component.key] - 1)
+            if component.enabled_path is None:
+                label = QtWidgets.QLabel(component.label)
+                label.setStyleSheet(
+                    f"font-weight: 600; color: #f0b84c; margin-left: {indent}px;"
+                    " margin-top: 6px;"
+                )
+                rows.addWidget(label)
+                continue
+            box = QtWidgets.QCheckBox(component.label)
+            box.setObjectName(f"component:{component.key}")
+            box.setStyleSheet(f"margin-left: {indent}px;")
+            box.setChecked(bool(self.config.get(component.enabled_path, False)))
+            box.toggled.connect(
+                lambda value, p=component.enabled_path: self._set(p, value)
+            )
+            if is_heightfield_landform(component):
+                box.setToolTip(
+                    "Only one terrain-heightfield landform can be enabled."
+                )
+                heightfield_boxes.append(box)
+                box.toggled.connect(lambda value, b=box: exclusive(value, b))
+            rows.addWidget(box)
+        rows.addStretch(1)
+        return panel
+
+
 class StudioWindow(QtWidgets.QMainWindow):
     """Main PBRT-v4 Art Studio window."""
 
-    def __init__(self, config_path: Path) -> None:
+    def __init__(self, config: Path | SceneConfig) -> None:
         super().__init__()
-        self.config = SceneConfig(config_path)
+        self.config = config if isinstance(config, SceneConfig) else SceneConfig(config)
         self.render_process = QtCore.QProcess(self)
         self.render_process.setProcessChannelMode(
             QtCore.QProcess.ProcessChannelMode.MergedChannels
@@ -1304,54 +1801,87 @@ class StudioWindow(QtWidgets.QMainWindow):
 
     def _build_navigation(self) -> QtWidgets.QTreeWidget:
         tree = QtWidgets.QTreeWidget()
-        tree.setHeaderLabel("SCENE ELEMENTS")
+        tree.setHeaderLabel("OUTLINE")
         tree.setMinimumWidth(215)
         tree.setMaximumWidth(290)
-        entries = [
-            ("Scene", "scene", None),
-            ("Composition", "composition", None),
-            ("Landscape", "landscape", None),
-            ("Ground", "ground", "landscape"),
-            ("Landform", "landform", "landscape"),
-            ("Grass", "grass", "landscape"),
-            ("Flowers / Poppies", "poppies", "landscape"),
-            ("Trees", "trees", "landscape"),
-            ("Water", "water", "landscape"),
-            ("Distant Hills", "distant_hills", "landscape"),
-            ("Objects", "objects", None),
-            ("Sky", "sky", None),
-            ("Clouds", "clouds", "sky"),
-            ("Atmosphere", "atmosphere", None),
-            ("Lighting", "lighting", None),
-            ("Camera", "camera", None),
-            ("Render", "render", None),
-        ]
-        items: dict[str, QtWidgets.QTreeWidgetItem] = {}
-        for label, key, parent_key in entries:
-            parent = items.get(parent_key)
-            item = QtWidgets.QTreeWidgetItem(parent or tree, [label])
-            item.setData(0, QtCore.Qt.ItemDataRole.UserRole, key)
-            items[key] = item
-        tree.expandAll()
-        tree.setCurrentItem(items["scene"])
+        self._populate_navigation(tree, "scene")
         tree.currentItemChanged.connect(
             lambda current, _previous: self.inspector.show_page(
-                current.data(0, QtCore.Qt.ItemDataRole.UserRole) if current else "scene"
+                current.data(0, QtCore.Qt.ItemDataRole.UserRole + 1)
+                if current
+                else "scene"
             )
         )
         return tree
+
+    def _populate_navigation(self, tree: QtWidgets.QTreeWidget, current_key: str) -> None:
+        """Fill the Outline from config.json with enabled components only.
+
+        Rows are generated from the scene arrays (see scene_components), so
+        the Outline mirrors the JSON hierarchy: the setup roots, then
+        scene_description. Heading rows are not selectable. Each row stores its
+        component key (UserRole) and the page it opens (UserRole + 1).
+        """
+
+        tree.blockSignals(True)
+        tree.clear()
+        items: dict[str, QtWidgets.QTreeWidgetItem] = {}
+        for component in visible_components(self.config, scene_components(self.config)):
+            parent = items.get(component.parent)
+            item = QtWidgets.QTreeWidgetItem(parent or tree, [component.label])
+            item.setData(0, QtCore.Qt.ItemDataRole.UserRole, component.key)
+            item.setData(0, QtCore.Qt.ItemDataRole.UserRole + 1, component.page)
+            if component.heading:
+                item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsSelectable)
+            items[component.key] = item
+        tree.expandAll()
+        tree.blockSignals(False)
+        tree.setCurrentItem(items.get(current_key) or items["scene"])
+
+    def _refresh_navigation(self) -> None:
+        """Rebuild the Outline after components change, keeping the selection."""
+
+        current = self.navigation.currentItem()
+        key = current.data(0, QtCore.Qt.ItemDataRole.UserRole) if current else "scene"
+        self._populate_navigation(self.navigation, key)
+
+    def outline_keys(self) -> list[str]:
+        """Component keys currently shown in the Outline, in display order."""
+
+        keys: list[str] = []
+
+        def walk(item: QtWidgets.QTreeWidgetItem) -> None:
+            keys.append(item.data(0, QtCore.Qt.ItemDataRole.UserRole))
+            for index in range(item.childCount()):
+                walk(item.child(index))
+
+        for index in range(self.navigation.topLevelItemCount()):
+            walk(self.navigation.topLevelItem(index))
+        return keys
+
+    def open_scene_setup(self) -> None:
+        """Reopen Scene Components and Setup from the workspace."""
+
+        dialog = SceneSetupDialog(self.config, self, launch=False)
+        dialog.exec()
+        self.inspector.refresh()
+        self._refresh_navigation()
+        self._configuration_changed("scene components")
 
     def _build_layout(self) -> None:
         central = QtWidgets.QWidget()
         layout = QtWidgets.QGridLayout(central)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(8)
+        # Outline and Parameter Values sit together on the left so a selected
+        # row and its editable values read as one unit; the viewer takes the
+        # remaining width on the right.
         layout.addWidget(self.navigation, 0, 0)
-        layout.addWidget(self.image, 0, 1)
-        layout.addWidget(self.inspector, 0, 2)
+        layout.addWidget(self.inspector, 0, 1)
+        layout.addWidget(self.image, 0, 2)
         layout.setColumnStretch(0, 0)
-        layout.setColumnStretch(1, 1)
-        layout.setColumnStretch(2, 0)
+        layout.setColumnStretch(1, 0)
+        layout.setColumnStretch(2, 1)
         self.inspector.setMinimumWidth(330)
         self.inspector.setMaximumWidth(440)
         self.setCentralWidget(central)
@@ -1380,36 +1910,27 @@ class StudioWindow(QtWidgets.QMainWindow):
         save = toolbar.addAction("Save Scene")
         render = toolbar.addAction("Render")
         stop = toolbar.addAction("Stop")
+        refresh_image = toolbar.addAction("Refresh Image")
+        refresh_image.setObjectName("refresh_image_action")
+        refresh_image.setToolTip(
+            "Show the newest render in the local archive, e.g. after a render "
+            "run from run_render_terminal.sh"
+        )
+        refresh_image.triggered.connect(self.refresh_image)
         toolbar.addSeparator()
         reload_action = toolbar.addAction("Reload JSON")
+        toolbar.addSeparator()
+        setup_action = toolbar.addAction("Scene Setup…")
+        setup_action.setObjectName("scene_setup_action")
         validate.triggered.connect(self.validate_config)
         save.triggered.connect(self.save_config)
         render.triggered.connect(self.start_render)
         stop.triggered.connect(self.stop_render)
         reload_action.triggered.connect(self.reload_config)
+        setup_action.triggered.connect(self.open_scene_setup)
 
     def _apply_style(self) -> None:
-        self.setStyleSheet(
-            """
-            QMainWindow, QWidget { background: #20252b; color: #e8ebed; }
-            QTreeWidget, QPlainTextEdit, QLineEdit, QSpinBox, QDoubleSpinBox,
-            QComboBox { background: #171b20; border: 1px solid #3a424b;
-                        selection-background-color: #87662b; }
-            QTreeWidget::item { padding: 5px; }
-            QTreeWidget::item:selected { background: #87662b; }
-            QToolBar { background: #2a3037; border-bottom: 1px solid #3a424b;
-                       spacing: 5px; padding: 5px; }
-            QToolButton { background: #39414a; padding: 6px 10px; border-radius: 3px; }
-            QToolButton:hover { background: #4a5561; }
-            QLabel#renderImage { background: #111418; border: 1px solid #3a424b;
-                                 color: #8f99a3; font-size: 16px; }
-            QLabel#inspectorHeading { font-size: 19px; font-weight: 600;
-                                      color: #f0b84c; padding: 8px 0; }
-            QLabel#inspectorNote { color: #aeb6bd; padding-bottom: 10px; }
-            QDockWidget::title { background: #2a3037; padding: 5px; }
-            QPlainTextEdit#renderLog { font-family: monospace; font-size: 12px; }
-            """
-        )
+        self.setStyleSheet(STUDIO_STYLE)
 
     def _configuration_changed(self, path: str) -> None:
         self._update_status(f"Unsaved change: {path}")
@@ -1454,6 +1975,7 @@ class StudioWindow(QtWidgets.QMainWindow):
         try:
             self.config.reload()
             self.inspector.refresh()
+            self._refresh_navigation()
         except SceneConfigError as error:
             QtWidgets.QMessageBox.warning(self, "Reload JSON", str(error))
             return
@@ -1538,7 +2060,16 @@ class StudioWindow(QtWidgets.QMainWindow):
         else:
             self._update_status("Render failed or stopped")
 
-    def _load_latest_render(self) -> None:
+    def refresh_image(self) -> None:
+        """Manually reload the newest archived render into the viewer."""
+
+        latest = self._load_latest_render()
+        if latest is None:
+            self._update_status("No render found in the local archive")
+        else:
+            self._update_status(f"Displayed {latest.name}")
+
+    def _load_latest_render(self) -> Path | None:
         configured_archive = Path(self.config.get(("file_paths", "local_archive")))
         archive = (
             configured_archive
@@ -1552,10 +2083,12 @@ class StudioWindow(QtWidgets.QMainWindow):
             and not path.name.endswith("_base.png")
         ]
         if not candidates:
-            return
+            return None
         latest = max(candidates, key=lambda path: path.stat().st_mtime)
         if self.image.load(latest):
             self.log.appendPlainText(f"Displayed render: {latest.name}")
+            return latest
+        return None
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         if self.render_process.state() != QtCore.QProcess.ProcessState.NotRunning:
@@ -1602,10 +2135,18 @@ def main() -> int:
     application.setApplicationName("PBRT-v4 Art Studio")
     application.setOrganizationName("PBRT-v4 Art Studio")
     try:
-        window = StudioWindow(arguments.config)
+        config = SceneConfig(arguments.config)
     except SceneConfigError as error:
         QtWidgets.QMessageBox.critical(None, "PBRT-v4 Art Studio", str(error))
         return 1
+    # Scene Components and Setup comes first, like an image editor's
+    # new-document dialog; the workspace opens only after Open Workspace.
+    setup = SceneSetupDialog(config, launch=True)
+    if setup.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+        return 0
+    window = StudioWindow(config)
+    if config.dirty:
+        window._configuration_changed("scene components")
     window.show()
     return application.exec()
 

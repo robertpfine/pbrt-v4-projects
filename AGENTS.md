@@ -15,6 +15,13 @@ Before analyzing, editing, rendering, committing, or proposing next steps:
 
 Core safeguards:
 
+- Claude Code works in this same checkout as an independent reviewer and,
+  when the artist instructs it, an editor. Only one assistant works at a time.
+  Before editing or committing, run `git status`; if the working copy contains
+  changes you did not make, the other assistant has been active — stop and ask
+  the artist. After either assistant commits, the other re-reads `git status`
+  and `git log` before doing anything. Claude does not commit or push unless
+  the artist explicitly grants it; Codex remains the checkpoint committer.
 - `scene_workspace/config.json` is the one authoritative live scene
   configuration. Do not create a second scene JSON for a new landform, module,
   preview, or experiment unless the artist explicitly changes this rule.
