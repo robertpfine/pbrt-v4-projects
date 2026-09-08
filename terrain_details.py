@@ -170,6 +170,16 @@ def _instance_anchor_position(point, local_anchor):
     return tuple(point.position[i] + aligned[i] for i in range(3))
 
 
+def validate_elevation_range(value):
+    """Validate an optional inclusive world-Y interval for terrain placement."""
+    if (not isinstance(value, (list, tuple)) or len(value) != 2
+            or any(not isinstance(v, (int, float)) or isinstance(v, bool)
+                   or not math.isfinite(v) for v in value)
+            or value[0] > value[1]):
+        return ["elevation_range must be an ascending pair of finite numbers"]
+    return []
+
+
 def scatter_points(
     terrain,
     config,
@@ -193,6 +203,11 @@ def scatter_points(
     width = min(float(size[0]), terrain.width)
     depth = min(float(size[1]), terrain.depth)
     max_slope = float(config.get("max_slope_degrees", 90.0))
+    elevation_range = config.get("elevation_range")
+    if "elevation_range" in config:
+        errors = validate_elevation_range(elevation_range)
+        if errors:
+            raise ValueError("; ".join(errors))
     scale_range = config.get("scale", [1.0, 1.0])
     patch = config.get("patchiness", {})
     patch_strength = float(patch.get("strength", 0.0))
@@ -254,6 +269,8 @@ def scatter_points(
         sample = terrain.sample(x, z)
         if sample.slope_degrees > max_slope:
             continue
+        if elevation_range is not None and not elevation_range[0] <= sample.height <= elevation_range[1]:
+            continue
         scale = rng.uniform(float(scale_range[0]), float(scale_range[1]))
         aspect = (
             rng.uniform(0.78, 1.22),
@@ -292,9 +309,10 @@ def scatter_points(
                 if rng.random() > density:
                     continue
         result.append(point)
-    if constrain_to_camera and len(result) < count:
+    if (constrain_to_camera or elevation_range is not None) and len(result) < count:
+        constraint = "camera-frustum" if constrain_to_camera else "elevation-constrained"
         raise ValueError(
-            f"camera-frustum scatter accepted only {len(result)} of {count} "
+            f"{constraint} scatter accepted only {len(result)} of {count} "
             f"requested instances after {attempts} attempts"
         )
     return result

@@ -16,8 +16,8 @@
     "enabled": true,
     "type": "perspective",
     "look_at": {
-      "eye":  [80.0, 115.0, 690.0],
-      "look": [0.0, 85.0, -1800.0],
+      "eye":  [670.0, 115.0, 710.0],
+      "look": [0.0, 85.0, -160.0],
       "up":   [0, 1, 0]
     },
     "fov": 48.0
@@ -412,29 +412,6 @@
               "y_offset": 0.055,
               "patchiness": { "strength": 0.48, "frequency": 0.035 },
               "attraction": { "center": [0.0, 0.0], "radius": 150.0, "strength": 0.75 }
-            }
-          },
-          {
-            "name": "rocks",
-            "enabled": false,
-            "generator": "rock_scatter",
-            "construction": {
-              "variants": 3,
-              "scale": [1.6, 5.8],
-              "reflectance_variants": [
-                [0.14, 0.13, 0.105],
-                [0.095, 0.10, 0.075],
-                [0.18, 0.16, 0.12]
-              ]
-            },
-            "population": {
-              "seed": 67,
-              "count": 48,
-              "region": { "center": [0.0, 0.0], "size": [620.0, 620.0] },
-              "max_slope_degrees": 48.0,
-              "y_offset": -1.0,
-              "exclusion": { "center": [0.0, 0.0], "radius": 14.0 },
-              "patchiness": { "strength": 0.64, "frequency": 0.012 }
             }
           },
           {
@@ -1688,19 +1665,25 @@
               "lacunarity": 2.0
             },
             "basin": {
+            "enabled": true,
+            "center": [
+              0.0,
+              -150.0
+            ],
+            "radii": [
+              1000.0,
+              850.0
+            ],
+            "floor_height": -60.0,
+            "inner_fraction": 0.6,
+            "shore_variation": 0.12,
+            "shore": {
               "enabled": true,
-              "center": [
-                0.0,
-                -150.0
-              ],
-              "radii": [
-                1030.0,
-                1000.0
-              ],
-              "floor_height": -60.0,
-              "inner_fraction": 0.6,
-              "shore_variation": 0.12
+              "height": 4.0,
+              "width": 350.0,
+              "transition": 1500.0
             }
+          }
           }
         },
         "surface": {
@@ -1734,7 +1717,173 @@
             }
           }
         },
-        "surface_objects": []
+        "surface_objects": [
+          {
+            "name": "shoreline_rocks",
+            "enabled": true,
+            "generator": "rock_scatter",
+            "construction": {
+              "variants": 5,
+              "scale": [
+                7.0,
+                23.0
+              ],
+              "reflectance_variants": [
+                [
+                  0.18,
+                  0.17,
+                  0.15
+                ],
+                [
+                  0.1,
+                  0.11,
+                  0.105
+                ],
+                [
+                  0.25,
+                  0.235,
+                  0.2
+                ],
+                [
+                  0.14,
+                  0.13,
+                  0.115
+                ],
+                [
+                  0.2,
+                  0.205,
+                  0.2
+                ]
+              ]
+            },
+            "population": {
+              "seed": 67,
+              "count": 420,
+              "region": {
+                "center": [
+                  0.0,
+                  -150.0
+                ],
+                "size": [
+                  2250.0,
+                  1950.0
+                ]
+              },
+              "max_slope_degrees": 48.0,
+              "y_offset": -2.0,
+              "exclusion": {
+                "center": [
+                  0.0,
+                  -150.0
+                ],
+                "radius": 0.0
+              },
+              "patchiness": {
+                "strength": 0.55,
+                "frequency": 0.014
+              },
+              "elevation_range": [
+                -5.0,
+                3.75
+              ]
+            }
+          },
+          {
+            "name": "shore_trees",
+            "enabled": true,
+            "generator": "lsystem_tree",
+            "construction": {
+              "preset": "fractal_tree",
+              "debug_render": {
+                "mode": "cylinders"
+              },
+              "seed": 23,
+              "scale": 1.4,
+              "trunk_height": 170.0,
+              "trunk_segments": 32,
+              "base_radius": 10.5,
+              "crown_radius": 7.8,
+              "initial_length": 52.0,
+              "alpha": 2.2,
+              "min_radius": 0.65,
+              "max_depth": 12,
+              "dominant_length_ratio": 0.76,
+              "lateral_length_ratio": 0.62,
+              "dominant_angle": 24.0,
+              "lateral_angle": 48.0,
+              "upward_bias": 0.18,
+              "angle_jitter": 12.0,
+              "length_jitter": 0.1,
+              "asymmetry_min": 1.05,
+              "asymmetry_max": 1.55,
+              "leaves_enabled": true,
+              "leaf_length": 3.2,
+              "leaf_width": 0.82,
+              "crownlet": {
+                "style": "open",
+                "depth": 4,
+                "length": 15.5,
+                "length_ratio": 0.75,
+                "angle": 40.0,
+                "radius_ratio": 0.46,
+                "clustered_spread_ratio": 0.3,
+                "clustered_length_ratio": 0.62,
+                "leaves_per_tip": 8
+              },
+              "wood_reflectance": [
+                0.2,
+                0.085,
+                0.02
+              ],
+              "foliage_reflectance": [
+                0.02,
+                0.18,
+                0.035
+              ]
+            },
+            "population": {
+              "method": "explicit",
+              "origin": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "terrain_placement": {
+                "enabled": true,
+                "height_offset": -1.0
+              },
+              "instances": [
+                {
+                  "position": [
+                    150.0,
+                    0.0,
+                    -1150.0
+                  ],
+                  "rotation_y": -18.0,
+                  "scale": 1.0
+                },
+                {
+                  "position": [
+                    -210.0,
+                    0.0,
+                    -1380.0
+                  ],
+                  "rotation_y": 37.0,
+                  "scale": 0.82
+                },
+                {
+                  "position": [
+                    -1050.0,
+                    0.0,
+                    -310.0
+                  ],
+                  "rotation_y": 82.0,
+                  "scale": 0.93
+                }
+              ]
+            }
+          }
+        ]
       }
     ],
     "objects": [
@@ -2179,67 +2328,124 @@
           "name": "left_cumulus",
           "enabled": true,
           "placement": {
-            "position": [-1200.0, 1250.0, -4600.0]
+            "position": [
+              -500.0,
+              720.0,
+              -2200.0
+            ]
           },
-          "dimensions": [1800.0, 900.0, 1200.0],
+          "dimensions": [
+            1800.0,
+            900.0,
+            1200.0
+          ],
           "density_field": {
             "generator": "lobed",
-            "resolution": [120, 72, 48],
+            "resolution": [
+              120,
+              72,
+              48
+            ],
             "shape": {
-              "bottom_fade": 120.0,
-              "top_fade": 180.0
+              "bottom_fade": 90.0,
+              "top_fade": 12.0
             },
             "noise": {
-              "seed": 823,
-              "frequency": [0.00045, 0.0012, 0.00055],
+              "seed": 317,
+              "frequency": 0.0045,
               "octaves": 3,
-              "roughness": 0.55,
-              "frequency_jump": 2.0,
-              "coverage": 0.34,
-              "softness": 0.22,
-              "broad_strength": 1.0,
-              "detail_strength": 0.35,
-              "detail_frequency_scale": 2.7,
-              "edge_fade_fraction": [0.08, 0.15, 0.1],
+              "roughness": 0.7,
+              "frequency_jump": 2.2,
+              "coverage": 0.35,
+              "softness": 0.01,
+              "edge_influence": 0.9,
+              "envelope_power": 0.2,
+              "density_contrast": 2.5,
+              "density_modulation_min": 0.03,
+              "density_modulation_max": 2.2,
               "domain_warp": {
-                "enabled": false,
-                "frequency": 0.001,
-                "strength": [0.0, 0.0, 0.0]
+                "enabled": true,
+                "frequency": 0.003,
+                "strength": [
+                  260.0,
+                  180.0,
+                  240.0
+                ]
               }
             },
             "depth_slope": {},
             "depth_profile": {},
             "lobes": [
               {
-                "center_offset": [0.0, -130.0, 0.0],
-                "radii": [620.0, 170.0, 360.0]
+                "center_offset": [
+                  0.0,
+                  -130.0,
+                  0.0
+                ],
+                "radii": [
+                  620.0,
+                  170.0,
+                  360.0
+                ]
               },
               {
-                "center_offset": [-280.0, 40.0, 20.0],
-                "radii": [310.0, 290.0, 270.0]
+                "center_offset": [
+                  -280.0,
+                  40.0,
+                  20.0
+                ],
+                "radii": [
+                  310.0,
+                  290.0,
+                  270.0
+                ]
               },
               {
-                "center_offset": [120.0, 90.0, -30.0],
-                "radii": [360.0, 330.0, 300.0]
+                "center_offset": [
+                  120.0,
+                  90.0,
+                  -30.0
+                ],
+                "radii": [
+                  360.0,
+                  330.0,
+                  300.0
+                ]
               },
               {
-                "center_offset": [410.0, 0.0, 40.0],
-                "radii": [260.0, 240.0, 230.0]
+                "center_offset": [
+                  410.0,
+                  0.0,
+                  40.0
+                ],
+                "radii": [
+                  260.0,
+                  240.0,
+                  230.0
+                ]
               }
             ]
           },
           "medium": {
             "type": "rgbgrid",
-            "density_scale": 0.9,
-            "scattering": [0.003, 0.003, 0.003],
-            "absorption": [8e-05, 9e-05, 0.0001],
-            "anisotropy": 0.25,
+            "density_scale": 0.72,
+            "scattering": [
+              0.0045,
+              0.0048,
+              0.0052
+            ],
+            "absorption": [
+              0.00035,
+              0.0003,
+              0.00025
+            ],
+            "anisotropy": 0.15,
             "underside": {
               "enabled": true,
-              "height_fraction": 0.5,
-              "transition": 0.25,
-              "scattering_scale": 0.75,
-              "absorption_scale": 2.0
+              "height_fraction": 0.42,
+              "transition": 0.2,
+              "scattering_scale": 0.4,
+              "absorption_scale": 4.0
             }
           }
         },
@@ -2247,67 +2453,124 @@
           "name": "right_cumulus",
           "enabled": true,
           "placement": {
-            "position": [1900.0, 1600.0, -6800.0]
+            "position": [
+              -4500.0,
+              900.0,
+              -4200.0
+            ]
           },
-          "dimensions": [2400.0, 1100.0, 1600.0],
+          "dimensions": [
+            2400.0,
+            1100.0,
+            1600.0
+          ],
           "density_field": {
             "generator": "lobed",
-            "resolution": [128, 80, 52],
+            "resolution": [
+              128,
+              80,
+              52
+            ],
             "shape": {
-              "bottom_fade": 120.0,
-              "top_fade": 180.0
+              "bottom_fade": 90.0,
+              "top_fade": 12.0
             },
             "noise": {
-              "seed": 823,
-              "frequency": [0.00045, 0.0012, 0.00055],
+              "seed": 317,
+              "frequency": 0.0045,
               "octaves": 3,
-              "roughness": 0.55,
-              "frequency_jump": 2.0,
-              "coverage": 0.34,
-              "softness": 0.22,
-              "broad_strength": 1.0,
-              "detail_strength": 0.35,
-              "detail_frequency_scale": 2.7,
-              "edge_fade_fraction": [0.08, 0.15, 0.1],
+              "roughness": 0.7,
+              "frequency_jump": 2.2,
+              "coverage": 0.35,
+              "softness": 0.01,
+              "edge_influence": 0.9,
+              "envelope_power": 0.2,
+              "density_contrast": 2.5,
+              "density_modulation_min": 0.03,
+              "density_modulation_max": 2.2,
               "domain_warp": {
-                "enabled": false,
-                "frequency": 0.001,
-                "strength": [0.0, 0.0, 0.0]
+                "enabled": true,
+                "frequency": 0.003,
+                "strength": [
+                  260.0,
+                  180.0,
+                  240.0
+                ]
               }
             },
             "depth_slope": {},
             "depth_profile": {},
             "lobes": [
               {
-                "center_offset": [0.0, -170.0, 0.0],
-                "radii": [840.0, 210.0, 500.0]
+                "center_offset": [
+                  0.0,
+                  -170.0,
+                  0.0
+                ],
+                "radii": [
+                  840.0,
+                  210.0,
+                  500.0
+                ]
               },
               {
-                "center_offset": [-430.0, 20.0, 70.0],
-                "radii": [390.0, 340.0, 350.0]
+                "center_offset": [
+                  -430.0,
+                  20.0,
+                  70.0
+                ],
+                "radii": [
+                  390.0,
+                  340.0,
+                  350.0
+                ]
               },
               {
-                "center_offset": [0.0, 150.0, -40.0],
-                "radii": [440.0, 390.0, 390.0]
+                "center_offset": [
+                  0.0,
+                  150.0,
+                  -40.0
+                ],
+                "radii": [
+                  440.0,
+                  390.0,
+                  390.0
+                ]
               },
               {
-                "center_offset": [520.0, 40.0, 60.0],
-                "radii": [360.0, 300.0, 320.0]
+                "center_offset": [
+                  520.0,
+                  40.0,
+                  60.0
+                ],
+                "radii": [
+                  360.0,
+                  300.0,
+                  320.0
+                ]
               }
             ]
           },
           "medium": {
             "type": "rgbgrid",
-            "density_scale": 0.9,
-            "scattering": [0.003, 0.003, 0.003],
-            "absorption": [8e-05, 9e-05, 0.0001],
-            "anisotropy": 0.25,
+            "density_scale": 0.72,
+            "scattering": [
+              0.0045,
+              0.0048,
+              0.0052
+            ],
+            "absorption": [
+              0.00035,
+              0.0003,
+              0.00025
+            ],
+            "anisotropy": 0.15,
             "underside": {
               "enabled": true,
-              "height_fraction": 0.5,
-              "transition": 0.25,
-              "scattering_scale": 0.75,
-              "absorption_scale": 2.0
+              "height_fraction": 0.42,
+              "transition": 0.2,
+              "scattering_scale": 0.4,
+              "absorption_scale": 4.0
             }
           }
         },

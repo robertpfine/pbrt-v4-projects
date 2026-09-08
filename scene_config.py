@@ -17,6 +17,7 @@ from cloud_boundary import CloudBoundary
 from sunflowers import validate_sunflower
 from pond import validate_pond, validate_water_lily
 from terrain import validate_basin
+from terrain_details import validate_elevation_range
 
 
 JsonPath = tuple[str | int, ...]
@@ -787,6 +788,12 @@ class SceneConfig:
                                     f"{object_prefix}.population must be an object"
                                 )
                                 population = {}
+                            if (generator in {"grass", "poppy", "litter", "rock_scatter", "undergrowth"}
+                                    and "elevation_range" in population):
+                                errors.extend(
+                                    f"{object_prefix}.population.{error}"
+                                    for error in validate_elevation_range(population["elevation_range"])
+                                )
                             if generator == "water_lily":
                                 errors.extend(
                                     f"{object_prefix}.{error}"

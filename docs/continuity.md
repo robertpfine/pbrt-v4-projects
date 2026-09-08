@@ -2,6 +2,68 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 rocky shoreline, trees, and restored poppy clouds
+
+After `141308`, the artist said the pond should not look sunken, requested a
+shoreline with a few trees, proposed testing the rock generator on the shore,
+and required the clouds from the poppy-field image. The intermediate landscape
+is preserved in pushed checkpoint `9ad6b6e`; its continuity backup completed
+before these changes.
+
+The current `rolling_pond_banks` basin has radii `[1000,850]` and a new optional
+`shore` shelf at Y=4 around water at Y=0. Shelf width is 350 scene units, then
+a 1500-unit smooth transition restores the distant rolling field. This lowers
+the immediate banks instead of lowering the pond into surrounding hills.
+The submerged bed and complete lily footprint checks remain valid, and all
+edges of the underlying rectangular water volume stay below dry land.
+
+`shoreline_rocks` uses the existing rock generator: 420 rounded stones with
+scale 7–23, varied aspect/rotation, five color variants, and partial burial.
+Optional `population.elevation_range: [-5,3.75]` restricts terrain scatter to
+the waterline before applying `y_offset: -2`. SceneConfig and the scatter
+function validate the interval; impossible constrained counts fail explicitly.
+The rock geometry is still stretched spheres, not angular/fractured meshes.
+This is an evaluation of that existing capability. `shore_trees` uses three
+explicit instances of the established fractal tree, with scale/rotation
+variation and terrain-sampled roots on dry ground. Its source scale is 1.4.
+
+Both cumulus entries restore the accepted `093054` poppy master's dimensions,
+lobes, grid resolutions, shape fades, noise seed/frequency/domain warp, and
+optical settings. Their original world positions are retained because cloud
+noise is evaluated in world coordinates. Exact parameter comparisons against
+the archived pre-migration JSON pass. The 10:00 AM sunlight and current blue
+background remain; sunrise lighting and fog are not copied. Camera eye is
+`[670,115,710]`, looking at `[0,85,-160]` with FOV 48, approximately 111 scene
+units above its bank. Its horizontal direction follows the poppy composition
+to frame both clouds. Lily construction/population and eta 2 / roughness 0
+water are unchanged.
+
+First launch `171617` stopped at snapshot validation before PBRT began: a
+copied rock entry duplicated the retained rock in the disabled flat landform.
+The snapshot schema permits only one `rock_scatter` entry across all landforms.
+Codex relocated that entry onto the pond banks, preserving the old recipe in
+`9ad6b6e`; no snapshot rule or general migration changed. The original disabled
+tree remains under the flat landform. Array indices there shifted when the
+rock entry moved; use names/generators when locating preserved plant entries.
+Scene and snapshot validation now pass. Replacement render
+`Water_Lily_Pond_Morning_20260908_171856.png` completed through the normal
+terminal pipeline and was inspected locally. The water meets a low rocky
+shore, three trees frame the pond, and tree/flower/cloud reflections are
+visible. The restored clouds have the poppy recipe's broken, shaped edges.
+The rounded stones visibly demonstrate the existing generator's limitation,
+and 64-sample noise remains, especially in the clouds. This comparison awaits
+artist evaluation. The archived JSON and terrain/scatter/configuration/pond/
+tree sources match the live files exactly; PBRT contains 420 rock instances
+and three tree instances.
+
+Validation: full suite passes 184 tests, 165 passed and 19 dependency skips.
+Four additional tests cover the low shelf, disabled compatibility, invalid
+shore settings, deterministic elevation-constrained scatter, impossible counts,
+and scene validation of elevation intervals. `git diff --check` passes.
+Documentation is updated in the terrain/pond guides and running discussion
+log. Reopen Art Studio for the added entry fields. PBRT/CUDA, GUI, Claude's
+journal, and the artist's question document remain untouched.
+
 ## 2026-09-08 ground-level morning pond landscape
 
 The artist requested a natural setting with rolling terrain, bright sunlight

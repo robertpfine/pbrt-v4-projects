@@ -383,3 +383,37 @@ The artist's response: "141308 is getting there. The pond should not appear
 sunken. It need a shore line with a few trees." The next iteration should lower
 and flatten the immediate banks, keep rolling relief farther back, and place
 a few trees at the shore. Preserve `141308` as an intermediate comparison.
+
+The artist added that this is an opportunity to test the rocks generator on a
+rocky shoreline, then required the clouds from the poppy-field image. Codex
+preserved `141308` in `9ad6b6e`, pushed it, and completed the continuity backup.
+
+The next composition uses a low shore shelf at Y=4 around Y=0 water, before
+blending into the hills. The existing rock generator supplies 420 rounded
+stones, with an added terrain-elevation placement interval to keep them at the
+waterline. It currently uses stretched spheres, not irregular rock meshes;
+this limitation is part of the generator test. Three copies of the established
+fractal tree sit on dry shore, with terrain-sampled roots.
+
+Cloud settings are restored from accepted poppy master `093054`, including
+lobes, grid sizes, shape fades, seed, fractal noise/domain warp, and optics.
+Their original world positions are retained so the world-space noise does not
+change their form. Camera eye `[670,115,710]`, target `[0,85,-160]`, aligns the
+pond view with the poppy composition's horizontal direction. The requested
+10:00 AM sun remains; the poppy image's sunrise light and fog are not copied.
+
+First launch `171617` failed at input snapshot validation because copying the
+rock entry left two `rock_scatter` entries in different landforms. Snapshot
+validation permits only one globally. Codex relocated the retained entry to
+the pond landform, preserving its old settings in `9ad6b6e`; no snapshot rule
+or general placement architecture changed. No PBRT render began in that run.
+Scene and snapshot validation pass after the correction.
+
+Replacement render `Water_Lily_Pond_Morning_20260908_171856.png` completed and
+was inspected locally. The pond meets a low rocky shore with three trees and
+clear reflections. The poppy cloud recipe's broken shapes are restored.
+The round, smooth stones show the current generator's limits; cloud sampling
+noise remains at 64 samples. No further refinement was applied before artist
+review. All 184 tests pass with 19 dependency skips; archived configuration and
+generator sources match live files, and PBRT contains 420 rock instances and
+three tree instances.

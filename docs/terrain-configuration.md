@@ -252,6 +252,17 @@ terrain exactly. It shapes the land only; the water remains a separate
   shaping; it does not alter the water's ripples or material.
 
 The basin affects terrain sampling, normals, and mesh generation together.
+An optional `basin.shore` block separates the immediate bank from distant
+relief. Set `enabled: true`, `height` to the desired world-Y shore elevation,
+`width` to the shelf width, and positive `transition` to the distance over
+which the shelf blends back into the original hills. Width may be zero.
+Distances are measured from the irregular ellipse rim using normalized radius
+times the smaller basin radius. The shore height must exceed the basin floor.
+This shelf levels land toward its height (it may cut or fill); the inner
+basin then excavates below it. Omitted/disabled shore controls retain the
+original basin behavior. A shore just above the water prevents crater-like
+banks while leaving rolling relief farther away.
+
 It does not automatically exclude terrestrial plants or place water lilies.
 For a pond, keep the lily footprints submerged, the bed inside the absorbing
 water volume, and the water's rectangular perimeter concealed by higher land.
@@ -364,6 +375,11 @@ share these controls beneath their explicit construction/population boundary:
 - `region.center` is `[x,z]`; `region.size` is its rectangular coverage.
 - `scale` is a randomized `[minimum,maximum]` uniform size range.
 - `max_slope_degrees` rejects sites steeper than the limit.
+- Optional `elevation_range: [minimum, maximum]` accepts only sites whose
+  sampled terrain height is within the inclusive world-Y interval, before
+  `y_offset` is applied. Omit it for unrestricted elevation. A narrow band
+  around water level can constrain the existing rock population to a shore.
+  A constrained scatter that cannot place the requested count fails explicitly.
 - `patchiness.strength` blends between uniform acceptance (`0`) and strong
   noise-controlled colonies (`1`).
 - `patchiness.frequency` controls colony size.

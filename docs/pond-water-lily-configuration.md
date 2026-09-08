@@ -35,6 +35,19 @@ retained disabled, and the pre-pond live scene is checkpoint `c99c3f4`.
   perimeter buried and the lily footprints over submerged terrain: lily
   placement currently checks water bounds, not shoreline clearance.
 
+The rocky-shore comparison adds `basin.shore` to keep the immediate land near
+water level before blending back into distant hills. `shoreline_rocks` on
+`rolling_pond_banks` uses the existing `rock_scatter` construction: rounded
+spheres varied by instance scale, aspect, rotation, and color. It is not yet
+an angular or fractured-rock generator. Its population `elevation_range`
+selects a thin band around the waterline; `y_offset` partially buries the
+stones. `shore_trees` reuses the established fractal tree with three explicit,
+terrain-sampled placements. The original tree recipe remains disabled under
+the flat landform. The rock entry is relocated to the shore because snapshot
+validation currently permits only one rock entry across all landforms; its
+earlier settings are preserved in checkpoint `9ad6b6e`. Reopen Art Studio to
+expose these entries.
+
 ## Water-lily construction
 
 A `generator: "water_lily"` entry belongs to the pond's `surface_objects`.

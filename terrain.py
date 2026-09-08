@@ -32,6 +32,23 @@ def validate_basin(basin):
         value = basin.get(key, default)
         if not finite(value) or not low <= value < high:
             errors.append(f"basin.{key} must be in [{low}, {high})")
+    shore = basin.get("shore", {})
+    if not isinstance(shore, dict):
+        errors.append("basin.shore must be an object")
+    else:
+        if not isinstance(shore.get("enabled", False), bool):
+            errors.append("basin.shore.enabled must be boolean")
+        if not finite(shore.get("height", 0.0)):
+            errors.append("basin.shore.height must be finite")
+        elif (finite(basin.get("floor_height", -10.0))
+              and shore.get("enabled", False)
+              and shore.get("height", 0.0) <= basin.get("floor_height", -10.0)):
+            errors.append("basin.shore.height must exceed basin.floor_height")
+        for key, default, minimum in (("width", 100.0, 0), ("transition", 300.0, 0)):
+            value = shore.get(key, default)
+            if not finite(value) or value < minimum or (key == "transition" and value == 0):
+                errors.append(f"basin.shore.{key} must be finite and "
+                              + ("positive" if key == "transition" else "nonnegative"))
     return errors
 
 
@@ -102,6 +119,7 @@ class RollingHillside:
         self.basin_floor = basin.get("floor_height", -10.0)
         self.basin_inner = basin.get("inner_fraction", 0.5)
         self.basin_variation = basin.get("shore_variation", 0.0)
+        self.basin_shore = basin.get("shore", {})
         if self.width <= 0 or self.depth <= 0:
             raise ValueError("terrain size values must be positive")
         if self.nx < 2 or self.nz < 2:
@@ -197,6 +215,16 @@ class RollingHillside:
                 0.6 * math.sin(3.0 * angle) + 0.4 * math.cos(5.0 * angle)
             )
             radius = math.hypot(bx, bz) / rim
+            if self.basin_shore.get("enabled", False):
+                # A low shelf separates the pond edge from the distant hills.
+                # Distances follow the distorted ellipse's normalized radius.
+                distance = (radius - 1.0) * min(self.basin_radii)
+                shore_blend = self._fade(max(0.0, min(1.0,
+                    (distance - self.basin_shore.get("width", 100.0))
+                    / self.basin_shore.get("transition", 300.0)
+                )))
+                shore_height = self.basin_shore.get("height", 0.0)
+                result = shore_height + shore_blend * (result - shore_height)
             blend = self._fade(max(0.0, min(
                 1.0, (radius - self.basin_inner) / (1.0 - self.basin_inner)
             )))
