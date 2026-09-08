@@ -296,3 +296,24 @@ water with absorption. It follows a pre-render syntax failure in `123411`,
 corrected and checked with PBRT's parser. Codex inspected `124746` and proposed
 one brighter, more downward-framed comparison to eliminate the far pond edge.
 No new visual result has yet been accepted by the artist.
+
+## 2026-09-08 — Artist likes lilies/pads; water appearance needs work
+
+The artist evaluated `124746`: "The lillies and pads are nice. But the surface
+is not water. There ought to be a reflection, correct? What is the water
+surface default in pbrt-v4?" Preserve the plant forms; the water appearance
+is not accepted. The earlier proposed brightness/framing comparison has not
+been applied; this feedback redirects the next comparison toward reflections.
+
+Codex verified the installed PBRT source and official file-format reference:
+there is no dedicated water material. `dielectric` defaults to eta 1.5,
+roughness 0, and remaproughness true. The pond uses eta 1.333 and roughness
+0.015, with an absorbing medium underneath. The installed renderer maps
+roughness to microfacet alpha using its square root, so 0.015 becomes about
+0.122 and can substantially blur reflections. The dark environment and viewing
+angle may also limit reflection visibility; their relative contributions have
+not been isolated. A roughness-zero comparison retaining the geometric ripples
+is Codex's proposed next diagnostic, not an adjustment already made.
+
+Source: [PBRT-v4 file format, materials](https://www.pbrt.org/fileformat-v4#materials),
+checked against local `src/pbrt/materials.cpp` and `util/scattering.h`.

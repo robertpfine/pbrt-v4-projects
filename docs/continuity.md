@@ -24,7 +24,13 @@ PBRT's format/parser check. Replacement render
 depth 10, with 32 clusters, 96 pads, and 26 blossoms. It was inspected locally:
 the forms read clearly, but lighting is subdued and the far pond/bed edges
 are visible. This is an initial proof awaiting artist evaluation, not an
-accepted master. A brighter, closer downward-framed comparison is planned.
+accepted master. The artist subsequently said the lilies and pads are nice but
+the surface does not read as water and asked about reflections and PBRT defaults.
+Preserve the plant forms. No brightness/framing adjustment was applied; the next
+proposed diagnostic is water roughness 0, keeping existing geometric ripples.
+Current water roughness remains 0.015 (PBRT remaps it to alpha about 0.122),
+eta 1.333. PBRT's dielectric defaults are roughness 0 and eta 1.5; there is no
+dedicated water material. The reflection comparison has not been launched.
 
 The full suite runs 176 tests, 157 passed and 19 dependency skips. Five new
 pond tests cover surface/rim geometry, open pad notches and upward winding,
