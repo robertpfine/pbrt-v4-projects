@@ -481,6 +481,61 @@ class SceneConfigTests(unittest.TestCase):
                 message,
             )
 
+    def test_reflectance_variants_reject_invalid_components_without_saving(self):
+        fixture = Path(__file__).parent / "fixtures" / "canonical_config.json"
+        source = fixture.read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            path.write_text(source, encoding="utf-8")
+            config = SceneConfig(path)
+            variants_path = (
+                "scene_description", "landforms", 1, "surface_objects", 4,
+                "construction", "reflectance_variants",
+            )
+            for variant_index in range(2):
+                for component_index in range(3):
+                    for invalid in (-7.82, 10.13, float("nan"), float("inf"), "0.5", True):
+                        with self.subTest(
+                            variant=variant_index, component=component_index,
+                            value=invalid,
+                        ):
+                            config.reload()
+                            variants = [[0.025, 0.13, 0.03], [0.04, 0.18, 0.04]]
+                            variants[variant_index][component_index] = invalid
+                            config.set(variants_path, variants)
+                            expected = ".".join(map(str, variants_path + (variant_index,)))
+                            errors = config.validate()
+                            self.assertIn(
+                                f"{expected} must contain 3 numbers in [0, 1]", errors
+                            )
+                            with self.assertRaises(SceneConfigError):
+                                config.save()
+                            self.assertEqual(path.read_text(encoding="utf-8"), source)
+
+    def test_reflectance_variants_accept_inclusive_bounds_and_reject_malformed_rgb(self):
+        fixture = Path(__file__).parent / "fixtures" / "canonical_config.json"
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            path.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
+            config = SceneConfig(path)
+            # Validate multiple surface-object owners, including disabled ones.
+            for object_index in (2, 3, 4):
+                variants_path = (
+                    "scene_description", "landforms", 1, "surface_objects", object_index,
+                    "construction", "reflectance_variants",
+                )
+                config.set(variants_path, [[0, 0.5, 1], [1.0, 0.0, 0.25]])
+            self.assertEqual(config.validate(), [])
+            config.save()
+            config.reload()
+            self.assertEqual(config.get(variants_path), [[0, 0.5, 1], [1.0, 0.0, 0.25]])
+            for invalid in (None, "rgb", [None], [[0, 1]], [[0, 0.5, 1, 0]]):
+                with self.subTest(value=invalid):
+                    config.set(variants_path, invalid)
+                    self.assertTrue(any(
+                        "reflectance_variants" in error for error in config.validate()
+                    ))
+
     def test_unsupported_terrain_rotation_is_not_saved(self):
         with tempfile.TemporaryDirectory() as directory:
             path, source = self.make_config(directory)

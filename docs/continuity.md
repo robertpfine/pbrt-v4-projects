@@ -2,6 +2,38 @@
 
 Last updated: 2026-09-07
 
+## 2026-09-07 Step C: retire old pages and validate reflectance variants
+
+The artist explicitly authorized Step C after the entry-form checkpoint
+`e20e73a`. Codex removed only the 17 named obsolete page/helper methods and
+the unused `_SURFACE_OBJECT_PAGES` table from `pbrt_v4_art_studio.py`, and
+removed the obsolete comment saying those methods awaited retirement.
+Repository-wide Python reference checks found no live callers; the sole
+method-to-method call was from the removed landform page to its removed
+single-landform helper. An AST comparison confirms that all other GUI code is
+unchanged. The entry form builder, `scene_components`, Scene Setup, and the
+Outline retain their existing behavior.
+
+`SceneConfig.validate()` now walks the configuration and validates every
+`reflectance_variants` list, including entries under disabled components.
+Each variant must contain three numeric RGB components within inclusive
+0–1 bounds; invalid types and non-finite values are rejected with the variant's
+full JSON path. Save refuses invalid variants without changing the file.
+Inspection found no general `reflectance` range check to reuse in this version
+of `scene_config.py`; this change is specifically for `reflectance_variants`.
+
+The full Qt suite passes: 166 tests run, 19 dependency skips, 147 passed. The
+original 164-test suite remains green, with two additional regression tests
+covering all component positions, the reported 10.13 / -7.82 failures, malformed
+values, inclusive bounds, multiple owners, and refusal to save invalid data.
+`git diff --check` passes. No renderer/build work or render was performed.
+
+The current `guiTest` configuration remains byte-identical to `e20e73a` at
+SHA-256 `8abda0fb2712e78e1a906e64d2e82a0cb6f78876d4d5616e415374779e1f3395`.
+Claude's journal and `docs/artist-questions.md` were read and left untouched.
+The entry-form limitations and other deferred generator work remain as
+recorded below; this checkpoint does not authorize additional implementation.
+
 ## 2026-09-07 entry-form checkpoint; current guiTest included
 
 The artist requested a checkpoint of `pbrt_v4_art_studio.py`,

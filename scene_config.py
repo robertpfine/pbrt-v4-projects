@@ -248,6 +248,37 @@ class SceneConfig:
     def validate(self) -> list[str]:
         errors: list[str] = []
 
+        def validate_reflectance_variants(value: Any, path: JsonPath) -> None:
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    child_path = path + (key,)
+                    if key == "reflectance_variants":
+                        owner = ".".join(map(str, child_path))
+                        if not isinstance(item, list):
+                            errors.append(f"{owner} must be a list of RGB variants")
+                            continue
+                        for index, variant in enumerate(item):
+                            if (
+                                not isinstance(variant, list)
+                                or len(variant) != 3
+                                or any(
+                                    isinstance(component, bool)
+                                    or not isinstance(component, (int, float))
+                                    or not 0.0 <= component <= 1.0
+                                    for component in variant
+                                )
+                            ):
+                                errors.append(
+                                    f"{owner}.{index} must contain 3 numbers in [0, 1]"
+                                )
+                    else:
+                        validate_reflectance_variants(item, child_path)
+            elif isinstance(value, list):
+                for index, item in enumerate(value):
+                    validate_reflectance_variants(item, path + (index,))
+
+        validate_reflectance_variants(self.data, ())
+
         def require(path: JsonPath, expected: type | tuple[type, ...]) -> Any:
             try:
                 value = self.get(path)
