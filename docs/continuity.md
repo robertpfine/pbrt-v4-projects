@@ -2,6 +2,26 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 roughness-zero pond comparison
+
+At the artist's explicit request, pond surface roughness changed from 0.015 to
+0.0 and was rerendered through the normal terminal pipeline. Render
+`Water_Lily_Pond_Study_20260908_125432.png` completed and was inspected locally.
+It has much less bright speckling, but flower reflections remain faint; setting
+roughness to zero alone did not establish the intended water appearance.
+No additional lighting, camera, plant, ripple, absorption, or eta adjustment
+was made. Archived JSON comparisons confirm this one-value difference from
+`124746`, and the current live JSON matches `125432` byte for byte. Validation
+and `git diff --check` pass. The existing 176-test implementation result remains
+applicable; tests were not rerun for this scalar parameter edit.
+
+The artist also asked about higher "degrees of refraction." Codex interpreted
+this as index of refraction: increasing eta from the current 1.333 strengthens
+Fresnel reflection and increases the bending of transmitted rays entering from
+air. It does not create ripples or directly control reflection sharpness.
+No eta experiment was requested or performed. Both pond images remain available
+for comparison; water appearance is still under artistic review.
+
 ## 2026-09-08 first pond/water-lily render
 
 Sunflower settings and the preceding design discussion were preserved in

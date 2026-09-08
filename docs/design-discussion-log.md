@@ -317,3 +317,22 @@ is Codex's proposed next diagnostic, not an adjustment already made.
 
 Source: [PBRT-v4 file format, materials](https://www.pbrt.org/fileformat-v4#materials),
 checked against local `src/pbrt/materials.cpp` and `util/scattering.h`.
+
+## 2026-09-08 — Roughness-zero rerender and refractive-index question
+
+The artist requested a rerun at roughness 0 and asked what happens at higher
+"degrees of refraction." Codex changed only pond roughness, validated the scene,
+and completed visible-terminal render `125432`. Its archived configuration is
+identical to `124746` except for water roughness 0.015 -> 0.0 and matches the
+live JSON exactly. The image has substantially less bright speckling, but
+reflections of flowers remain faint. No further adjustment was made.
+
+Codex interpreted the question as increasing the index of refraction (`eta`).
+For light entering from air, larger eta increases bending toward the surface
+normal and generally strengthens surface reflection. At normal incidence,
+Fresnel reflectance is about 2% for eta 1.333, 4% for 1.5, and 11% for 2.0.
+These percentages are calculated from ((eta-1)/(eta+1))^2; reflectance rises
+toward grazing angles. Roughness controls reflection sharpness separately.
+The current eta remains 1.333. No higher-eta experiment has been performed.
+
+Reference: [PBRT, Specular Reflection and Transmission](https://www.pbr-book.org/4ed/Reflection_Models/Specular_Reflection_and_Transmission).
