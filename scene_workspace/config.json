@@ -16,8 +16,8 @@
     "enabled": true,
     "type": "perspective",
     "look_at": {
-      "eye":  [120.0, 330.0, 580.0],
-      "look": [0.0, 210.0, -800.0],
+      "eye":  [240.0, 1000.0, 1900.0],
+      "look": [0.0, 150.0, -850.0],
       "up":   [0, 1, 0]
     },
     "fov": 55.0
@@ -1004,8 +1004,8 @@
             "enabled": true,
             "generator": "sunflower",
             "construction": {
-              "variants": 3,
-              "head_pitch_variation": 10.0,
+              "variants": 9,
+              "head_pitch_variation": 25.0,
               "stem_length_variation": 0.12,
               "pattern": {
                 "count": 630,
@@ -1314,7 +1314,7 @@
                 1.12
               ],
               "heading_degrees": 0.0,
-              "heading_spread_degrees": 38.0,
+              "heading_spread_degrees": 180.0,
               "region": {
                 "center": [
                   0.0,

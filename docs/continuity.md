@@ -2,6 +2,29 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 broader sunflower view with random orientations
+
+At the artist's request, the live scene advances from preserved `034127` to
+render `Sunflower_Field_Study_20260908_083500.png`. Camera eye is now
+`[240,1000,1900]`, looking at `[0,150,-850]`, with FOV 55 retained. This pulls
+back roughly twice as far from the planting center and raises the viewpoint.
+The full planting and the finite ground plane's edges are visible.
+
+Existing sunflower controls supply full-circle random facing directions
+(`heading_spread_degrees: 180`) and nine randomly assigned plant prototypes
+with head pitches from 60 to 110 degrees (`head_pitch_variation: 25`).
+The count remains 500. The archived PBRT was checked: 500 distinct headings
+span approximately -179.43 to 179.57 degrees, and all nine prototypes are used.
+Head pitch is selected from those nine values, rather than continuously sampled.
+No generator or GUI code changed.
+
+The 1600×1200, 32-sample GPU render completed through the normal terminal
+wrapper and was inspected locally. Its archived JSON matches the live file
+byte for byte. Scene validation and `git diff --check` pass; the full code
+suite was not rerun for these parameter-only edits. This broader comparison
+awaits artist evaluation. `034127` remains preserved by `f59a57d` / `4ffa158`.
+Claude's two pending documents remain untouched and uncommitted.
+
 ## 2026-09-08 sunflower visual preservation checkpoint
 
 After viewing `Sunflower_Field_Study_20260908_034127.png`, the artist said
