@@ -2,6 +2,24 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 eta-2 pond comparison
+
+The artist requested a glass-like response, then explicitly specified eta 2
+before a replacement render began. The intermediate proposed eta 1.5 was not
+rendered. Current pond eta is 2.0, roughness remains 0.0, and all other values
+are unchanged from `125432`. Render
+`Water_Lily_Pond_Study_20260908_130340.png` completed and was inspected locally:
+the water reflects more gray environment light and is brighter, but reflected
+flower undersides remain dark. This is an artistic index experiment, not a
+physical-water preset, and awaits artist evaluation.
+
+Archived configs verify eta is the sole change from `125432`; the live JSON
+matches archived `130340` exactly. Validation and `git diff --check` pass.
+The preceding `125432` pipeline was held open by its Drive upload after local
+archival had finished. Codex terminated only that upload process to let the
+pipeline close before launching `130340`, then retried its remote copy
+separately. Local image and reproduction bundles remain intact.
+
 ## 2026-09-08 roughness-zero pond comparison
 
 At the artist's explicit request, pond surface roughness changed from 0.015 to

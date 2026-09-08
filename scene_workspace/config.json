@@ -1526,7 +1526,7 @@
         "surface": {
           "material": {
             "type": "dielectric",
-            "eta": 1.333,
+            "eta": 2.0,
             "roughness": 0.0,
             "absorption": [
               0.018,

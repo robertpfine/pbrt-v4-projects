@@ -336,3 +336,15 @@ toward grazing angles. Roughness controls reflection sharpness separately.
 The current eta remains 1.333. No higher-eta experiment has been performed.
 
 Reference: [PBRT, Specular Reflection and Transmission](https://www.pbr-book.org/4ed/Reflection_Models/Specular_Reflection_and_Transmission).
+
+## 2026-09-08 — Artist requests eta 2
+
+The artist wanted to see a glass-like response. Codex initially proposed eta
+1.5; before rendering, the artist explicitly requested "raise it to 2."
+Codex used eta 2.0 with roughness 0.0. No eta-1.5 image was rendered.
+
+Render `130340` completed through the normal terminal pipeline. Its frozen
+configuration differs from `125432` only in eta and matches the live scene
+exactly. Codex inspected the result: a brighter gray surface reflecting more
+environment light, with flower reflections still dark. No other parameter
+was adjusted. The study awaits the artist's assessment.
