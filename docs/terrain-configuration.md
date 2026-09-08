@@ -234,6 +234,30 @@ Multiplies frequency between octaves. At `2.0`, frequencies beginning with
 Higher values separate the scales more aggressively. Values near `2.0` are a
 useful starting point.
 
+## Optional pond basin
+
+`topography.parameters.basin` excavates a bounded depression after slope and
+noise are evaluated. Omit it, or set `enabled: false`, to retain the existing
+terrain exactly. It shapes the land only; the water remains a separate
+`pond_surface` landform with its own optics and lily population.
+
+- `center`: world `[x,z]`, independent of the terrain patch center.
+- `radii`: positive ellipse radii along world X and Z.
+- `floor_height`: world Y of the flat inner bed. Excavation never raises
+  terrain already below this height.
+- `inner_fraction`: normalized radius of the inner bed, in `[0,1)`. From
+  there to radius 1, a quintic blend restores the original rolling surface.
+- `shore_variation`: `[0,0.3)` strength of fixed angular harmonics that vary
+  the ellipse's outline. Zero produces an ellipse. This is geometric shoreline
+  shaping; it does not alter the water's ripples or material.
+
+The basin affects terrain sampling, normals, and mesh generation together.
+It does not automatically exclude terrestrial plants or place water lilies.
+For a pond, keep the lily footprints submerged, the bed inside the absorbing
+water volume, and the water's rectangular perimeter concealed by higher land.
+These controls appear through the existing generic Parameter Values builder;
+reopen Art Studio after adding a new landform or new fields.
+
 ## Material
 
 ### `surface.material.reflectance`

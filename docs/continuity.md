@@ -2,6 +2,67 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 ground-level morning pond landscape
+
+The artist requested a natural setting with rolling terrain, bright sunlight
+around 10:00 AM, highlighted clouds, a vista layer, and a more ground-level
+view. The preceding eta-2 study is preserved in pushed checkpoint `e0fb566`
+with its continuity backup completed before this scene change.
+
+Render `Water_Lily_Pond_Morning_20260908_141308.png` completed through the
+normal visible-terminal wrapper and was inspected locally. It shows the lilies
+across the foreground, green rolling banks, a distant rise, and two cumulus
+formations. Flower and cloud reflections are clearly visible in the water.
+The 1600×1200, 64-sample study has visible sampling noise, particularly in the
+clouds and reflections; it awaits artist evaluation and is not an accepted
+master. Bank vegetation is currently a surface texture, without grass geometry.
+The artist then evaluated `141308` as "getting there," but said the pond
+should not appear sunken and requested a shoreline with a few trees. Preserve
+this intermediate state before lowering the surrounding banks and adding
+shore trees. This feedback supersedes the pending-evaluation statement above.
+
+The live JSON now enables a new `rolling_pond_banks` terrain heightfield,
+`broad_rise`, `vista_plane`, and both cumulus entries. The old flat bed and
+its disabled plant recipes are retained intact. Pond optics remain eta 2,
+roughness 0; the lily construction and population are unchanged. Camera eye
+`[80,115,690]` is approximately 77 scene units above the bank and looks toward
+`[0,85,-1800]`, FOV 48. The background is uniform blue at scale 0.35; direct
+sunlight is 5700 K at scale 4. Cumulus absorption is reduced for a lighter
+appearance, and integrator depth increases from 10 to 24 for these volumes.
+
+The scene clock is 10:00 AM EDT, retaining June 21 and 43 N / 76 W. A one-time
+NOAA approximation sets explicit sun `from: [-66.35524,73.47254,-14.09849]`
+(about 47.3 degrees elevation, 102 degrees azimuth; north +Z, east -X).
+`use_astronomical_direction` remains false: subsequent clock changes do not
+automatically move the sun. Calculation reference is in the discussion log.
+
+`terrain.py` adds optional `topography.parameters.basin` controls: world-XZ
+center, ellipse radii, world-Y floor, inner-bed fraction, and shoreline
+variation. Excavation blends into the existing rolling field and affects
+height sampling, mesh, and normals together. SceneConfig validates these
+controls; the generic GUI exposes them without GUI changes. Reopen Art Studio
+to load the new entry/fields. See `docs/terrain-configuration.md` and
+`docs/pond-water-lily-configuration.md`. No general asset/placement migration
+or reusable landform library was implemented.
+
+Composition checks confirm the full rectangular water perimeter is buried
+under dry banks and the lily region, including footprint margins, stays below
+the water. Lily placement does not automatically test terrain clearance, so
+future basin edits must preserve this relationship. The water retains its
+rectangular underlying volume; the shoreline comes from intersecting terrain.
+
+Validation: 180 tests run successfully, 161 passed and 19 dependency skips.
+Four new tests cover basin floor/rim continuity, unchanged disabled behavior,
+excavation-only semantics, invalid controls, and scene/landform integration.
+An older distant-hill test was moved from the mutable live scene to the
+canonical fixture, preserving its assertions while allowing the artist to
+enable and reposition the hill. The live JSON and rendered terrain, scene
+configuration, and pond sources were checked against the frozen archive;
+they match exactly. `git diff --check` passes. PBRT/CUDA and GUI are unchanged.
+Claude's journal and the artist's question document remain untouched and
+uncommitted. The discussion, goals, and objectives are recorded in
+`docs/design-discussion-log.md`.
+
 ## 2026-09-08 eta-2 pond comparison
 
 The artist requested a glass-like response, then explicitly specified eta 2

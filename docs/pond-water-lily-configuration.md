@@ -28,8 +28,12 @@ retained disabled, and the pre-pond live scene is checkpoint `c99c3f4`.
   beneath the rippled surface provides depth-dependent transmission color.
   The study has no water scattering or animated waves.
 - The existing mandatory terrain heightfield serves as the submerged bed.
-  Its settings are distinct from the water surface. This first composition
-  looks into the pond and does not build a shoreline or pond-bank vegetation.
+  Its settings are distinct from the water surface. The initial study used a
+  flat bed; the morning landscape uses the optional terrain `basin` controls
+  in `rolling_pond_banks` to excavate a pond bed and blend into rolling banks.
+  The water remains rectangular underneath opaque dry land. Keep its entire
+  perimeter buried and the lily footprints over submerged terrain: lily
+  placement currently checks water bounds, not shoreline clearance.
 
 ## Water-lily construction
 

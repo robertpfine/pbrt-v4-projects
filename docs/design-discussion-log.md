@@ -348,3 +348,38 @@ configuration differs from `125432` only in eta and matches the live scene
 exactly. Codex inspected the result: a brighter gray surface reflecting more
 environment light, with flower reflections still dark. No other parameter
 was adjusted. The study awaits the artist's assessment.
+
+## 2026-09-08 — Natural pond landscape and lower viewpoint
+
+The artist requested rolling land around the pond, bright sunlight around
+10:00 AM, highlighted clouds, a vista layer, and a more ground-level view.
+The eta-2 study is preserved at `e0fb566` before changing the composition.
+Keep the accepted lily/pad forms and current eta 2 / roughness 0 controls.
+
+Codex added an optional excavated basin to the existing terrain heightfield
+and a `rolling_pond_banks` landform in the sole live JSON. It blends a submerged
+bed into textured green rolling banks, hiding the rectangular water boundary.
+The old flat bed and its disabled plant recipes remain available. A broad
+distant rise, vista plane, blue background, and two brighter cumulus volumes
+complete the requested setting. No generalized landform-library or asset
+migration is implied by this bounded scene work.
+
+Camera eye `[80,115,690]` is approximately 77 scene units above its bank,
+looking toward `[0,85,-1800]`. Time is 10:00 AM EDT with the retained June 21,
+43 N / 76 W context. The explicit sun vector was calculated once with
+[NOAA's approximate solar equations](https://www.gml.noaa.gov/grad/solcalc/solareqns.PDF):
+about 47.3 degrees elevation and 102 degrees azimuth. World north remains +Z
+and east -X. Automatic astronomical direction remains disabled; changing the
+clock in the GUI does not automatically update this explicit vector.
+
+Render `Water_Lily_Pond_Morning_20260908_141308.png` completed and was inspected
+locally. Flowers and clouds now reflect visibly in the foreground water, with
+rolling banks and a distant rise beyond. At 64 samples there is visible noise
+in the clouds and reflections. This first landscape composition awaits artist
+evaluation; it is not an accepted master. The full suite passes 180 tests with
+19 skips. Archived configuration and generator sources match the live scene.
+
+The artist's response: "141308 is getting there. The pond should not appear
+sunken. It need a shore line with a few trees." The next iteration should lower
+and flatten the immediate banks, keep rolling relief farther back, and place
+a few trees at the shore. Preserve `141308` as an intermediate comparison.

@@ -18,7 +18,7 @@ class DistantHillTests(unittest.TestCase):
     def setUpClass(cls):
         root = Path(__file__).resolve().parents[1]
         config = json.loads(
-            (root / "scene_workspace" / "config.json").read_text(encoding="utf-8")
+            (root / "tests" / "fixtures" / "canonical_config.json").read_text(encoding="utf-8")
         )
         cls.ridge_landform = next(
             landform

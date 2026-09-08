@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from cloud_boundary import CloudBoundary
 from sunflowers import validate_sunflower
 from pond import validate_pond, validate_water_lily
+from terrain import validate_basin
 
 
 JsonPath = tuple[str | int, ...]
@@ -628,6 +629,12 @@ class SceneConfig:
                                 "terrain_heightfield, distant_ridge, or pond_surface when provided"
                             )
                         if topography_enabled is True and generator == "terrain_heightfield":
+                            parameters = topography.get("parameters", {})
+                            if isinstance(parameters, dict) and "basin" in parameters:
+                                errors.extend(
+                                    f"{prefix}.topography.parameters.{error}"
+                                    for error in validate_basin(parameters["basin"])
+                                )
                             rotations = []
                             if isinstance(placement, dict):
                                 rotations.append(placement.get("rotation_degrees"))

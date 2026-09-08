@@ -4,6 +4,37 @@ from dataclasses import dataclass
 import math
 
 
+def validate_basin(basin):
+    """Validate an optional, world-space depression in a terrain heightfield."""
+    if not isinstance(basin, dict):
+        return ["basin must be an object"]
+    errors = []
+    if not isinstance(basin.get("enabled", False), bool):
+        errors.append("basin.enabled must be boolean")
+
+    def finite(value):
+        return (isinstance(value, (int, float)) and not isinstance(value, bool)
+                and math.isfinite(value))
+
+    for key, default in (("center", [0.0, 0.0]), ("radii", [100.0, 100.0])):
+        value = basin.get(key, default)
+        if (not isinstance(value, (list, tuple)) or len(value) != 2
+                or not all(finite(v) for v in value)):
+            errors.append(f"basin.{key} must contain two finite numbers")
+        elif key == "radii" and any(v <= 0 for v in value):
+            errors.append("basin.radii must be positive")
+    if not finite(basin.get("floor_height", -10.0)):
+        errors.append("basin.floor_height must be finite")
+    for key, default, low, high in (
+        ("inner_fraction", 0.5, 0.0, 1.0),
+        ("shore_variation", 0.0, 0.0, 0.3),
+    ):
+        value = basin.get(key, default)
+        if not finite(value) or not low <= value < high:
+            errors.append(f"basin.{key} must be in [{low}, {high})")
+    return errors
+
+
 @dataclass(frozen=True)
 class TerrainSample:
     height: float
@@ -61,6 +92,16 @@ class RollingHillside:
         self.right_rise_center = float(right_profile.get("rise_center", 600.0))
         self.right_rise_width = float(right_profile.get("rise_width", 250.0))
         self.right_rise_height = float(right_profile.get("rise_height", 55.0))
+        basin = config.get("basin", {})
+        errors = validate_basin(basin)
+        if errors:
+            raise ValueError("; ".join(errors))
+        self.basin_enabled = basin.get("enabled", False)
+        self.basin_center = basin.get("center", [0.0, 0.0])
+        self.basin_radii = basin.get("radii", [100.0, 100.0])
+        self.basin_floor = basin.get("floor_height", -10.0)
+        self.basin_inner = basin.get("inner_fraction", 0.5)
+        self.basin_variation = basin.get("shore_variation", 0.0)
         if self.width <= 0 or self.depth <= 0:
             raise ValueError("terrain size values must be positive")
         if self.nx < 2 or self.nz < 2:
@@ -148,6 +189,20 @@ class RollingHillside:
             )
             # Preserve the established tree elevation at the profile origin.
             result += self._right_profile(distance) - self._right_profile(0.0)
+        if self.basin_enabled:
+            bx = (x - self.basin_center[0]) / self.basin_radii[0]
+            bz = (z - self.basin_center[1]) / self.basin_radii[1]
+            angle = math.atan2(bz, bx)
+            rim = 1.0 + self.basin_variation * (
+                0.6 * math.sin(3.0 * angle) + 0.4 * math.cos(5.0 * angle)
+            )
+            radius = math.hypot(bx, bz) / rim
+            blend = self._fade(max(0.0, min(
+                1.0, (radius - self.basin_inner) / (1.0 - self.basin_inner)
+            )))
+            # Only excavate: a basin must never raise pre-existing low ground.
+            floor = min(result, self.basin_floor)
+            result = floor + blend * (result - floor)
         return result
 
     def sample(self, x, z):
@@ -227,5 +282,6 @@ def create_terrain(config):
         "slope": parameters.get("slope", {}),
         "noise": parameters.get("noise", {}),
         "right_profile": parameters.get("right_profile", {}),
+        "basin": parameters.get("basin", {}),
     }
     return RollingHillside(terrain_config)
