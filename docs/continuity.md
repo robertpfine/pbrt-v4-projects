@@ -2,6 +2,15 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 artist's response to pond 171856
+
+The artist evaluated `171856`: "171856 is rather lovely. The trees are
+beautiful." Preserve this pond composition as the current visual reference,
+especially the tree forms, their arrangement, and their reflections. The scene
+and implementation are already preserved in pushed checkpoint `59ddb13`.
+This records the favorable review; no scene settings or code changed and no
+new render was requested. The existing 184-test result remains applicable.
+
 ## 2026-09-08 rocky shoreline, trees, and restored poppy clouds
 
 After `141308`, the artist said the pond should not look sunken, requested a
@@ -51,8 +60,9 @@ terminal pipeline and was inspected locally. The water meets a low rocky
 shore, three trees frame the pond, and tree/flower/cloud reflections are
 visible. The restored clouds have the poppy recipe's broken, shaped edges.
 The rounded stones visibly demonstrate the existing generator's limitation,
-and 64-sample noise remains, especially in the clouds. This comparison awaits
-artist evaluation. The archived JSON and terrain/scatter/configuration/pond/
+and 64-sample noise remains, especially in the clouds. The artist subsequently
+responded favorably, particularly to the trees; see the review above.
+The archived JSON and terrain/scatter/configuration/pond/
 tree sources match the live files exactly; PBRT contains 420 rock instances
 and three tree instances.
 

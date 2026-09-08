@@ -417,3 +417,11 @@ noise remains at 64 samples. No further refinement was applied before artist
 review. All 184 tests pass with 19 dependency skips; archived configuration and
 generator sources match live files, and PBRT contains 420 rock instances and
 three tree instances.
+
+## 2026-09-08 — Artist's favorable review of pond 171856
+
+The artist said, "171856 is rather lovely. The trees are beautiful."
+Preserve this composition as the current pond reference, particularly the
+tree forms, arrangement, and reflections. The exact rendered scene and source
+are checkpointed in `59ddb13`. This response requests no further scene change;
+Codex recorded it without changing settings or launching another render.
