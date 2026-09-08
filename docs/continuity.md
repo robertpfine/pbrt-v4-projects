@@ -2,6 +2,21 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 sunflower visual preservation checkpoint
+
+After viewing `Sunflower_Field_Study_20260908_034127.png`, the artist said
+"Nice image" and requested a checkpoint. Implementation and the exact live
+field configuration are preserved in pushed commit `f59a57d`. This follow-up
+records the artist's response and preserves that working result for resumption.
+The live configuration still matches the archived `034127` configuration at
+the SHA-256 recorded below. No scene settings or code changed for this
+checkpoint; the completed 171-test run remains the applicable validation.
+The earlier accepted master remains preserved separately.
+
+Claude's two incoming discussion-document changes remain unchanged and
+uncommitted, as at the implementation checkpoint. No further rendering or
+scene changes are underway.
+
 ## 2026-09-08 independent sunflower plant and instanced field
 
 The artist requested an independent sunflower-field implementation starting
@@ -37,8 +52,9 @@ Completed independent renders, both inspected from the local archive:
 - `Sunflower_Field_Study_20260908_034127.png`: 500 scattered plants, 1600×1200,
   32 samples. The frozen PBRT contains exactly three whole-plant definitions
   and 500 whole-plant instances. The field reads as a dense sunflower planting
-  with varied head heights and facing directions. It is an exploratory result
-  awaiting artist evaluation, not a replacement accepted master.
+  with varied head heights and facing directions. The artist subsequently
+  responded positively and requested its preservation; see the checkpoint
+  note above.
 
 The live `scene_workspace/config.json` matches archived `034127` byte for byte
 at SHA-256 `a326f300720711d6c9e7fa8230caae81716e2fedb16eb26a5099bc3a0c11ef34`.
