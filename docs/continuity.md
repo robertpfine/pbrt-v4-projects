@@ -1,6 +1,61 @@
 # PBRT-v4 Art Studio Continuity
 
-Last updated: 2026-09-07
+Last updated: 2026-09-08
+
+## 2026-09-08 independent sunflower plant and instanced field
+
+The artist requested an independent sunflower-field implementation starting
+from `aebaff1`, using the original sunflower work. Claude's experimental code
+and images under `~/ClaudeArchive/` were not opened or used. The artist
+explicitly authorized proceeding with Claude's two updated discussion records
+present in the working copy. Those records were read and left unchanged and
+uncommitted; this checkpoint includes only Codex's implementation and handoff.
+
+`sunflowers.py` reuses the original `write_planar_phyllotaxis()` and sunflower
+support writer. The full existing spiral/floret/petal recipe is retained in a
+new `generator: "sunflower"` surface object under `flat_landform`. Its stalk
+and leaves are enabled and proportioned for a standing field plant. The
+original disabled standalone sunflower object remains available. The new entry
+owns construction and population controls and appears in the existing generic
+Art Studio form without GUI changes. The deferred asset/instancing schema
+migration has not begun.
+
+The whole-plant compiler expands generated organ instances once per prototype,
+because PBRT-v4 forbids nested instances. It then defines three reusable plant
+variants and instances them across the field. Plants remain upright with
+terrain-sampled root height, uniform scale variation, head-pitch and stalk-length
+variation, and configurable common heading/spread. `population.method` supports
+both `explicit` placement and deterministic `scatter`. The single live JSON
+retains one explicit specimen placement while selecting scatter for the field.
+See `docs/sunflower-configuration.md` for paths, semantics, and limitations.
+
+Completed independent renders, both inspected from the local archive:
+
+- `Sunflower_Plant_Study_20260908_033451.png`: one explicit complete plant,
+  800×900, 16 samples; demonstrates original head detail, leaves, stalk, ground
+  contact, and legal whole-plant PBRT construction.
+- `Sunflower_Field_Study_20260908_034127.png`: 500 scattered plants, 1600×1200,
+  32 samples. The frozen PBRT contains exactly three whole-plant definitions
+  and 500 whole-plant instances. The field reads as a dense sunflower planting
+  with varied head heights and facing directions. It is an exploratory result
+  awaiting artist evaluation, not a replacement accepted master.
+
+The live `scene_workspace/config.json` matches archived `034127` byte for byte
+at SHA-256 `a326f300720711d6c9e7fa8230caae81716e2fedb16eb26a5099bc3a0c11ef34`.
+It selects Sunflower Field Study, camera eye `[120,330,580]`, target
+`[0,210,-800]`, FOV 55, active flat terrain, and disabled undergrowth. The
+sun's explicit source is `[-60,90,100]`; the retained overcast background is
+unchanged. The pre-sunflower `guiTest` scene remains preserved in `aebaff1`.
+The archived source bundle was checked for an exact copy of `sunflowers.py`.
+
+Validation: the Qt suite runs 171 tests successfully (152 passed, 19
+dependency skips), including five new tests for organ expansion, deterministic
+scatter/instance reuse, terrain-aware explicit placement, invalid field
+controls, and impossible scatter. Live scene validation and `git diff --check`
+pass. Both GPU renders completed through `run_render_terminal.sh`; artist
+confirmation of terminal visibility has not been received. PBRT/CUDA were not
+modified. Leaves remain the original simplified curved blade geometry;
+botanical leaf refinement and spacing/collision avoidance remain future work.
 
 ## 2026-09-07 Step C: retire old pages and validate reflectance variants
 

@@ -63,6 +63,7 @@ from scene_objects import (
     configured_scene_objects,
 )
 from atmosphere import configured_fog, configured_rain
+from sunflowers import write_sunflower_field
 
 
 # ==============================================================
@@ -3563,6 +3564,12 @@ def write_scene(cfg, scene_root, medium_rel_path):
         grass_config,
         poppy_config,
     )
+    for index, entry in enumerate(terrain_landform.get("surface_objects", [])):
+        if entry.get("generator") == "sunflower":
+            write_sunflower_field(
+                lines, terrain, entry, f"sunflower_{index}", write_planar_phyllotaxis,
+                camera=camera_settings, film=render_settings["film"],
+            )
     write_planar_phyllotaxis(
         lines,
         configured_scene_objects(scene_description, "planar_phyllotaxis"),

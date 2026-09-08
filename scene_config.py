@@ -14,6 +14,7 @@ from typing import Any, Iterable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from cloud_boundary import CloudBoundary
+from sunflowers import validate_sunflower
 
 
 JsonPath = tuple[str | int, ...]
@@ -746,6 +747,7 @@ class SceneConfig:
                             if generator not in {
                                 "grass",
                                 "poppy",
+                                "sunflower",
                                 "litter",
                                 "rock_scatter",
                                 "undergrowth",
@@ -753,7 +755,7 @@ class SceneConfig:
                                 "space_colonization_tree",
                             }:
                                 errors.append(
-                                    f"{object_prefix}.generator must be grass, poppy, "
+                                    f"{object_prefix}.generator must be grass, poppy, sunflower, "
                                     "litter, rock_scatter, undergrowth, lsystem_tree, "
                                     "or space_colonization_tree"
                                 )
@@ -769,7 +771,12 @@ class SceneConfig:
                                     f"{object_prefix}.population must be an object"
                                 )
                                 population = {}
-                            if generator == "grass":
+                            if generator == "sunflower":
+                                errors.extend(
+                                    f"{object_prefix}.{error}"
+                                    for error in validate_sunflower(construction, population)
+                                )
+                            elif generator == "grass":
                                 validate_depth_fade(
                                     "grass", population.get("camera_frustum", {})
                                 )
