@@ -16,8 +16,8 @@
     "enabled": true,
     "type": "perspective",
     "look_at": {
-      "eye":  [240.0, 1000.0, 1900.0],
-      "look": [0.0, 150.0, -850.0],
+      "eye":  [0.0, 100.0, 1000.0],
+      "look": [0.0, 50.0, -250.0],
       "up":   [0, 1, 0]
     },
     "fov": 55.0
@@ -1005,7 +1005,7 @@
             "generator": "sunflower",
             "construction": {
               "variants": 9,
-              "head_pitch_variation": 25.0,
+              "head_pitch_variation": 10.0,
               "stem_length_variation": 0.12,
               "pattern": {
                 "count": 630,
@@ -1016,7 +1016,7 @@
                   0.0,
                   0.0
                 ],
-                "head_pitch": 85.0,
+                "head_pitch": 90.0,
                 "surface": {
                   "type": "area_dome",
                   "radius": 32.6,
@@ -1307,14 +1307,14 @@
             },
             "population": {
               "method": "scatter",
-              "count": 500,
+              "count": 25,
               "seed": 908,
               "scale": [
                 0.72,
                 1.12
               ],
               "heading_degrees": 0.0,
-              "heading_spread_degrees": 180.0,
+              "heading_spread_degrees": 15.0,
               "region": {
                 "center": [
                   0.0,

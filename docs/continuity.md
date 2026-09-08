@@ -2,6 +2,58 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 pond and water-lily study requested
+
+The artist requested lily pads and flowers on a pond surface. Preserve the
+current 25-plant, camera-facing sunflower configuration and the design
+discussion before switching the live scene. The requested work is a bounded
+pond/water-lily study; the general asset/placement migration remains unstarted.
+Claude's pending discussion documents remain unchanged and uncommitted.
+
+## 2026-09-08 current sunflower orientation: toward the camera
+
+The artist withdrew the eastward bias and requested camera X = 0 with flowers
+facing the camera and constrained rotation/tilt. Current eye is `[0,100,1000]`,
+target `[0,50,-250]`. Sunflower population heading is 0 degrees toward +Z,
+with plus/minus 15 degrees of variation. Base head pitch is 90 degrees with
+plus/minus 10 degrees across nine prototypes. Count remains 25. This common
+camera-side heading uses existing controls; it is not per-plant camera tracking.
+These values supersede the eastward bias and east-side camera recorded below.
+Only five camera/orientation values changed; validation passed. No render was
+launched. The artist continues editing and rendering manually in Art Studio.
+
+## 2026-09-08 ongoing GUI and foundational-design discussion
+
+The artist requested a running log of discussions, goals, and objectives. Codex maintains
+[`design-discussion-log.md`](design-discussion-log.md); read it before further
+GUI, asset/placement, or landform-builder work. It records the GUI review,
+confirmed limitations, agreed landform/asset/placement separation, and the
+artist's requirement to place any asset type on any landform type. The artist
+also requires generic landform-builder options that can be configured and
+saved as named reusable landform types.
+The artist also explicitly agreed to distinguish **build** (plant construction)
+from **placement** (the population's count, region, orientation, and distribution)
+when refining sunflowers. The running log records the JSON-to-GUI workflow and
+its current reload limitation.
+The artist explicitly approved separating the reusable sunflower plant recipe
+from its field placements as a requirement of the proposed migration. The
+current `sunflower_field` still contains both `construction` and `population`.
+
+Implementation sequence, recipe storage/reference behavior, and migration
+details are not yet settled. The three-to-six-session estimate was preliminary
+and preceded the reusable landform-builder requirement. Discussion and logging
+do not authorize beginning the migration. The last rendered checkpoint is
+`083500` at `ae285d7`. The artist has since saved camera eye `[0,100,1000]`,
+target `[0,50,-250]`, and sunflower population count 25. At the artist's request,
+Codex then set sunflower population heading to -90 degrees (east, using +Z
+north and +Y up) with a 20-degree half-spread. Only those two heading values
+were changed by Codex; scene validation passed. No new render was launched.
+The artist then requested viewing the fronts rather than the backs. Codex moved
+only the camera eye to `[-1250,100,-250]`, east of the retained target
+`[0,50,-250]`, preserving height, viewing distance, and FOV. Eastward plant bias
+and count 25 remain. Validation passed; this camera change is not yet rendered.
+Claude's journal and the artist's Q&A remain untouched.
+
 ## 2026-09-08 broader sunflower view with random orientations
 
 At the artist's request, the live scene advances from preserved `034127` to
