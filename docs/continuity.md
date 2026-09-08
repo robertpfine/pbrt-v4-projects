@@ -2,6 +2,39 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 first pond/water-lily render
+
+Sunflower settings and the preceding design discussion were preserved in
+`c99c3f4`, pushed with continuity backed up before changing the scene.
+The artist requested a pond with lily pads and approved pink-and-white flowers.
+
+`pond.py` implements a `pond_surface` landform with static geometric ripples,
+dielectric surface, and a closed absorbing water volume. Its `water_lily`
+surface object has separate construction and population controls: notched,
+veined pads, layered pointed petals, golden centers, and deterministic explicit
+or scattered whole-cluster instancing. These entries appear through the
+existing generic GUI builder. No GUI code or general schema migration changed.
+The mandatory flat terrain serves as a submerged bed; sunflower construction
+is retained disabled. See `docs/pond-water-lily-configuration.md`.
+
+Initial run `123411` failed before rendering because the new writer used
+`normal3` instead of PBRT's `normal` parameter type. Corrected output passed
+PBRT's format/parser check. Replacement render
+`Water_Lily_Pond_Study_20260908_124746.png` completed at 1600×1200, 64 samples,
+depth 10, with 32 clusters, 96 pads, and 26 blossoms. It was inspected locally:
+the forms read clearly, but lighting is subdued and the far pond/bed edges
+are visible. This is an initial proof awaiting artist evaluation, not an
+accepted master. A brighter, closer downward-framed comparison is planned.
+
+The full suite runs 176 tests, 157 passed and 19 dependency skips. Five new
+pond tests cover surface/rim geometry, open pad notches and upward winding,
+deterministic spacing/height placement, explicit bounds and legal instancing,
+and validation including malformed parameters. PBRT/CUDA were not modified.
+Known limits: horizontal undeformed pad clusters, no shoreline or submerged
+plant anatomy, and spacing between cluster centers rather than pad collision
+avoidance. Only water lilies currently attach to pond surfaces; universal
+asset/landform placement remains future work. Claude's records stay untouched.
+
 ## 2026-09-08 pond and water-lily study requested
 
 The artist requested lily pads and flowers on a pond surface. Preserve the

@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from cloud_boundary import CloudBoundary
 from sunflowers import validate_sunflower
+from pond import validate_pond, validate_water_lily
 
 
 JsonPath = tuple[str | int, ...]
@@ -607,10 +608,11 @@ class SceneConfig:
                             if generator not in {
                                 "terrain_heightfield",
                                 "distant_ridge",
+                                "pond_surface",
                             }:
                                 errors.append(
                                     f"{prefix}.topography.generator must be "
-                                    "terrain_heightfield or distant_ridge"
+                                    "terrain_heightfield, distant_ridge, or pond_surface"
                                 )
                             if not isinstance(topography.get("parameters"), dict):
                                 errors.append(
@@ -619,10 +621,11 @@ class SceneConfig:
                         elif generator is not None and generator not in {
                             "terrain_heightfield",
                             "distant_ridge",
+                            "pond_surface",
                         }:
                             errors.append(
                                 f"{prefix}.topography.generator must be "
-                                "terrain_heightfield or distant_ridge when provided"
+                                "terrain_heightfield, distant_ridge, or pond_surface when provided"
                             )
                         if topography_enabled is True and generator == "terrain_heightfield":
                             rotations = []
@@ -722,6 +725,11 @@ class SceneConfig:
                         for field in ("material", "texture"):
                             if not isinstance(surface.get(field), dict):
                                 errors.append(f"{prefix}.surface.{field} must be an object")
+                    if (isinstance(topography, dict)
+                            and topography.get("generator") == "pond_surface"
+                            and isinstance(surface, dict) and isinstance(geometry, dict)
+                            and isinstance(placement, dict) and isinstance(patches, list)):
+                        errors.extend(f"{prefix}: {error}" for error in validate_pond(landform))
                     surface_objects = landform.get("surface_objects")
                     if not isinstance(surface_objects, list):
                         errors.append(f"{prefix}.surface_objects must be an array")
@@ -748,6 +756,7 @@ class SceneConfig:
                                 "grass",
                                 "poppy",
                                 "sunflower",
+                                "water_lily",
                                 "litter",
                                 "rock_scatter",
                                 "undergrowth",
@@ -755,7 +764,7 @@ class SceneConfig:
                                 "space_colonization_tree",
                             }:
                                 errors.append(
-                                    f"{object_prefix}.generator must be grass, poppy, sunflower, "
+                                    f"{object_prefix}.generator must be grass, poppy, sunflower, water_lily, "
                                     "litter, rock_scatter, undergrowth, lsystem_tree, "
                                     "or space_colonization_tree"
                                 )
@@ -771,7 +780,14 @@ class SceneConfig:
                                     f"{object_prefix}.population must be an object"
                                 )
                                 population = {}
-                            if generator == "sunflower":
+                            if generator == "water_lily":
+                                errors.extend(
+                                    f"{object_prefix}.{error}"
+                                    for error in validate_water_lily(construction, population)
+                                )
+                                if not isinstance(topography, dict) or topography.get("generator") != "pond_surface":
+                                    errors.append(f"{object_prefix}: water_lily currently requires a pond_surface landform")
+                            elif generator == "sunflower":
                                 errors.extend(
                                     f"{object_prefix}.{error}"
                                     for error in validate_sunflower(construction, population)

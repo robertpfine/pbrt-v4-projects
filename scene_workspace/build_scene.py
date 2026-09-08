@@ -64,6 +64,7 @@ from scene_objects import (
 )
 from atmosphere import configured_fog, configured_rain
 from sunflowers import write_sunflower_field
+from pond import write_ponds
 
 
 # ==============================================================
@@ -3551,6 +3552,7 @@ def write_scene(cfg, scene_root, medium_rel_path):
         scene_files_root,
     )
     write_terrain(lines, terrain, terrain_landform, scene_root, scene_files_root)
+    write_ponds(lines, scene_description.get("landforms", []))
     write_terrain_details(
         lines,
         terrain,

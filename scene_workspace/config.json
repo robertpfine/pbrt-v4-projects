@@ -16,11 +16,11 @@
     "enabled": true,
     "type": "perspective",
     "look_at": {
-      "eye":  [0.0, 100.0, 1000.0],
-      "look": [0.0, 50.0, -250.0],
+      "eye":  [160.0, 520.0, 760.0],
+      "look": [0.0, 0.0, -150.0],
       "up":   [0, 1, 0]
     },
-    "fov": 55.0
+    "fov": 48.0
   },
 
   "render_settings": {
@@ -30,11 +30,11 @@
     },
     "sampler": {
       "type": "halton",
-      "pixel_samples": 32
+      "pixel_samples": 64
     },
     "integrator": {
       "type": "volpath",
-      "max_depth": 6
+      "max_depth": 10
     },
     "backend": {
       "type": "gpu",
@@ -53,7 +53,7 @@
 
   "scene_description": {
     "mode": "new",
-    "name": "Sunflower Field Study",
+    "name": "Water Lily Pond Study",
     "scene_context": {
       "date": "2026-06-21",
       "local_time": "08:00:00",
@@ -144,7 +144,7 @@
         "name": "flat_landform",
         "enabled": true,
         "placement": {
-          "position": [-400.0, 0.0, -700.0],
+          "position": [0.0, -70.0, -200.0],
           "rotation_degrees": [0.0, 0.0, 0.0]
         },
         "geometry": {
@@ -153,7 +153,7 @@
               "name": "main_patch",
               "enabled": true,
               "generator": "plane",
-              "dimensions": [3000.0, 2800.0],
+              "dimensions": [3500.0, 3500.0],
               "subdivisions": [401, 373],
               "local_position": [0.0, 0.0, 0.0],
               "local_rotation_degrees": [0.0, 0.0, 0.0]
@@ -181,10 +181,10 @@
         },
         "surface": {
           "material": {
-            "reflectance": [0.10, 0.17, 0.045]
+            "reflectance": [0.065, 0.09, 0.045]
           },
           "texture": {
-            "enabled": true,
+            "enabled": false,
             "mode": "terrain_surface_texture",
             "terrain_surface_texture": {
               "resolution": 2048,
@@ -1001,7 +1001,7 @@
           },
           {
             "name": "sunflower_field",
-            "enabled": true,
+            "enabled": false,
             "generator": "sunflower",
             "construction": {
               "variants": 9,
@@ -1452,6 +1452,178 @@
           }
         },
         "surface_objects": []
+      }
+    ,
+      {
+        "name": "lily_pond",
+        "enabled": true,
+        "placement": {
+          "position": [
+            0.0,
+            0.0,
+            -200.0
+          ],
+          "rotation_degrees": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        "geometry": {
+          "patches": [
+            {
+              "name": "water_surface",
+              "enabled": true,
+              "generator": "plane",
+              "dimensions": [
+                2600.0,
+                2400.0
+              ],
+              "subdivisions": [
+                321,
+                301
+              ],
+              "local_position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "local_rotation_degrees": [
+                0.0,
+                0.0,
+                0.0
+              ]
+            }
+          ]
+        },
+        "topography": {
+          "enabled": true,
+          "generator": "pond_surface",
+          "parameters": {
+            "depth": 65.0,
+            "ripples": [
+              {
+                "amplitude": 0.24,
+                "wavelength": 85.0,
+                "direction_degrees": 22.0,
+                "phase_degrees": 0.0
+              },
+              {
+                "amplitude": 0.1,
+                "wavelength": 38.0,
+                "direction_degrees": -38.0,
+                "phase_degrees": 60.0
+              },
+              {
+                "amplitude": 0.04,
+                "wavelength": 21.0,
+                "direction_degrees": 75.0,
+                "phase_degrees": 125.0
+              }
+            ]
+          }
+        },
+        "surface": {
+          "material": {
+            "type": "dielectric",
+            "eta": 1.333,
+            "roughness": 0.015,
+            "absorption": [
+              0.018,
+              0.006,
+              0.01
+            ]
+          },
+          "texture": {
+            "enabled": false
+          }
+        },
+        "surface_objects": [
+          {
+            "name": "pink_and_white_water_lilies",
+            "enabled": true,
+            "generator": "water_lily",
+            "construction": {
+              "variants": 5,
+              "pads_per_cluster": 3,
+              "pad_radius": 27.0,
+              "cluster_radius": 30.0,
+              "pad_segments": 72,
+              "pad_rings": 5,
+              "pad_notch_degrees": 24.0,
+              "pad_camber": 0.45,
+              "vein_count": 13,
+              "vein_width": 0.2,
+              "pad_color": [
+                0.065,
+                0.22,
+                0.045
+              ],
+              "vein_color": [
+                0.14,
+                0.3,
+                0.075
+              ],
+              "roughness": 0.32,
+              "flower_radius": 19.0,
+              "flower_height": 12.0,
+              "petal_width": 4.2,
+              "petal_layers": 4,
+              "petals_per_layer": 13,
+              "petal_segments": 12,
+              "petal_color": [
+                0.7,
+                0.1,
+                0.27
+              ],
+              "petal_tip_color": [
+                0.92,
+                0.83,
+                0.78
+              ],
+              "center_color": [
+                0.9,
+                0.47,
+                0.035
+              ],
+              "stamen_count": 48
+            },
+            "population": {
+              "method": "scatter",
+              "count": 32,
+              "seed": 908,
+              "scale": [
+                0.8,
+                1.25
+              ],
+              "region": {
+                "center": [
+                  0.0,
+                  -150.0
+                ],
+                "size": [
+                  740.0,
+                  660.0
+                ]
+              },
+              "minimum_spacing": 95.0,
+              "surface_offset": 0.6,
+              "flower_probability": 0.78,
+              "instances": [
+                {
+                  "position": [
+                    0.0,
+                    -150.0
+                  ],
+                  "rotation_degrees": 0.0,
+                  "scale": 1.0,
+                  "variant": 0,
+                  "flower": true
+                }
+              ]
+            }
+          }
+        ]
       }
     ],
     "objects": [
@@ -2136,7 +2308,7 @@
       "sun": {
         "enabled": true,
         "type": "distant",
-        "from": [-60.0, 90.0, 100.0],
+        "from": [-180.0, 400.0, 260.0],
         "to": [0, 0, 0],
         "color_mode": "blackbody",
         "temperature": 5700,

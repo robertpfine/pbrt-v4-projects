@@ -289,3 +289,10 @@ and asked Codex to create it. Codex will preserve the sunflower working state,
 then build and render a pond study with floating pads and water-lily blossoms.
 Construction and placement remain separate controls within the existing entry
 organization. This request does not initiate the full asset/placement migration.
+The artist selected pink and white flowers. The initial implementation uses
+a `pond_surface` landform with a `water_lily` surface-object entry. Successful
+render `124746` has 32 clusters, 96 pads, and 26 blossoms on rippled dielectric
+water with absorption. It follows a pre-render syntax failure in `123411`,
+corrected and checked with PBRT's parser. Codex inspected `124746` and proposed
+one brighter, more downward-framed comparison to eliminate the far pond edge.
+No new visual result has yet been accepted by the artist.
