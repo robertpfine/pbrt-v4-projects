@@ -2423,9 +2423,9 @@
         "scale": 0.5,
         "environment": {
           "generator": "twilight_map",
-          "zenith_color": [0.001, 0.002, 0.006],
-          "horizon_color": [0.016, 0.025, 0.045],
-          "nadir_color": [0.008, 0.012, 0.02],
+          "zenith_color": [0.00025, 0.0005, 0.0015],
+          "horizon_color": [0.004, 0.00625, 0.01125],
+          "nadir_color": [0.002, 0.003, 0.005],
           "horizon_transition_degrees": 30.0,
           "star_count": 160,
           "star_radius_degrees": 0.03,

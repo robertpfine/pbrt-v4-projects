@@ -683,3 +683,22 @@ instances, zero flowering instances. Archived JSON and pond/sky/builder sources
 match live files. This comparison awaits artist evaluation; the proposed
 nighttime viewing model remains unimplemented. No code or settings changed
 for this render.
+
+## 2026-09-08 — Blacker sky under full moonlight
+
+The artist observed that even under a full Moon the sky should be blacker.
+After preserving `224147` in pushed/backed-up `fba0801`, the diffuse sky's
+zenith, horizon, and nadir colors each become one quarter of their prior values.
+Moon strength/direction/color and the stars remain unchanged, as do the pads,
+clouds, all geometry, and camera. This also darkens the reflected sky on the
+pond. It is a lighting adjustment, not the proposed observer model.
+
+Scene/snapshot validation passes. The previous pipeline finished and a clean
+process check preceded run `224706`, launched through the normal terminal
+wrapper. No code changed and the existing 193-test result remains applicable.
+
+Render `Water_Lily_Pond_Moonlight_20260908_224706.png` completed and was
+inspected locally. Upper sky is close to black; pale clouds and their water
+reflections stand out more, with pad outlines retained. It awaits artist
+review. Archived settings and pond/sky/builder sources match live files exactly.
+No further adjustments were made after inspection.

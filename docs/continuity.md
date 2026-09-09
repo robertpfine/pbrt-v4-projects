@@ -2,6 +2,28 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 blacker moonlit sky comparison
+
+The artist's response to `224147`: even under a full Moon, the sky should be
+blacker. The preceding pads-only comparison is preserved in pushed checkpoint
+`fba0801`, and its continuity backup completed before changing sky settings.
+The live sky's zenith, horizon, and nadir RGB values are each reduced to one
+quarter. Enclosing sky scale, star positions/size/brightness, Moon direction/
+color/strength, clouds, plants, water, camera, and render settings are unchanged.
+This reduces diffuse environment fill and its water reflection; it is not
+an exposure change or the proposed nighttime perception model.
+
+Scene and snapshot validation and diff checks pass. No code changed after
+the 193-test verification. The prior render pipeline finished before the new
+launch; an attempted upload termination found the upload already exited.
+After a clean process check, `224706` launched through the usual terminal
+wrapper. Render `Water_Lily_Pond_Moonlight_20260908_224706.png` completed and
+was inspected locally. The upper sky is close to black, the clouds and pale
+water reflections have stronger separation, and the pads remain visible under
+the unchanged direct moonlight. This comparison awaits artist review. Archived
+JSON and pond/sky/builder sources match the live files exactly. No additional
+scene adjustment was made after inspection.
+
 ## 2026-09-08 pads-only moonlight render 224147
 
 The artist authorized proceeding with the render. After confirming no active
