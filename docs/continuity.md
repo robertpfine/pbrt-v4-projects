@@ -2,6 +2,26 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 pads-only moonlight render 224147
+
+The artist authorized proceeding with the render. After confirming no active
+builder, PBRT, or pipeline, `224147` launched through the usual terminal wrapper.
+It uses the committed pads-only configuration: 32 clusters / 96 pads, no
+blossom instances, and the same lighting/composition as `223019`. This is not
+the proposed dark-adapted viewing simulation; that remains research/proposal
+only. The live configuration validates, and no code or settings changed for
+this launch. The previous declined-launch note below is now superseded.
+
+Render `Water_Lily_Pond_Moonlight_20260908_224147.png` completed and was
+inspected locally. Blossoms are absent, all pad clusters remain, and the pale
+cloud/tree reflections are retained. Lighting still has the limitations
+identified in the moonlight research; no perceptual rendering change occurred.
+PBRT verifies 32 pad-only cluster instances and zero flowering instances.
+Archived JSON and pond/sky/builder sources match the live files exactly.
+The existing 193-test code result remains applicable. This comparison awaits
+artist evaluation. The live JSON now matches the latest completed image.
+
+
 ## 2026-09-08 moonlight research and pads-only working scene
 
 Full checkpoint `f6f203e` is pushed and its continuity backup completed before

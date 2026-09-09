@@ -667,3 +667,19 @@ loss of fine detail. Exposure stays distinct from adaptation; materials remain
 unchanged. Prefer spectral output, with existing GPU/export integration to be
 verified. An RGB proxy is approximate. Validate ordinary and mapped outputs
 from the same frozen scene. This is a proposal, not implemented behavior.
+
+## 2026-09-08 — Authorized pads-only moonlight render
+
+The artist said "Proceed with render." After confirming no active pipeline,
+run `224147` launched through the usual terminal wrapper using the committed
+pads-only moonlight configuration. All 32 clusters / 96 pads remain and no
+blossoms are instanced. The existing moonlight is unchanged; the proposed
+night-vision treatment has not been implemented. Scene validation passes.
+
+`Water_Lily_Pond_Moonlight_20260908_224147.png` completed and was inspected
+locally: blossoms are gone, all pad clusters remain, and the existing pale
+reflections and lighting are preserved. PBRT confirms 32 pad-only cluster
+instances, zero flowering instances. Archived JSON and pond/sky/builder sources
+match live files. This comparison awaits artist evaluation; the proposed
+nighttime viewing model remains unimplemented. No code or settings changed
+for this render.

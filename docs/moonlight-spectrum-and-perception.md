@@ -74,8 +74,10 @@ At the artist's subsequent request, `flower_probability` is now zero. All 26
 blossoms are removed from placement; the 32 clusters / 96 pads and their
 transforms are unchanged. Flower recipes remain available but unused. The
 existing generator still defines unused flowering prototypes. Lighting is
-unchanged while the research is discussed. The pads-only render launch was
-declined, so `223019` remains the latest image and still shows flowers.
+unchanged while the research is discussed. The initial pads-only render launch was
+declined; the artist subsequently authorized it. Completed render `224147`
+now shows pads only and matches the live configuration. Earlier `223019`
+remains the lighting-research reference with flowers.
 
 ## Proposed simulation of reduced color/detail discrimination
 
