@@ -30,6 +30,10 @@ from the live JSON by this one setting. The rock texture, pad variegation, and
 fall-color studies remain pending; only flower removal was applied. Claude's
 journal and artist-question record were not edited.
 
+Archive follow-up: the separate upload retry for the full `222127` render
+bundle has now exited successfully. The earlier `221342` PBRT quota failure
+remains a separate unresolved remote-copy issue; its local bundle is intact.
+
 ## 2026-09-08 full checkpoint after moonlight 223019
 
 The artist requested a full checkpoint after asking to log the material and
