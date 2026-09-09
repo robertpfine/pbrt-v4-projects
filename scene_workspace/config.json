@@ -1491,7 +1491,7 @@
               },
               "minimum_spacing": 95.0,
               "surface_offset": 0.6,
-              "flower_probability": 0.78,
+              "flower_probability": 0.0,
               "instances": [
                 {
                   "position": [

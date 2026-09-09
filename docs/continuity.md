@@ -2,6 +2,34 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 moonlight research and pads-only working scene
+
+Full checkpoint `f6f203e` is pushed and its continuity backup completed before
+this scene change. The artist then said `223019` looked like a dimmed sun and
+requested research on moonlight frequencies and colors it cannot reflect.
+Research and sources are in `docs/moonlight-spectrum-and-perception.md`.
+Measured moonlight contains substantial red. No ordinary surface-color category
+is excluded from reflection; nighttime appearance instead requires accounting
+for material spectra, light level, and visual adaptation. Full-moon color
+recognition is not universally absent. The current artistic light plus default
+CIE RGB-film output does not model rod/cone adaptation. No perceptual rendering
+or PBRT/CUDA change was made; discuss the research before implementation.
+
+The artist explicitly requested removing flowers from the moonlight scene.
+`pink_and_white_water_lilies.population.flower_probability` changes 0.78 to 0.
+All 26 blossom instances disappear; 32 pad-cluster placements (96 pads) retain
+exactly the same positions, scales, rotations, variants, and heights. The
+scatter RNG still consumes the flower decision, preserving layout. Unused
+flower recipes and prototypes remain available; explicit instances are inactive.
+Scene validation and diff checks pass. This is a single-setting change, so the
+existing 193-test result remains applicable.
+
+The requested pads-only render launch was declined. No replacement render was
+started. Latest image `223019` therefore still contains flowers and differs
+from the live JSON by this one setting. The rock texture, pad variegation, and
+fall-color studies remain pending; only flower removal was applied. Claude's
+journal and artist-question record were not edited.
+
 ## 2026-09-08 full checkpoint after moonlight 223019
 
 The artist requested a full checkpoint after asking to log the material and

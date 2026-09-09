@@ -640,3 +640,30 @@ Codex records, and the existing pending artist-question/Claude-journal additions
 without modifying those two records. Log the rock texture, variegated pads
 without flowers, and separate fall-color comparison as later studies. No code
 changes require repeating the existing 193-test verification.
+
+## 2026-09-08 — Moonlight criticism, research, and flower removal
+
+The artist said `223019` looked like a dimmed sun and asked for research on
+moonlight frequencies and which colors it cannot reflect from. Codex found
+that the spectrum includes substantial red; surface reflection and low-light
+visual appearance must be distinguished. The current render did not model
+visual adaptation, so its cool, dim directional source was insufficient to
+establish the intended experience. See `docs/moonlight-spectrum-and-perception.md`
+for primary measurements, full-moon color-recognition results, CIE guidance,
+local PBRT inspection, and a proposed next approach. No new perceptual pipeline
+was implemented during research.
+
+The artist then explicitly requested removing the flowers from the moonlight
+scene. Flower probability is now zero: 26 blossoms removed, all 32 clusters / 96
+pads retain identical placements. Lighting and pad materials remain unchanged.
+The pads-only render launch was declined; no replacement image was started.
+`223019` still contains blossoms; live JSON is now pads only. The full checkpoint
+`f6f203e` and its continuity backup were completed before this edit.
+
+The artist asked how reduced visual sensitivity would be simulated. Proposed
+approach: a separate dark-adapted viewing model on linear HDR output, with
+rod/cone brightness weighting, adaptation-dependent colorfulness, and restrained
+loss of fine detail. Exposure stays distinct from adaptation; materials remain
+unchanged. Prefer spectral output, with existing GPU/export integration to be
+verified. An RGB proxy is approximate. Validate ordinary and mapped outputs
+from the same frozen scene. This is a proposal, not implemented behavior.
