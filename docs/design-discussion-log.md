@@ -496,3 +496,24 @@ granite-like surface is subtle at this distance. This comparison awaits artist
 evaluation. The live JSON and new sources match the archive. PBRT confirms
 450,000 main, 50,000 shore, and 750,000 distant grass tufts, alongside the
 preserved 420 rocks and three trees, with five textured stone materials.
+
+## 2026-09-08 — Direct sunlight and reddish dusk comparisons
+
+The artist asked where the sun is in `212736` and requested two views: direct
+sunlight, and dusk with reddish cloud tones reflected by the pond. In `212736`
+the enabled distant light points from `[-66.35524,73.47254,-14.09849]` toward
+the origin: approximately 47.3 degrees elevation and 102 degrees azimuth,
+east-southeast and off-frame upper left. Its temperature is 5700 K and scale 4.
+It already supplies direct light, partly from the side/behind the viewed forms.
+
+The first comparison keeps that direction, temperature, background, camera,
+and all scene geometry, increasing only direct sun scale to 16 and naming the
+scene `Water Lily Pond Direct Sun`. A separate warm, low-light dusk comparison
+will follow through the same authoritative live JSON, preserving each render's
+frozen configuration and source bundle. No parallel live scene JSON is created.
+
+Daylight render `214903` completed and was inspected locally. Lilies, grass,
+stones, and reflected clouds are substantially brighter; cloud highlights are
+very bright in the PNG. The live JSON matches its archive exactly. Preserve
+this first comparison before the requested dusk scene. Scene/snapshot checks
+and `git diff --check` pass; lighting-only changes need no repeated code suite.

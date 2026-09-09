@@ -2,6 +2,30 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 direct sunlight comparison; dusk requested next
+
+The artist asked where the sun is in `212736` and requested both direct
+sunlight and dusk with reddish clouds reflected in the pond. In `212736`,
+the distant sun is approximately 47.3 degrees above the horizon at azimuth
+102 degrees, east-southeast and off-frame upper left. Explicit source is
+`[-66.35524,73.47254,-14.09849]`, temperature 5700 K, scale 4. Direct lighting
+was already enabled, partly from the side and behind the viewed forms.
+
+Render `Water_Lily_Pond_Direct_Sun_20260908_214903.png` completed and was
+inspected locally. It changes only sun scale from 4 to 16, plus scene name.
+The lilies, stones, grass, and cloud reflections are brighter. Cloud highlights
+are very bright in the PNG; this is an exploratory comparison awaiting artist
+review. Camera, geometry, cloud recipe, sky fill, and render quality are
+unchanged. The live JSON matches the archived daylight configuration exactly.
+
+Preserve this comparison before the second requested view: a dusk study with
+low west-northwest light, warm cloud color, and reflections in the water.
+Use the same authoritative live JSON sequentially, with each render's frozen
+archive retaining its own scene. No parallel live JSON is authorized.
+Scene/snapshot validation and `git diff --check` pass. The previous 189-test
+result remains applicable to these lighting-only changes. Claude's records
+remain untouched; the running discussion log records the request.
+
 ## 2026-09-08 grass gaps, distant-hill grass, and stone texture
 
 The artist called `211607` "Nice" and requested grass on the distant hill,

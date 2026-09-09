@@ -53,7 +53,7 @@
 
   "scene_description": {
     "mode": "new",
-    "name": "Water Lily Pond Morning",
+    "name": "Water Lily Pond Direct Sun",
     "scene_context": {
       "date": "2026-06-21",
       "local_time": "10:00:00",
@@ -2802,7 +2802,7 @@
         "to": [0, 0, 0],
         "color_mode": "blackbody",
         "temperature": 5700,
-        "scale": 4.0,
+        "scale": 16.0,
         "use_astronomical_direction": false,
         "light_shafts": {
           "light": {
