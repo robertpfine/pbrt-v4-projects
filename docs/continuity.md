@@ -2,6 +2,76 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 full checkpoint after moonlight 223019
+
+The artist requested a full checkpoint after asking to log the material and
+fall-color objectives below. This includes the live moonlight configuration,
+Codex continuity/discussion records, and the previously pending additions to
+`docs/artist-questions.md` and `docs/claude-review-continuity.md`. Those two
+records were reviewed and included as written by their author; Codex did not
+edit either. Their historical references to uncommitted state and earlier
+checkpoints remain historical, not current worktree instructions.
+
+Render `Water_Lily_Pond_Moonlight_20260908_223019.png` completed and was
+inspected locally. Pale clouds reflect in the dark pond; the high source
+reveals pads, grass, and shoreline stones while tree crowns remain mostly
+silhouetted. The rose sunset lighting is gone. This is a new moonlight
+comparison awaiting artist evaluation. Favorably reviewed twilight `222127`
+remains preserved in `f7f3528`; the live scene is now moonlight. No renderer,
+builder, or pipeline was active at the final render check.
+
+The archived JSON and sky/configuration/builder sources match the live files
+exactly. SceneConfig, snapshot validation, and `git diff --check` pass. No code
+changed after the 193-test result (171 passed, 22 dependency skips, with all
+seven sky tests passing separately under production Python). The new rock,
+pad, and autumn objectives are logged for later work and have not been applied.
+
+Remote archive note: the separate retry for intermediate `221342` reported a
+Google Drive quota failure for its PBRT file. Its complete local bundle is
+safe in `Archive/`. The stopped `222127` upload is being retried separately;
+these render-bundle uploads are distinct from the successful continuity backups
+at prior checkpoints. Do not claim those remote bundles verified without a
+successful transfer/check. Git includes source/configuration/docs, not render
+artifacts or archives.
+
+## 2026-09-08 artist's next material and seasonal studies
+
+During moonlight run `223019`, the artist asked to log these objectives:
+stronger rock texture; remove lily flowers but retain pads with much more
+surface/color variegation; and a separate fall-color render affecting trees,
+grass, and lily pads. These are pending subsequent studies, not changes to the
+frozen moonlight comparison. See the running discussion log. Preserve the
+reviewed lighting states before materially changing those plants/materials.
+
+## 2026-09-08 off-camera full-moon comparison
+
+The artist requested moonlight from a full Moon high outside the frame, and
+suggested that such light contains no red frequencies. Codex clarified that
+moonlight is reflected sunlight and includes red wavelengths; this study uses
+restrained cool white rather than removing red. Sources and discussion are
+recorded in `docs/design-discussion-log.md`. Favorably reviewed twilight
+`222127` is preserved in pushed/backed-up checkpoint `f7f3528`.
+
+The live scene is `Water Lily Pond Moonlight`, with clock metadata 23:30.
+The existing `sky.sun` distant-light slot serves as the off-camera Moon for
+this bounded lighting study: `from [-35,82,45]`, `to [0,0,0]`, roughly
+55 degrees elevation, RGB `[0.88,0.94,1]`, scale 0.45. There is no separate
+solar illumination. This is an artistic full-moon lighting approximation,
+not a lunar ephemeris or calibrated photometric exposure; retained date and
+location do not establish an actual lunar phase. The renderer still labels
+this existing entry Sun in the GUI. No new moon module or schema migration
+was introduced. The high source is outside the camera view and has no visible
+disk. PBRT's distant source approximates the Moon with hard parallel shadows.
+
+Background scale is 0.5, with zenith `[0.001,0.002,0.006]`, horizon
+`[0.016,0.025,0.045]`, and nadir `[0.008,0.012,0.02]`. Transition and stars
+remain from `222127`. All geometry, materials, cloud recipes, camera, and
+render settings are unchanged. Scene/snapshot validation and diff checks
+pass; the 193-test code result remains applicable to these setting changes.
+The prior twilight pipeline was waiting on a stalled Drive upload; only that
+upload was terminated before launching this comparison. Its local archive is
+complete. Claude's pending records remain untouched and uncommitted.
+
 ## 2026-09-08 twilight gradient refinement
 
 Intermediate `221342` is preserved in pushed/backed-up checkpoint `2964f98`.

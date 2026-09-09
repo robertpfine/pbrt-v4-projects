@@ -592,3 +592,51 @@ configuration values changed after the 193-test verification.
 The artist evaluated `222127`: "very twilight like." Preserve this as the
 favorably reviewed twilight reference. This supersedes the pending-review note
 above; no additional sky, brightness, or composition edits are requested.
+
+## 2026-09-08 — Off-camera full Moon
+
+The artist requested a high, off-camera full Moon and suggested that its light
+contains no red frequencies. Moonlight is reflected sunlight and includes red;
+Codex uses restrained cool-white RGB `[0.88,0.94,1]` for this artistic study.
+References: [NASA Moonlight](https://science.nasa.gov/moon/moonlight/) and
+[NASA lunar color measurements](https://science.nasa.gov/photojournal/color-of-the-moon/).
+
+Twilight `222127` is preserved in pushed/backed-up `f7f3528`. The existing
+distant-light slot (`sky.sun`) represents the Moon at about 55 degrees elevation
+from `[-35,82,45]`, scale 0.45. It supplies no separate sunlight or visible lunar
+disk. Midnight-like clock metadata is 23:30; phase, direction, exposure, and
+slightly cool color are artistic choices rather than an ephemeris/photometric
+simulation. The existing GUI still labels this light Sun.
+
+The background changes to a dim blue-black starry sky, removing the rose glow.
+Camera, plants, water, rocks, cloud forms, and render settings remain unchanged.
+Scene/snapshot validation passes; no code or tests changed. The prior render's
+stalled upload was stopped after confirming its complete local archive so that
+one moonlight comparison can launch through the normal terminal wrapper.
+
+## 2026-09-08 — Logged material and seasonal objectives
+
+While moonlight comparison `223019` was running, the artist explicitly asked
+to log these additional notes:
+
+- Rocks need stronger, more convincing rock surface texture.
+- Remove the lily flowers while retaining the pads; add much more variegation
+  to pad surface texture and color.
+- Produce a separate fall-color render with autumn tones in trees, grass, and
+  lily pads.
+
+These are recorded as subsequent studies. They are not applied to the frozen
+moonlight comparison, which retains the prior plants and materials to isolate
+lighting. No choice of autumn palette or new material controls is settled yet.
+
+Moonlight render `223019` completed and was inspected locally. Pale clouds and
+shore stones catch the high light, pads and grass remain visible, and the sky
+and water are dark blue-black with pale reflections. Tree crowns remain mostly
+silhouetted. This comparison awaits artist evaluation. Archived JSON and
+changed sources match live files; scene/snapshot validation passes.
+
+The artist requested a full checkpoint. Include the live moonlight scene,
+Codex records, and the existing pending artist-question/Claude-journal additions
+without modifying those two records. Log the rock texture, variegated pads
+without flowers, and separate fall-color comparison as later studies. No code
+changes require repeating the existing 193-test verification.

@@ -92,6 +92,26 @@ functions remain in the code, unreachable, for Step C.
 - "0.62 is a hack? It should be in the JSON" — yes; logged under Deferred
   generator work.
 
+## Plan agreed 2026-09-07 (evening)
+
+**Migration is deferred — deliberately.** The land-cover mapping stays as
+is. The schema target has grown from "move `surface_objects` to
+`land_cover`" to the **asset / instancing** model (see Glossary), and that
+model has not yet been tested against the awkward cases (a sunflower placed
+once and scattered; `fractal_tree`'s explicit instances; the grass and
+poppy `extension` onto `broad_rise`; `debug_render`). Migrating now would
+mean migrating twice.
+
+**Next goals, in this order, as the way to test the model:**
+1. **Sunflowers** — an asset that is both placed and scattered.
+2. **Water waves** — a new asset builder and a new kind of landform.
+3. **Trees** — rationalize the three tree builders' parameters.
+
+Each is generator work, additions and changes *within* entries — no
+migration needed for any of them. What they teach informs the final
+`config.json` structure; the migration to assets + instancing happens once,
+afterward, to a shape proven by use.
+
 ## Deferred generator work
 
 - **Undergrowth (fern) geometry is hard-coded.** `_fern_mesh()` in
@@ -152,6 +172,19 @@ the value; validator to range-check `reflectance_variants`.
 - **Container** — an Outline row that only groups entries (Landforms, Land
   cover, Objects, Clouds, Atmosphere). Not clickable; expands and
   collapses only.
+- **Asset builder** — the code that makes a thing: `fractal_tree.py`,
+  `_fern_mesh`, the poppy mesh, the ocean generator to come. Named in the
+  JSON by `generator`.
+- **Asset** — a named recipe: an asset builder plus its parameters (today's
+  `construction`). One poppy, one live oak, one sunflower head. Reused by
+  instancing. (Technical footnote: in PBRT an asset becomes an
+  `ObjectBegin` prototype.)
+- **Instancing** — how copies of an asset are placed. Two methods:
+  **scatter** (count, region, landform, seed, patchiness — today's
+  `population`) and **explicit** (a list of positions/rotations/scales —
+  today's `objects[]` placement and the trees' `instances`). Agreed
+  2026-09-07 as the model for the eventual schema; the JSON keys are
+  unchanged until a migration.
 
 ## The Studio
 

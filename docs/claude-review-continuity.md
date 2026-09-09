@@ -511,3 +511,30 @@ Working copy: `pbrt_v4_art_studio.py`, `tests/test_art_studio.py`,
 `docs/artist-questions.md`, this file, `scene_workspace/config.json`.
 Next: checkpoint (artist decides whether `config.json` goes in), then
 Step C by Codex.
+
+### Addendum, same evening: plan after checkpoint `aebaff1`
+
+Step C done by Codex (`aebaff1`): retired page functions deleted,
+`reflectance_variants` validated. Reviewed: builder/dialog/Outline intact,
+166 tests pass.
+
+Design conversation settled the vocabulary **asset builder / asset /
+instancing (scatter | explicit)** and, as a result, the land-cover
+migration is **deferred**: the target is now the asset/instancing model,
+untested against the awkward cases, so migrating to `land_cover` first
+would mean migrating twice. Agreed next goals: **sunflowers, water waves,
+trees** — generator work within entries, no migration — to inform the final
+schema. Details and glossary in `docs/artist-questions.md`.
+
+## 2026-09-08 sunflower field slice — done, archived, rolled back
+
+At the artist's direction Claude built a first "mature sunflower on a stalk,
+instanced across the field" slice (two renders, `030240` and `030725`; the
+artist: "interesting"). The artist then asked that the work be **saved and
+rolled back** so Codex can be given the same task independently, for
+comparison. The implementation, patch, renders, and a README are in
+`~/ClaudeArchive/sunflower-field-2026-09-08/` — outside the repository on
+purpose. The working copy is back at `aebaff1` for all code and
+`config.json`; only the doc updates (plan, glossary, Q&A) remain
+uncommitted. Details are withheld from this journal until Codex has made
+its attempt.

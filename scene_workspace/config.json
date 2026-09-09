@@ -53,10 +53,10 @@
 
   "scene_description": {
     "mode": "new",
-    "name": "Water Lily Pond Dusk",
+    "name": "Water Lily Pond Moonlight",
     "scene_context": {
       "date": "2026-06-21",
-      "local_time": "20:39:00",
+      "local_time": "23:30:00",
       "time_zone": "America/New_York",
       "latitude": 43.0,
       "longitude": -76.0,
@@ -2420,12 +2420,12 @@
         "source": "procedural_twilight",
         "color_mode": "rgb",
         "color": [0.22, 0.13, 0.28],
-        "scale": 1.05,
+        "scale": 0.5,
         "environment": {
           "generator": "twilight_map",
-          "zenith_color": [0.002, 0.004, 0.012],
-          "horizon_color": [0.42, 0.30, 0.30],
-          "nadir_color": [0.10, 0.12, 0.17],
+          "zenith_color": [0.001, 0.002, 0.006],
+          "horizon_color": [0.016, 0.025, 0.045],
+          "nadir_color": [0.008, 0.012, 0.02],
           "horizon_transition_degrees": 30.0,
           "star_count": 160,
           "star_radius_degrees": 0.03,
@@ -2805,12 +2805,12 @@
       "sun": {
         "enabled": true,
         "type": "distant",
-        "from": [84.19405, 0.50068, 53.95472],
+        "from": [-35.0, 82.0, 45.0],
         "to": [0, 0, 0],
         "color_mode": "rgb",
         "temperature": 5700,
-        "color": [1.0, 0.23, 0.18],
-        "scale": 4.0,
+        "color": [0.88, 0.94, 1.0],
+        "scale": 0.45,
         "use_astronomical_direction": false,
         "light_shafts": {
           "light": {
