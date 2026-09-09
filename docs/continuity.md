@@ -2,6 +2,49 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 long grass on the pond banks
+
+The artist requested long grass on the green landform after praising `171856`
+and its trees. The favorably reviewed scene is preserved in `59ddb13`, with
+the response recorded in pushed/backed-up `dc79d98` before this change.
+
+The existing grass entry is relocated from the disabled flat landform onto
+`rolling_pond_banks` as `long_pond_grass`; this avoids the snapshot schema's
+global one-grass-entry restriction. The original recipe remains in the earlier
+checkpoint. The current recipe uses 450,000 tufts, nine blades per tuft, three
+prototypes, blade heights 28–52, half-widths 0.12–0.28, six blade segments,
+varied lean/bend, and gently drooping tips. Instance scale is 0.9–1.35. Existing
+wind/tropism and coated-diffuse material controls remain in use.
+
+The population covers the full rolling landform `[8000,9000]` within the
+camera frustum, retaining the 0.08 bottom margin. Elevation range `[3.9,2000]`
+keeps roots on dry ground. Camera, tree forms/placements, clouds, water optics,
+lilies, and landform geometry remain as in `171856`. The distant-hill grass
+extension stays disabled.
+
+The legacy detail writer derives its scatter seed offset from enabled-layer
+order. To retain the accepted stones when grass becomes the first detail
+layer, rock population seed changes from 67 to -933: combined with its new
++2000 offset, this yields the same effective seed as 67 + 1000. All 420
+complete rock placements were compared and match exactly. This compensates
+using existing controls; no generator code changed.
+
+SceneConfig and snapshot validation pass. A bounded sample verifies 500 grass
+placements inside the frustum on dry ground, and all three longer blade
+prototypes generate successfully. `git diff --check` passes. The prior
+184-test implementation result remains applicable; no new tests or full-suite
+rerun was needed for this configuration-only change. Render
+`Water_Lily_Pond_Morning_20260908_211607.png` completed through the normal
+terminal wrapper and was inspected locally. Long grass covers the banks and
+rolling ground, with some foreground blades beside the rocks. It reads darker
+and denser than the previous green surface; this is a first comparison awaiting
+artist review. The live JSON and frozen generator sources match the archive
+exactly, and PBRT contains 450,000 grass, 420 rock, and three tree instances.
+Camera, render settings, sky, pond/lilies, and tree entries were independently
+compared against `171856` and are unchanged. See the running discussion log.
+Claude's two pending records remain untouched and uncommitted. Reopen Art
+Studio to load the relocated grass entry before editing its controls.
+
 ## 2026-09-08 artist's response to pond 171856
 
 The artist evaluated `171856`: "171856 is rather lovely. The trees are

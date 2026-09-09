@@ -425,3 +425,35 @@ Preserve this composition as the current pond reference, particularly the
 tree forms, arrangement, and reflections. The exact rendered scene and source
 are checkpointed in `59ddb13`. This response requests no further scene change;
 Codex recorded it without changing settings or launching another render.
+
+## 2026-09-08 — Long grass on the pond's green landform
+
+The artist requested long grass on the green landform after favorably reviewing
+`171856`, especially its trees. Codex relocated the existing unique grass entry
+from the disabled flat landform to `rolling_pond_banks`, naming it
+`long_pond_grass`. The old grass settings remain preserved in `59ddb13` and
+`dc79d98`. This is a configuration change using the existing generator.
+
+The first comparison uses 450,000 nine-blade tufts, three prototypes, blade
+heights 28–52 scene units before instance scale 0.9–1.35, gently bent/drooping
+tips, and varied greens. Placement covers the rolling landform within the
+camera's frustum, with elevation range `[3.9,2000]` keeping roots on dry land.
+The original camera, trees, clouds, water, and lilies remain as in `171856`.
+
+The old writer adds a seed offset based on enabled detail-layer order. Enabling
+grass would shift rock placement, so the rock population seed changes from 67
+to -933 to compensate for its new +2000 offset instead of +1000. All 420 rock
+placements were compared and remain exactly identical. This workaround uses
+existing controls; no generator or general placement architecture changed.
+
+Scene and snapshot validation pass, as do a 500-tuft dry-ground/frustum sample,
+generation of all three grass prototypes, and `git diff --check`. No new tests
+or repeated full suite were needed for these parameter-only changes.
+
+Render `Water_Lily_Pond_Morning_20260908_211607.png` completed and was inspected
+locally. The grass covers the banks and rolling ground, with taller blades
+beside the foreground rocks. It is darker and denser than the earlier textured
+green land. This first comparison awaits artist review. PBRT confirms 450,000
+grass tufts, 420 rocks, and three trees. Archived JSON/source verification
+passes; camera, render settings, sky, pond/lilies, and trees remain unchanged
+from `171856`.
