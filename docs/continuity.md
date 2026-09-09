@@ -6,6 +6,14 @@ Last updated: 2026-09-08
 
 The artist requested a full checkpoint and said they would return in a few
 hours. Stop here; no additional scene changes or renders are requested.
+Stopping checkpoint `cd0ab7f` is committed and pushed. Its Google Drive
+continuity copy remains pending after repeated HTTP 403 quota failures. The
+last successful Drive continuity copy predates this stopping note. Retry
+`rclone copyto docs/continuity.md gdrive:wipImages/pbrt-v4/SessionArchive/continuity.md`
+when the quota clears; do not report the full continuity checkpoint delivered
+until that succeeds. The source, live scene, research, and handoff are preserved
+on GitHub and locally.
+
 The worktree was clean at `3fdc81f` before this stopping note. Current branch
 is `pbrt-v4-art-studio`; no builder, PBRT, or pipeline is active.
 
