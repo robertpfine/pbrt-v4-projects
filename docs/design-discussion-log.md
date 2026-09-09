@@ -574,3 +574,21 @@ background are brighter and stars are visible, but the near-black sky at
 55 degrees is above this camera frame and the stars appear too large. The
 archive matches live JSON/sources. Preserve this intermediate before a bounded
 correction bringing darkness into the frame and reducing star size.
+
+Intermediate `221342` is preserved in pushed/backed-up `2964f98`. The
+correction changes sky transition 55 to 30 degrees, scale 0.40 to 1.05 to
+compensate for the narrower glow, star radius 0.08 to 0.03 degrees, and peak
+brightness 8 to 2. Sun and composition remain unchanged. Scene validation
+passes; no code changed. The prior archive upload must finish before launch.
+
+Run `222127` completed through the normal terminal wrapper and was inspected
+locally. The stars are finer; the bright rose horizon darkens more distinctly
+upward, though visible upper sky remains gray/rose rather than fully black.
+Water reflections are substantially brighter than `220117`; foreground plants
+remain deeply shaded. This comparison awaits artist review, with no further
+iteration. Archive JSON and generator sources match live files. Only four
+configuration values changed after the 193-test verification.
+
+The artist evaluated `222127`: "very twilight like." Preserve this as the
+favorably reviewed twilight reference. This supersedes the pending-review note
+above; no additional sky, brightness, or composition edits are requested.

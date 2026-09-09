@@ -2,6 +2,30 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 twilight gradient refinement
+
+Intermediate `221342` is preserved in pushed/backed-up checkpoint `2964f98`.
+Its sky was too pale in the camera frame, and stars appeared too large.
+The live settings lower the dark transition from 55 to 30 degrees and raise
+sky scale from 0.40 to 1.05 to compensate for the narrower illuminated band.
+Star radius falls from 0.08 to 0.03 degrees and peak brightness from 8 to 2.
+Sun, camera, and scene content remain unchanged. SceneConfig validation passes;
+no code changed after the 193-test verification. The earlier pipeline remained
+open on its stalled Drive upload; only that upload was terminated, preserving
+the complete local archive. After confirming pipeline exit, replacement
+`222127` launched through the normal wrapper. The prior upload is being retried
+separately. The artist explicitly reiterated: "start the render."
+
+Render `Water_Lily_Pond_Dusk_20260908_222127.png` completed and was inspected
+locally. Smaller stars are visible and the rose horizon fades more distinctly
+upward. The visible upper sky remains dark gray/rose rather than fully black;
+the brightest horizon and water are substantially lighter than `220117`, while
+foreground plants remain deeply shaded. The artist evaluated `222127` as "very twilight like." Preserve it as the
+favorably reviewed twilight reference. This response supersedes pending-review
+notes; no further iterations were made. Archived JSON and changed generator sources match live files exactly.
+The previous 193-test and production sky-test results remain applicable; only
+four configuration values changed for this render.
+
 ## 2026-09-08 lighter twilight revision — render 221342
 
 The artist called dusk `220117` interesting, requesting slightly more light
