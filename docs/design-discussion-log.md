@@ -702,3 +702,16 @@ inspected locally. Upper sky is close to black; pale clouds and their water
 reflections stand out more, with pad outlines retained. It awaits artist
 review. Archived settings and pond/sky/builder sources match live files exactly.
 No further adjustments were made after inspection.
+
+## 2026-09-08 — Stopping checkpoint
+
+The artist requested a full checkpoint and said they would return in a few
+hours. Preserve the live `224706` moonlight scene, with the blacker sky and
+pads only. The worktree was clean at `3fdc81f`; no renderer or pipeline was
+active, and the live JSON matches the complete local render bundle.
+
+Resume with the artist on stronger rock texture, more variegated pad surfaces
+and colors, a separate autumn palette, and the proposed nighttime viewing
+model. Only flower removal and the sky-lighting comparisons are implemented
+from those latest objectives. No additional render or scene edit is requested
+during the pause. Continuity carries the exact state and pending work.

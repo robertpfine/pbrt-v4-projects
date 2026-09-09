@@ -2,6 +2,40 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 stopping checkpoint — resume with artist
+
+The artist requested a full checkpoint and said they would return in a few
+hours. Stop here; no additional scene changes or renders are requested.
+The worktree was clean at `3fdc81f` before this stopping note. Current branch
+is `pbrt-v4-art-studio`; no builder, PBRT, or pipeline is active.
+
+The sole live configuration exactly matches completed render
+`Water_Lily_Pond_Moonlight_20260908_224706.png`: blacker sky, an off-camera
+high Moon, 32 clusters / 96 lily pads, and no blossom instances. Its PNG,
+PBRT, frozen configuration, manifest, and source bundle are present locally.
+Scene validation passes. No code changed since the 193-test result: 171
+passed and 22 dependency skips, with all seven sky tests passing separately
+under production Python. Preserve this state while awaiting artist review;
+the checkpoint request is not a claim that the Moon simulation is final.
+
+Pending work, to resume with the artist:
+
+- Stronger, more convincing rock surface texture.
+- Much greater variation in lily-pad surface texture and color; flowers have
+  already been removed.
+- A separate fall-color study for trees, grass, and lily pads.
+- Discuss/validate the proposed dark-adapted viewing model in
+  `docs/moonlight-spectrum-and-perception.md`. It is not implemented; existing
+  moonlight still uses an artistic directional source and ordinary RGB-film
+  output. PBRT/CUDA build changes remain outside authorization.
+
+The favorably reviewed twilight reference is `222127`, preserved in `f7f3528`;
+its remote render-bundle upload completed. The earlier intermediate `221342`
+has a recorded unresolved remote PBRT-copy quota failure, with its complete
+local bundle intact. Do not conflate that outstanding archive copy with the
+GitHub/continuity checkpoint. Claude's journal and the artist-question record
+are already committed and remain unedited by Codex.
+
 ## 2026-09-08 blacker moonlit sky comparison
 
 The artist's response to `224147`: even under a full Moon, the sky should be
