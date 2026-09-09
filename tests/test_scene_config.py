@@ -234,6 +234,23 @@ class SceneConfigTests(unittest.TestCase):
             path.write_text(json.dumps(data), encoding="utf-8")
             self.assertEqual(SceneConfig(path).validate(), [])
 
+    def test_twilight_background_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path, _ = self.make_config(directory)
+            config = SceneConfig(path)
+            background = config.data["scene_description"]["sky"]["background"]
+            background.update({"source": "procedural_twilight", "environment": {
+                "generator": "twilight_map", "resolution": [512, 512],
+                "zenith_color": [0.1, 0.18, 0.34],
+                "horizon_transition_degrees": 35.0,
+            }})
+            self.assertEqual(config.validate(), [])
+            background["environment"]["horizon_color"] = [1, -0.1, 0.2]
+            self.assertTrue(any("horizon_color" in e for e in config.validate()))
+            del background["environment"]["horizon_color"]
+            background["environment"]["horizon_transition_degrees"] = 91
+            self.assertTrue(any("horizon_transition_degrees" in e for e in config.validate()))
+
     def test_procedural_overcast_requires_square_resolution(self):
         with tempfile.TemporaryDirectory() as directory:
             path, _ = self.make_config(directory)

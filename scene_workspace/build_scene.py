@@ -990,13 +990,16 @@ def configured_background_light(cfg, sky_config, scene_root, scene_files_root):
     if not background:
         return None
     background = deepcopy(background)
-    if background.get("source", "uniform") != "procedural_overcast":
+    source = background.get("source", "uniform")
+    if source not in {"procedural_overcast", "procedural_twilight"}:
         return background
 
-    from sky_environment import generate_overcast_environment
+    from sky_environment import generate_overcast_environment, generate_twilight_environment
 
     environment = background["environment"]
-    environment_path = generate_overcast_environment(
+    generate = (generate_twilight_environment if source == "procedural_twilight"
+                else generate_overcast_environment)
+    environment_path = generate(
         environment,
         Path(scene_files_root) / "textures",
     )

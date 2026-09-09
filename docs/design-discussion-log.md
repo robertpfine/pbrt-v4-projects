@@ -539,3 +539,38 @@ shadow and deep foreground shadows leave many lilies and grasses silhouetted.
 Both lighting studies are preserved for the artist's comparison; no further
 brightness or framing adjustment was made. The archived dusk JSON and
 generator sources match the live files exactly. The live scene remains dusk.
+
+## 2026-09-08 — Slightly brighter twilight and a dusk sky
+
+The artist called `220117` interesting, requested a slight light increase,
+and asked for a background reflecting dusk ("livil sky"). Codex interpreted
+this as blue civil twilight with a warm horizon and offered clarification.
+The previous scene is preserved in pushed/backed-up `b1e4ae4`.
+
+The prepared revision adds a smooth twilight environment: muted peach at the
+horizon, blue overhead, a dim blue-gray lower hemisphere, and sky scale 0.24
+instead of 0.16. The coral sun and all composition elements stay unchanged.
+The gradient controls are part of the live JSON background entry. This is an
+artistic approximation, not a computed atmospheric twilight model.
+
+Validation passes: 192 tests with 21 dependency skips; all six sky tests pass
+separately with production dependencies. Rendering is pending because the
+host-process check was declined. No new image or checkpoint has been made.
+
+The artist clarified the intended sky: twilight with stars emerging and
+progressively black sky higher above the horizon. This supersedes the initial
+blue-sky interpretation. The working gradient now reaches near-black blue at
+55 degrees, with a muted rose horizon and 160 faint seeded stars. Sky scale
+0.40 compensates for the darker upper hemisphere; the intended slight scene
+brightness increase remains to be evaluated in a render. The sun is unchanged.
+
+The clarified star-field revision passes 193 tests with 22 dependency skips;
+all seven sky tests pass separately with production dependencies. Scene and
+snapshot validation pass. The new render remains pending the host-process
+check; no new image or checkpoint has been claimed.
+
+Authorized render `221342` completed and was inspected locally. The pond and
+background are brighter and stars are visible, but the near-black sky at
+55 degrees is above this camera frame and the stars appear too large. The
+archive matches live JSON/sources. Preserve this intermediate before a bounded
+correction bringing darkness into the frame and reducing star size.

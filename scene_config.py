@@ -1310,21 +1310,50 @@ class SceneConfig:
                 errors.append("sky.background.type must be infinite")
             else:
                 source = background.get("source", "uniform")
-                if source not in {"uniform", "procedural_overcast"}:
+                if source not in {"uniform", "procedural_overcast", "procedural_twilight"}:
                     errors.append(
-                        "sky.background.source must be uniform or procedural_overcast"
+                        "sky.background.source must be uniform, procedural_overcast, "
+                        "or procedural_twilight"
                     )
-                if source == "procedural_overcast":
+                if source in {"procedural_overcast", "procedural_twilight"}:
                     environment = background.get("environment")
                     if not isinstance(environment, dict):
                         errors.append(
                             "sky.background.environment must be an object"
                         )
                     else:
-                        if environment.get("generator") != "overcast_map":
+                        expected = ("twilight_map" if source == "procedural_twilight"
+                                    else "overcast_map")
+                        if environment.get("generator") != expected:
                             errors.append(
-                                "sky.background.environment.generator must be overcast_map"
+                                f"sky.background.environment.generator must be {expected}"
                             )
+                        if source == "procedural_twilight":
+                            count = environment.get("star_count", 0)
+                            if (not isinstance(count, int) or isinstance(count, bool)
+                                    or not 0 <= count <= 2000):
+                                errors.append("sky.background.environment.star_count "
+                                              "must be an integer within [0, 2000]")
+                            for name, default, upper in (
+                                ("star_radius_degrees", 0.08, 1.0),
+                                ("star_brightness", 8.0, float("inf")),
+                            ):
+                                value = environment.get(name, default)
+                                if (not isinstance(value, (int, float))
+                                        or isinstance(value, bool)
+                                        or not math.isfinite(value)
+                                        or not 0 < value <= upper):
+                                    errors.append(f"sky.background.environment.{name} "
+                                                  f"must be within (0, {upper}]")
+                            degrees = environment.get("horizon_transition_degrees", 35.0)
+                            if (not isinstance(degrees, (int, float))
+                                    or isinstance(degrees, bool)
+                                    or not math.isfinite(degrees)
+                                    or not 0 < degrees <= 90):
+                                errors.append(
+                                    "sky.background.environment.horizon_transition_degrees "
+                                    "must be within (0, 90]"
+                                )
                         resolution = environment.get("resolution", [2048, 2048])
                         if (
                             not isinstance(resolution, list)
@@ -1394,6 +1423,9 @@ class SceneConfig:
                             "cloud_dark_color",
                             "cloud_light_color",
                             "target_average_color",
+                            "zenith_color",
+                            "horizon_color",
+                            "nadir_color",
                         ):
                             value = environment.get(field)
                             if value is not None and (

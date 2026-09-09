@@ -159,6 +159,68 @@ def _write_pfm(path, color):
     return path
 
 
+def generate_twilight_equal_area(config):
+    """Artist-controlled horizon glow and blue upper sky, with world Y up.
+
+    This smooth environment supplies fill and reflections; the separate sun
+    and volumetric clouds supply directional light and cloud shapes.
+    """
+    width, height = _resolution(config)
+    directions = _equal_area_square_to_sphere(width, height)
+    altitude = directions[1]
+    zenith = _rgb(config, "zenith_color", [0.10, 0.18, 0.34])
+    horizon = _rgb(config, "horizon_color", [0.35, 0.24, 0.23])
+    nadir = _rgb(config, "nadir_color", [0.10, 0.12, 0.17])
+    degrees = config.get("horizon_transition_degrees", 35.0)
+    if (isinstance(degrees, bool) or not isinstance(degrees, (int, float))
+            or not np.isfinite(degrees) or not 0 < degrees <= 90):
+        raise ValueError("sky background environment.horizon_transition_degrees "
+                         "must be within (0, 90]")
+    blend = _smoothstep(0.0, np.sin(np.radians(degrees)), np.abs(altitude))
+    pole = np.where((altitude >= 0)[..., None], zenith, nadir)
+    color = (horizon + blend[..., None] * (pole - horizon)).astype(np.float32)
+    count = config.get("star_count", 0)
+    radius = config.get("star_radius_degrees", 0.08)
+    brightness = config.get("star_brightness", 8.0)
+    if isinstance(count, bool) or not isinstance(count, int) or not 0 <= count <= 2000:
+        raise ValueError("sky background environment.star_count must be an integer within [0, 2000]")
+    for name, value, upper in (("star_radius_degrees", radius, 1.0),
+                               ("star_brightness", brightness, float("inf"))):
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not np.isfinite(value) or not 0 < value <= upper):
+            raise ValueError(f"sky background environment.{name} must be positive "
+                             f"and no greater than {upper}")
+    # Seeded directions give consistent stars across map resolutions. Angular
+    # Gaussian points cross map seams continuously and fade into horizon glow.
+    rng = np.random.default_rng(int(config.get("seed", 823)))
+    variance = np.radians(radius) ** 2
+    star_light = np.zeros_like(altitude)
+    for _ in range(count):
+        star_y = rng.uniform(np.sin(np.radians(8.0)), 1.0)
+        azimuth = rng.uniform(0.0, 2.0 * np.pi)
+        radial = np.sqrt(1.0 - star_y * star_y)
+        dot = (directions[0] * radial * np.cos(azimuth)
+               + altitude * star_y
+               + directions[2] * radial * np.sin(azimuth))
+        glow = np.exp(-np.maximum(0.0, 1.0 - dot) / variance)
+        fade = _smoothstep(0.0, np.sin(np.radians(25.0)), star_y)
+        star_light += glow * brightness * rng.uniform(0.35, 1.0) * fade
+    color += star_light[..., None] * np.array([0.85, 0.90, 1.0], dtype=np.float32)
+    return color
+
+
+def generate_twilight_environment(config, output_directory):
+    """Write a reproducible twilight map using the existing PBRT mapping."""
+    color = generate_twilight_equal_area(config)
+    output_directory = Path(output_directory)
+    path = _write_pfm(output_directory / "twilight_environment.pfm", color)
+    encoded = np.rint(_linear_to_srgb(color) * 255.0).astype(np.uint8)
+    Image.fromarray(encoded, "RGB").save(
+        output_directory / "twilight_environment_equalarea.png", optimize=True
+    )
+    return path
+
+
 def generate_overcast_environment(config, output_directory):
     """Generate PBRT equal-area PFM plus a human-viewable map preview."""
 

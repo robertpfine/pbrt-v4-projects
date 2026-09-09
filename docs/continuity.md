@@ -2,6 +2,43 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 lighter twilight revision — render 221342
+
+The artist called dusk `220117` interesting, requesting slightly more light
+and a sky color that better reflects dusk. They then clarified: twilight
+with stars emerging and sky becoming black higher above the horizon. Its exact state is preserved in pushed
+checkpoint `b1e4ae4`, with continuity backed up before this revision.
+
+The working scene now uses a new `procedural_twilight` background, implemented
+in `sky_environment.py` through the existing equal-area PFM path. It blends
+muted rose `[0.42,0.30,0.30]` at the horizon into near-black blue
+`[0.002,0.004,0.012]` overhead and `[0.10,0.12,0.17]` below, reaching the
+pole colors at 55 degrees. Sky scale is 0.40 to compensate for the darker
+upper hemisphere and aim for slightly more fill than `220117`. The new
+seeded star field has 160 points, angular radius 0.08 degrees, peak brightness
+8, and retained seed 823. Render `221342` is the first comparison. Sun direction/color/
+scale, camera, clouds, geometry, and populations remain unchanged. The new
+gradient is an artistic approximation with an all-around horizon glow, not
+a physical civil-twilight simulation. Existing overcast fields are retained
+but inactive. Reopen Art Studio for the new gradient controls.
+
+SceneConfig validates the new source, generator, colors, and transition angle;
+the builder generates its map through the established environment-light path.
+Full suite: 193 tests, 171 passed and 22 dependency skips. All seven sky
+tests pass separately under production Python, including the three new sky
+tests skipped in the Qt environment. Coverage checks world-Y orientation,
+smooth horizon, map wiring, deterministic stars, and invalid controls. Scene/snapshot validation and `git diff --check` pass.
+
+The artist authorized the host-process check and render. No active renderer
+was found, and run `221342` launched through the normal terminal wrapper.
+Render `221342` completed and was inspected locally. The pond/background are
+brighter and several stars are visible, but the sky stays pale in-frame: the
+55-degree near-black transition is above this camera view. Stars also read too
+large for an emerging-star effect. Archive JSON and changed sources match live
+files. Preserve this intermediate before lowering the dark transition and
+reducing star size. It is not an artist-accepted result.
+Claude's two pending records remain untouched and uncommitted.
+
 ## 2026-09-08 dusk pond comparison
 
 The artist requested a dusk scene with reddish tones in the clouds reflected
