@@ -53,10 +53,10 @@
 
   "scene_description": {
     "mode": "new",
-    "name": "Water Lily Pond Direct Sun",
+    "name": "Water Lily Pond Dusk",
     "scene_context": {
       "date": "2026-06-21",
-      "local_time": "10:00:00",
+      "local_time": "20:39:00",
       "time_zone": "America/New_York",
       "latitude": 43.0,
       "longitude": -76.0,
@@ -2419,8 +2419,8 @@
         "type": "infinite",
         "source": "uniform",
         "color_mode": "rgb",
-        "color": [0.35, 0.6, 1.0],
-        "scale": 0.35,
+        "color": [0.22, 0.13, 0.28],
+        "scale": 0.16,
         "environment": {
           "generator": "overcast_map",
           "resolution": [2048, 2048],
@@ -2798,11 +2798,12 @@
       "sun": {
         "enabled": true,
         "type": "distant",
-        "from": [-66.35524, 73.47254, -14.09849],
+        "from": [84.19405, 0.50068, 53.95472],
         "to": [0, 0, 0],
-        "color_mode": "blackbody",
+        "color_mode": "rgb",
         "temperature": 5700,
-        "scale": 16.0,
+        "color": [1.0, 0.23, 0.18],
+        "scale": 4.0,
         "use_astronomical_direction": false,
         "light_shafts": {
           "light": {

@@ -517,3 +517,25 @@ stones, and reflected clouds are substantially brighter; cloud highlights are
 very bright in the PNG. The live JSON matches its archive exactly. Preserve
 this first comparison before the requested dusk scene. Scene/snapshot checks
 and `git diff --check` pass; lighting-only changes need no repeated code suite.
+
+Daylight is preserved in pushed/backed-up checkpoint `a7dc298`. The second
+comparison uses scene time 20:39 EDT on the retained June 21 at 43 N / 76 W.
+The same NOAA approximation yields a near-sunset direction about 0.29 degrees
+above the horizon, azimuth 302.65 degrees (west-northwest), source
+`[84.19405,0.50068,53.95472]`. This is an artistic dusk/near-sunset study;
+the direction remains explicit rather than driven automatically by the clock.
+
+Sun color switches to artistic RGB `[1,0.23,0.18]`, scale 4. The retained
+5700 K field is inactive in RGB mode. Uniform sky fill becomes
+`[0.22,0.13,0.28]`, scale 0.16. This aims for coral-red cloud light and reflected
+color over a dim purple-blue background. It does not compute atmospheric
+reddening. Camera, render settings, every landform and its contents, and cloud
+recipes were compared against daylight and remain exactly identical.
+
+Dusk render `Water_Lily_Pond_Dusk_20260908_220117.png` completed and was
+inspected locally. Coral-pink clouds reflect in the water under a purple sky.
+The low sun illuminates tree trunks red-orange, while a pronounced shore
+shadow and deep foreground shadows leave many lilies and grasses silhouetted.
+Both lighting studies are preserved for the artist's comparison; no further
+brightness or framing adjustment was made. The archived dusk JSON and
+generator sources match the live files exactly. The live scene remains dusk.

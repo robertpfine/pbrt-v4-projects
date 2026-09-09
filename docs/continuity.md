@@ -2,6 +2,40 @@
 
 Last updated: 2026-09-08
 
+## 2026-09-08 dusk pond comparison
+
+The artist requested a dusk scene with reddish tones in the clouds reflected
+by the water, alongside the direct-sunlight comparison. Daylight render
+`214903` is preserved in pushed checkpoint `a7dc298`, with continuity backed
+up before switching the sole live JSON to `Water Lily Pond Dusk`.
+
+The dusk study sets the clock to 20:39 EDT, retaining June 21 and 43 N / 76 W.
+The same NOAA approximation used for the morning direction gives an explicit
+near-sunset sun at about 0.29 degrees elevation, azimuth 302.65 degrees:
+`from: [84.19405,0.50068,53.95472]`. This is an artistic dusk/near-sunset view;
+automatic astronomical direction remains disabled.
+
+Sun color is now explicit RGB `[1,0.23,0.18]`, scale 4, to illuminate the clouds
+in coral-red tones. The retained 5700 K field is inactive in RGB mode. Uniform
+sky fill is `[0.22,0.13,0.28]`, scale 0.16. These colors are artistic settings,
+not computed atmospheric reddening. Camera, render settings, cloud recipes,
+all landforms, plants, stones, and their placements match the daylight scene
+exactly. The single live configuration is now the dusk scene; daylight remains
+available from its frozen archive and checkpoint.
+
+Scene and snapshot validation and `git diff --check` pass. The existing
+189-test result remains applicable; no code changed for either lighting study.
+Render `Water_Lily_Pond_Dusk_20260908_220117.png` completed through the normal
+terminal wrapper and was inspected locally. Coral-pink clouds reflect clearly
+in the pond against a purple sky. Low sunlight catches the trees in red-orange,
+with a pronounced shoreline shadow and deep foreground shadows that leave
+many lilies and grasses silhouetted. This comparison awaits artist review;
+no further brightness or framing adjustment was made. The archived JSON and
+generator sources match the live files exactly. Both `214903` and `220117`
+are available in `Archive/`; the live scene remains dusk. The discussion log
+records both comparisons and the answer about `212736`'s sun location.
+Claude's records remain untouched and uncommitted.
+
 ## 2026-09-08 direct sunlight comparison; dusk requested next
 
 The artist asked where the sun is in `212736` and requested both direct
