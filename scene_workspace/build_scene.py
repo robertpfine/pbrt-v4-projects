@@ -52,6 +52,7 @@ from distant_hills import (
     flatten_triplets,
 )
 from fractal_tree import fractal_tree
+from stone_texture import write_granite_surface
 from lsystem import christmas_tree, live_oak
 from terrain_surface_texture import generate_terrain_surface_maps
 from vista_surface_texture import generate_vista_surface_mottle
@@ -2776,7 +2777,9 @@ def write_terrain_details(lines, terrain, config, camera=None, film=None):
         for variant in range(variants):
             color = colors[variant % len(colors)]
             lines.append(f'ObjectBegin "terrain_{name}_{variant}"')
-            if name != "poppies":
+            if name == "rocks" and layer.get("texture", {}).get("enabled", False):
+                write_granite_surface(lines, f"stone_{variant}", layer["texture"], color)
+            elif name != "poppies":
                 surface = layer.get("surface", {})
                 surface_type = surface.get("type", "diffuse")
                 if surface_type == "coateddiffuse":

@@ -18,6 +18,7 @@ from sunflowers import validate_sunflower
 from pond import validate_pond, validate_water_lily
 from terrain import validate_basin
 from terrain_details import validate_elevation_range
+from stone_texture import validate_stone_texture
 
 
 JsonPath = tuple[str | int, ...]
@@ -301,6 +302,11 @@ class SceneConfig:
             if not isinstance(frustum, dict):
                 errors.append(f"{owner}.camera_frustum must be an object")
                 return
+            for field in ("bottom_margin", "side_margin"):
+                margin = frustum.get(field, 0.0)
+                if (not isinstance(margin, (int, float)) or isinstance(margin, bool)
+                        or not math.isfinite(margin) or margin < 0):
+                    errors.append(f"{owner}.camera_frustum.{field} must be finite and nonnegative")
             fade = frustum.get("depth_fade", {})
             if not isinstance(fade, dict):
                 errors.append(f"{owner}.camera_frustum.depth_fade must be an object")
@@ -892,6 +898,11 @@ class SceneConfig:
                                         "litter.construction.scale must be an ascending pair"
                                     )
                             elif generator == "rock_scatter":
+                                if "texture" in construction:
+                                    errors.extend(
+                                        f"{object_prefix}.construction.{error}"
+                                        for error in validate_stone_texture(construction["texture"])
+                                    )
                                 count = population.get("count")
                                 if not isinstance(count, int) or count < 0:
                                     errors.append(

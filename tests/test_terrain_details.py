@@ -71,6 +71,31 @@ class CameraFrustumScatterTests(unittest.TestCase):
         self.assertFalse(_point_inside_camera_frustum(point, frame))
         self.assertTrue(_point_inside_camera_frustum(point, frame, 0.08))
 
+    def test_side_margin_admits_overhanging_blades_at_both_edges(self):
+        frame = _camera_frame(self.camera, self.film)
+        eye, forward, right, up, half_width, half_height = frame
+        for side in (-1, 1):
+            point = tuple(eye[i] + 20*forward[i] + side*1.15*20*half_width*right[i]
+                          for i in range(3))
+            self.assertFalse(_point_inside_camera_frustum(point, frame))
+            self.assertTrue(_point_inside_camera_frustum(point, frame, side_margin=0.1))
+        behind = tuple(eye[i] - forward[i] for i in range(3))
+        self.assertFalse(_point_inside_camera_frustum(behind, frame, 1, 1))
+
+    def test_scatter_uses_side_allowance_and_rejects_invalid_margin(self):
+        config = {**self.config, "count": 500,
+                  "camera_frustum": {"enabled": True, "side_margin": 0.25}}
+        points = scatter_points(self.terrain, config, camera=self.camera, film=self.film)
+        frame = _camera_frame(self.camera, self.film)
+        self.assertEqual(len(points), 500)
+        self.assertTrue(any(not _point_inside_camera_frustum(p.position, frame) for p in points))
+        self.assertTrue(all(_point_inside_camera_frustum(p.position, frame, side_margin=0.25)
+                            for p in points))
+        for bad in (-0.1, float("nan"), float("inf")):
+            with self.assertRaisesRegex(ValueError, "margins"):
+                scatter_points(self.terrain, {**config, "camera_frustum": {
+                    "enabled": True, "side_margin": bad}}, camera=self.camera, film=self.film)
+
     def test_object_anchor_not_root_controls_visible_instance_count(self):
         anchor = (0.0, 3.0, 0.0)
         points = scatter_points(

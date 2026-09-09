@@ -108,7 +108,7 @@ def _camera_frame(camera, film):
     return eye, forward, right, up, half_width, half_height
 
 
-def _point_inside_camera_frustum(position, frame, bottom_margin=0.0):
+def _point_inside_camera_frustum(position, frame, bottom_margin=0.0, side_margin=0.0):
     """Return true when a world-space placement point is inside the view."""
 
     eye, forward, right, up, half_width, half_height = frame
@@ -119,7 +119,7 @@ def _point_inside_camera_frustum(position, frame, bottom_margin=0.0):
     horizontal = sum(offset[i] * right[i] for i in range(3))
     vertical = sum(offset[i] * up[i] for i in range(3))
 
-    horizontal_clearance = depth * half_width - abs(horizontal)
+    horizontal_clearance = depth * half_width * (1.0 + 2.0 * side_margin) - abs(horizontal)
     top_clearance = depth * half_height - vertical
     bottom_clearance = depth * half_height * (1.0 + 2.0 * bottom_margin) + vertical
     return (
@@ -224,8 +224,9 @@ def scatter_points(
     camera_frustum = config.get("camera_frustum", {})
     constrain_to_camera = bool(camera_frustum.get("enabled", False))
     bottom_margin = float(camera_frustum.get("bottom_margin", 0.0))
-    if bottom_margin < 0.0:
-        raise ValueError("camera bottom margin cannot be negative")
+    side_margin = float(camera_frustum.get("side_margin", 0.0))
+    if any(not math.isfinite(v) or v < 0 for v in (bottom_margin, side_margin)):
+        raise ValueError("camera margins must be finite and nonnegative")
     camera_frame = None
     depth_fade = camera_frustum.get("depth_fade", {})
     depth_fade_enabled = bool(depth_fade.get("enabled", False))
@@ -293,7 +294,7 @@ def scatter_points(
                 else position
             )
             if not _point_inside_camera_frustum(
-                reference_position, camera_frame, bottom_margin
+                reference_position, camera_frame, bottom_margin, side_margin
             ):
                 continue
             if depth_fade_enabled:

@@ -457,3 +457,42 @@ green land. This first comparison awaits artist review. PBRT confirms 450,000
 grass tufts, 420 rocks, and three trees. Archived JSON/source verification
 passes; camera, render settings, sky, pond/lilies, and trees remain unchanged
 from `171856`.
+
+## 2026-09-08 — Fill grass gaps and texture pond stones
+
+The artist called `211607` "Nice," requested grass on the distant hill and
+bare foreground patches, and asked for stone/granite texture on the pond rocks.
+The artist then specifically requested grass on the bright green far shoreline.
+The previous grass scene is preserved in pushed/backed-up checkpoint `02de4b4`.
+
+Codex expanded root-placement allowance below the camera frame to 1.0 and
+added horizontal side margin 0.12. These allow tall blades rooted outside the
+image to grow into the foreground. The original 450,000-tuft layer remains;
+a second 50,000-tuft layer targets the pond perimeter, accepting dry heights
+1.5–5 to cover bright gaps between shoreline stones. The existing hill
+extension adds 750,000 tufts on `broad_rise`, normalized depth 0.50–1.0 to
+cover the ridge and the slope facing this camera. Ridge fade is disabled.
+
+The second grass layer moves rocks to scatter offset +3000. Rock seed is
+therefore -1933, preserving its effective seed 1067 and all 420 placements.
+The trees, clouds, pond/lilies, camera, and landform shapes remain unchanged.
+
+`stone_texture.py` adds an optional granite-like diffuse surface to the
+existing rounded stones: fine mineral-colored noise, broad mottling, and
+subtle bump. The colors and spatial scales are exposed in the rock entry's
+`construction.texture`. No image texture assets or renderer changes are
+needed. This tests a stone surface treatment; angular rock geometry remains
+separate future work.
+
+Scene/snapshot validation, two 500-tuft dry-placement samples, exact rock
+placement comparison, and PBRT's material parser check pass. The full suite
+passes 189 tests with 19 dependency skips. Five new tests cover side buffers,
+invalid margins, stone controls, texture wiring, and scene validation.
+
+Render `Water_Lily_Pond_Morning_20260908_212736.png` completed and was inspected
+locally. The far-shore grass gaps and distant-hill strip are filled; the
+foreground is much fuller and partly conceals the nearest stones. The new
+granite-like surface is subtle at this distance. This comparison awaits artist
+evaluation. The live JSON and new sources match the archive. PBRT confirms
+450,000 main, 50,000 shore, and 750,000 distant grass tufts, alongside the
+preserved 420 rocks and three trees, with five textured stone materials.

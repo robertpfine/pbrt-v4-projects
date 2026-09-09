@@ -1660,10 +1660,28 @@
                   0.205,
                   0.2
                 ]
-              ]
+              ],
+              "texture": {
+                "enabled": true,
+                "generator": "granite",
+                "grain_size": 0.7,
+                "mottle_size": 9.0,
+                "grain_strength": 0.7,
+                "grain_dark": [
+                  0.035,
+                  0.032,
+                  0.025
+                ],
+                "grain_light": [
+                  0.6,
+                  0.57,
+                  0.5
+                ],
+                "bump_height": 0.12
+              }
             },
             "population": {
-              "seed": -933,
+              "seed": -1933,
               "count": 420,
               "region": {
                 "center": [
@@ -1876,19 +1894,45 @@
               "seed": 41,
               "variants": 3,
               "layers": [
-                {
-                  "count": 450000,
-                  "seed": 41,
-                  "scale": [
-                    0.9,
-                    1.35
-                  ],
-                  "patchiness": {
-                    "strength": 0.25,
-                    "frequency": 0.012
-                  }
+              {
+                "count": 450000,
+                "seed": 41,
+                "scale": [
+                  0.9,
+                  1.35
+                ],
+                "patchiness": {
+                  "strength": 0.25,
+                  "frequency": 0.012
                 }
-              ],
+              },
+              {
+                "count": 50000,
+                "seed": 83,
+                "scale": [
+                  0.9,
+                  1.35
+                ],
+                "region": {
+                  "center": [
+                    0.0,
+                    -150.0
+                  ],
+                  "size": [
+                    2300.0,
+                    2100.0
+                  ]
+                },
+                "elevation_range": [
+                  1.5,
+                  5.0
+                ],
+                "patchiness": {
+                  "strength": 0.15,
+                  "frequency": 0.018
+                }
+              }
+            ],
               "region": {
                 "center": [
                   0.0,
@@ -1909,45 +1953,46 @@
                 "radius": 0.0
               },
               "camera_frustum": {
-                "enabled": true,
-                "bottom_margin": 0.08,
-                "depth_fade": {
-                  "enabled": false,
-                  "start": 1850.0,
-                  "end": 2400.0,
-                  "minimum_density": 0.0
-                }
-              },
-              "extension": {
+              "enabled": true,
+              "bottom_margin": 1.0,
+              "depth_fade": {
                 "enabled": false,
-                "target_distant_hill": "broad_rise",
-                "count": 250000,
-                "seed": 409,
-                "lateral_range": [
-                  -1.0,
-                  1.0
-                ],
-                "depth_range": [
-                  0.0,
-                  0.56
-                ],
-                "ridge_fade": {
-                  "enabled": true,
-                  "start": 0.44,
-                  "end": 0.53,
-                  "minimum_density": 0.0
-                },
-                "scale": [
-                  0.55,
-                  0.9
-                ],
-                "max_slope_degrees": 70.0,
-                "y_offset": 0.05,
-                "patchiness": {
-                  "strength": 0.12,
-                  "frequency": 0.012
-                }
+                "start": 1850.0,
+                "end": 2400.0,
+                "minimum_density": 0.0
               },
+              "side_margin": 0.12
+            },
+              "extension": {
+              "enabled": true,
+              "target_distant_hill": "broad_rise",
+              "count": 750000,
+              "seed": 409,
+              "lateral_range": [
+                -1.0,
+                1.0
+              ],
+              "depth_range": [
+                0.5,
+                1.0
+              ],
+              "ridge_fade": {
+                "enabled": false,
+                "start": 0.44,
+                "end": 0.53,
+                "minimum_density": 0.0
+              },
+              "scale": [
+                0.75,
+                1.1
+              ],
+              "max_slope_degrees": 70.0,
+              "y_offset": 0.05,
+              "patchiness": {
+                "strength": 0.12,
+                "frequency": 0.012
+              }
+            },
               "elevation_range": [
                 3.9,
                 2000.0

@@ -316,6 +316,13 @@ contribute blades inside the image, preventing a screen-aligned grass cutoff.
 The accepted `054517` state uses `0.08` for grass. Poppies continue to use their
 main flower as the visibility reference instead.
 
+`camera_frustum.side_margin` likewise permits roots beyond both horizontal
+image edges. Both margins are nonnegative fractions of full image width or
+height and default to zero. Tall foreground grass may need a larger bottom
+allowance so roots below the frame can send blades into view. The pond study
+uses bottom margin 1.0 and side margin 0.12. These expand placement acceptance;
+they do not change the camera or crop the rendered image.
+
 ### `surface.texture`
 
 This layer enriches the terrain mesh itself rather than adding objects.

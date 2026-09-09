@@ -48,6 +48,11 @@ validation currently permits only one rock entry across all landforms; its
 earlier settings are preserved in checkpoint `9ad6b6e`. Reopen Art Studio to
 expose these entries.
 
+The stone surface can now use `construction.texture.generator: "granite"`
+for fine mineral grain, broad mottling, and bump relief; see
+[`stone-texture-configuration.md`](stone-texture-configuration.md). This changes
+the surface treatment while retaining the existing rounded geometry.
+
 ## Water-lily construction
 
 A `generator: "water_lily"` entry belongs to the pond's `surface_objects`.
